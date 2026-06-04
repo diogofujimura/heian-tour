@@ -104,7 +104,7 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
             let foundT = state.orcamento.tours.find(t => t._roteiroRefId === dia.refId);
             if (foundT) {
                 foundT.data = diaData;
-                foundT.pontos = locais.join('n');
+                foundT.pontos = locais.join('\n');
                 foundT.duracao = duracao;
                 foundT.valor = state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0;
             } else {
@@ -113,7 +113,7 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     _roteiroRefId: dia.refId,
                     data: diaData,
                     descricao: 'Tour Dia ' + (i+1),
-                    pontos: locais.join('n'),
+                    pontos: locais.join('\n'),
                     duracao: duracao,
                     valor: state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0,
                     desconto: 0, descontoAtivo: false, observacao: ''
