@@ -155,6 +155,20 @@ app.post('/api/config', async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/debug', async (req, res) => {
+  try {
+    const { data: cfg, error: cfgErr } = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    res.json({
+      supabaseUrl: !!process.env.SUPABASE_URL,
+      supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      cfgData: cfg,
+      cfgErr: cfgErr
+    });
+  } catch (e) {
+    res.json({ error: e.message, stack: e.stack });
+  }
+});
+
 // ── API: Transportes ────────────────────────────────────────────────────────
 app.get('/api/orcamentos', async (req, res) => res.json(await readDB().orcamentosDB));
 app.post('/api/orcamentos', async (req, res) => {
