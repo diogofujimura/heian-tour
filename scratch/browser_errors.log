@@ -1,0 +1,2 @@
+Erro ao carregar roteiros: ReferenceError: fetch is not defined
+Erro ao carregar roteiros: TypeError: dbAtracoes.forEach is not a function

@@ -1,0 +1,17 @@
+{
+  "name": "heian-quote",
+  "version": "1.0.0",
+  "description": "Heian Tour - Gerador de Orçamentos Premium",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.107.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "jsdom": "^29.1.1",
+    "pdf-parse": "^2.4.5"
+  }
+}

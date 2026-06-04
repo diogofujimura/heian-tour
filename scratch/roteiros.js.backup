@@ -1,0 +1,730 @@
+// public/js/roteiros.js
+let dbAtracoes = [];
+let dbRotas = {};
+let atracaoMap = new Map(); // Mapa rápido de nome -> atracao
+let roteiroEmEdicao = null;
+let roteiroOriginalNome = '';
+
+function migrarDiaParaNovaEstrutura(dia) {
+  if (dia.blocos) return dia; // já está no formato novo
+  return {
+    dataDoTour: dia.dataDoTour || '',
+    horarioEncontro: dia.horarioEncontro || '',
+    localEncontro: dia.localEncontro || '',
+    tourGuiado: dia.tourGuiado || false,
+    blocos: [{
+      cidade: dia.cidade || '',
+      nomeDaRota: dia.nomeDaRota || '',
+      atracoesDoDia: dia.atracoesDoDia ? [...dia.atracoesDoDia] : []
+    }]
+  };
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await carregarBases();
+  setupEvents();
+  if (typeof setupEditorEvents === 'function') setupEditorEvents();
+  criarPopover();
+});
+
+async function carregarBases() {
+  try {
+    const [resAtr, resRotas] = await Promise.all([
+      fetch('/api/atracoes'),
+      fetch('/api/roteiros')
+    ]);
+    dbAtracoes = await resAtr.json();
+    dbRotas = await resRotas.json();
+
+    // Criar mapa rápido
+    dbAtracoes.forEach(a => {
+      // Normalizar para buscas seguras (lower case)
+      atracaoMap.set(a['Nome da Atração'].toLowerCase(), a);
+    });
+
+    preencherSelectRoteiros();
+    criarDatalistCidades();
+  } catch (err) {
+    console.error('Erro ao carregar roteiros:', err);
+  }
+}
+
+function preencherSelectRoteiros(selectValue = '') {
+  const select = document.getElementById('selectRoteiroBase');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Selecione um Roteiro Base...</option>';
+  Object.keys(dbRotas).forEach(roteiroName => {
+    const opt = document.createElement('option');
+    opt.value = roteiroName;
+    opt.textContent = roteiroName;
+    select.appendChild(opt);
+  });
+  if (selectValue) {
+    select.value = selectValue;
+  }
+}
+
+function setupEvents() {
+  const select = document.getElementById('selectRoteiroBase');
+  if (select) {
+    select.addEventListener('change', (e) => {
+      const roteiro = e.target.value;
+      renderizarRoteiro(roteiro);
+      
+      document.getElementById('btnEditarRoteiro').style.display = roteiro ? 'inline-block' : 'none';
+      document.getElementById('btnExcluirRoteiro').style.display = roteiro ? 'inline-block' : 'none';
+    });
+  }
+}
+
+function criarPopover() {
+  const popover = document.createElement('div');
+  popover.className = 'atracao-popover';
+  popover.id = 'atracaoPopover';
+  popover.innerHTML = `
+    <div class="popover-bairro" id="popBairro">Bairro</div>
+    <div class="popover-titulo" id="popTitulo">Nome da Atração</div>
+    <div class="popover-desc" id="popDesc">Descrição detalhada...</div>
+    <div class="popover-preco" id="popPreco">
+      <span>Preço:</span>
+      <strong class="preco-brt">Grátis</strong>
+    </div>
+  `;
+  document.body.appendChild(popover);
+}
+
+function criarDatalistCidades() {
+  let datalist = document.getElementById('datalistCidades');
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = 'datalistCidades';
+    document.body.appendChild(datalist);
+  }
+  
+  datalist.innerHTML = '';
+  const cidadesUnicas = new Set();
+  dbAtracoes.forEach(a => {
+    if (a['Cidade']) cidadesUnicas.add(a['Cidade']);
+  });
+
+  cidadesUnicas.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    datalist.appendChild(opt);
+  });
+}
+
+// Dicionário global de blocos compilados (Tours)
+window.blocosRoteiro = {};
+
+window.construirBlocosRoteiro = function() {
+  window.blocosRoteiro = {};
+  if (typeof dbRotas === 'undefined') return;
+  
+  Object.values(dbRotas).forEach(rotasData => {
+    const rotas = Array.isArray(rotasData) ? rotasData : (rotasData.dias || []);
+    rotas.forEach(dAntigo => {
+      const d = migrarDiaParaNovaEstrutura(dAntigo);
+      d.blocos.forEach(b => {
+        if (b.nomeDaRota && b.atracoesDoDia && b.atracoesDoDia.length > 0) {
+          const c = b.cidade || 'Diversos';
+          if (!window.blocosRoteiro[c]) window.blocosRoteiro[c] = {};
+          window.blocosRoteiro[c][b.nomeDaRota] = b.atracoesDoDia;
+        }
+      });
+    });
+  });
+};
+
+window.atualizarDatalists = function(idx, bIdx) {
+  if (!roteiroEmEdicao || !roteiroEmEdicao.dias || !roteiroEmEdicao.dias[idx]) return;
+  const bloco = roteiroEmEdicao.dias[idx].blocos[bIdx];
+  if (!bloco) return;
+  const cidade = bloco.cidade || '';
+  
+  let dlRotas = document.getElementById(`dlRotas_${idx}_${bIdx}`);
+  let dlAtr = document.getElementById(`dlAtracoes_${idx}_${bIdx}`);
+  if (!dlRotas || !dlAtr) return;
+  
+  dlRotas.innerHTML = '';
+  dlAtr.innerHTML = '';
+  
+  // 1. Títulos de Roteiro (Blocos Compilados)
+  construirBlocosRoteiro();
+  const blocosDisponiveis = new Set();
+  let cKey = null;
+  if (cidade) {
+    cKey = Object.keys(window.blocosRoteiro).find(k => k.toLowerCase() === cidade.toLowerCase());
+  }
+  
+  if (cKey && window.blocosRoteiro[cKey]) {
+    Object.keys(window.blocosRoteiro[cKey]).forEach(nome => blocosDisponiveis.add(nome));
+  } else if (!cidade) {
+    // Se não tiver cidade, mostra todos
+    Object.values(window.blocosRoteiro).forEach(bc => Object.keys(bc).forEach(nome => blocosDisponiveis.add(nome)));
+  }
+  
+  Array.from(blocosDisponiveis).sort().forEach(nome => dlRotas.appendChild(new Option(nome)));
+  
+  // 2. Atrações
+  const atracoes = new Set();
+  dbAtracoes.forEach(a => {
+    if (cidade && a['Cidade'] && a['Cidade'].toLowerCase() !== cidade.toLowerCase()) return;
+    if (a['Nome da Atração']) atracoes.add(a['Nome da Atração']);
+  });
+  
+  Array.from(atracoes).sort().forEach(a => dlAtr.appendChild(new Option(a)));
+};
+
+window.selecionarBlocoRoteiro = function(idx, bIdx, nomeRota) {
+  roteiroEmEdicao.dias[idx].blocos[bIdx].nomeDaRota = nomeRota;
+  
+  if (!nomeRota) {
+    roteiroEmEdicao.dias[idx].blocos[bIdx].atracoesDoDia = [];
+    renderEditDias();
+    return;
+  }
+  
+  const cidade = roteiroEmEdicao.dias[idx].blocos[bIdx].cidade || 'Diversos';
+  let atracoesParaAdicionar = null;
+  
+  // Tenta encontrar o bloco na cidade atual
+  if (window.blocosRoteiro[cidade] && window.blocosRoteiro[cidade][nomeRota]) {
+    atracoesParaAdicionar = window.blocosRoteiro[cidade][nomeRota];
+  } else {
+    // Busca em todas as cidades
+    for (let c in window.blocosRoteiro) {
+      if (window.blocosRoteiro[c][nomeRota]) {
+        atracoesParaAdicionar = window.blocosRoteiro[c][nomeRota];
+        break;
+      }
+    }
+  }
+  
+  if (atracoesParaAdicionar && atracoesParaAdicionar.length > 0) {
+    // Sobrescreve as atrações atuais pelo "bloco todo compilado"
+    roteiroEmEdicao.dias[idx].blocos[bIdx].atracoesDoDia = [...atracoesParaAdicionar];
+    renderEditDias();
+  }
+};
+
+function renderizarRoteiro(roteiroNome) {
+  const timeline = document.getElementById('roteiroTimeline');
+  if (!roteiroNome) {
+    timeline.innerHTML = '<div class="empty-state">Selecione um roteiro base acima para visualizar os dias.</div>';
+    return;
+  }
+
+  const rotasData = dbRotas[roteiroNome];
+  if (!rotasData) {
+    timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>';
+    return;
+  }
+
+  const rotas = Array.isArray(rotasData) ? rotasData : (rotasData.dias || []);
+  if (rotas.length === 0) {
+    timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>';
+    return;
+  }
+
+  timeline.innerHTML = ''; // Clear
+
+  rotas.forEach((rotaOrig, index) => {
+    const rota = migrarDiaParaNovaEstrutura(rotaOrig);
+    const card = document.createElement('div');
+    card.className = 'dia-card';
+
+    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:var(--surface); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle">Tour Guiado</span>` : '';
+
+    let blocosHtml = rota.blocos.map((bloco, bIdx) => {
+      const tituloRota = bloco.nomeDaRota || 'Sequência';
+      const cidadeText = bloco.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${bloco.cidade}</span>` : '';
+      return `
+        <div style="margin-bottom:${bIdx === rota.blocos.length - 1 ? '0' : '16px'}">
+          <div style="margin-bottom:8px; display:flex; align-items:center">${cidadeText} <strong style="font-family:var(--ff-display); color:var(--crimson); font-size:14px">${tituloRota}</strong></div>
+          <div class="dia-atracoes">
+            ${bloco.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}
+          </div>
+        </div>
+      `;
+    }).join('<div style="height:1px; background:var(--border-lt); margin:12px 0"></div>');
+
+    card.innerHTML = `
+      <div class="dia-header" style="flex-direction:column; align-items:flex-start">
+        <div style="margin-bottom:8px">
+          <span class="dia-numero" style="font-size:16px; margin-right:8px">Dia ${index + 1}</span>
+          ${badgeGuiado}
+        </div>
+      </div>
+      ${blocosHtml}
+    `;
+
+    timeline.appendChild(card);
+  });
+
+  // Attach hover events
+  const chips = timeline.querySelectorAll('.chip-atracao');
+  chips.forEach(chip => {
+    chip.addEventListener('mouseenter', showPopover);
+    chip.addEventListener('mouseleave', hidePopover);
+  });
+}
+
+window.attachChipEvents = function() {
+  const chips = document.querySelectorAll('.chip-atracao');
+  chips.forEach(chip => {
+    chip.removeEventListener('mouseenter', showPopover);
+    chip.removeEventListener('mouseleave', hidePopover);
+    chip.addEventListener('mouseenter', showPopover);
+    chip.addEventListener('mouseleave', hidePopover);
+  });
+};
+
+function criarChipAtracaoHTML(nomeAtracao) {
+  const match = atracaoMap.get(nomeAtracao.toLowerCase());
+  const isMissing = !match ? 'missing' : '';
+  // Guarda o nome real no data-id para recuperar depois
+  return `<div class="chip-atracao ${isMissing}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}">${nomeAtracao}</div>`;
+}
+
+function showPopover(e) {
+  const chip = e.target;
+  const nome = chip.getAttribute('data-id');
+  const atracao = atracaoMap.get(nome.toLowerCase());
+  
+  const popover = document.getElementById('atracaoPopover');
+  
+  if (atracao) {
+    document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
+    document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
+    document.getElementById('popDesc').textContent = atracao['Descrição Detalhada'] || 'Visitação livre.';
+    let preco = atracao['Preço (Ingresso)'];
+    document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
+  } else {
+    // Fallback para atrações que estão na rota mas não têm cadastro detalhado
+    document.getElementById('popBairro').textContent = 'Ponto de Interesse';
+    document.getElementById('popTitulo').textContent = nome;
+    document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
+    document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-lt)">Sem dados</strong>`;
+  }
+
+  // Calcular posição do popover (flutuando perto do mouse).
+  // Como o popover tem position: fixed, usamos apenas o getBoundingClientRect (relativo ao viewport).
+  const rect = chip.getBoundingClientRect();
+  
+  // Garantir que não estoure a tela na direita ou embaixo
+  let topPos = rect.bottom + 8;
+  let leftPos = rect.left;
+  
+  if (topPos + 150 > window.innerHeight) {
+    topPos = rect.top - 160; // Abre pra cima se não couber embaixo
+  }
+
+  popover.style.top = topPos + 'px';
+  popover.style.left = leftPos + 'px';
+  popover.classList.add('visible');
+}
+
+function hidePopover() {
+  const popover = document.getElementById('atracaoPopover');
+  popover.classList.remove('visible');
+}
+
+// ── MODO EDIÇÃO DE ROTEIRO ──────────────────────────────────────────────────
+
+function migrarDiaParaNovaEstrutura(dia) {
+  if (dia.blocos) return dia;
+  return {
+    dataDoTour: dia.dataDoTour || '',
+    horarioEncontro: dia.horarioEncontro || '',
+    localEncontro: dia.localEncontro || '',
+    tourGuiado: dia.tourGuiado || false,
+    blocos: [{
+      cidade: dia.cidade || '',
+      nomeDaRota: dia.nomeDaRota || '',
+      atracoesDoDia: dia.atracoesDoDia ? [...dia.atracoesDoDia] : []
+    }]
+  };
+}
+
+function setupEditorEvents() {
+  document.getElementById('btnNovoRoteiro').addEventListener('click', () => {
+    roteiroOriginalNome = '';
+    roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: [] };
+    abrirEditorRoteiro('Novo Roteiro');
+  });
+
+  document.getElementById('btnEditarRoteiro').addEventListener('click', () => {
+    const nome = document.getElementById('selectRoteiroBase').value;
+    if (!nome) return;
+    roteiroOriginalNome = nome;
+    
+    const data = dbRotas[nome];
+    if (Array.isArray(data)) {
+      roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: JSON.parse(JSON.stringify(data)).map(migrarDiaParaNovaEstrutura) };
+    } else {
+      roteiroEmEdicao = JSON.parse(JSON.stringify(data));
+      if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {nome:'', adultos:2, criancas:0, dataOrcamento:''};
+      if (roteiroEmEdicao.dias) roteiroEmEdicao.dias = roteiroEmEdicao.dias.map(migrarDiaParaNovaEstrutura);
+      else roteiroEmEdicao.dias = [];
+    }
+    abrirEditorRoteiro(nome);
+  });
+
+  document.getElementById('btnExcluirRoteiro').addEventListener('click', async () => {
+    const nome = document.getElementById('selectRoteiroBase').value;
+    if (!nome) return;
+    if (!confirm(`Tem certeza que deseja excluir o roteiro "${nome}"?`)) return;
+    
+    await fetch(`/api/roteiros/${encodeURIComponent(nome)}`, { method: 'DELETE' });
+    delete dbRotas[nome];
+    preencherSelectRoteiros();
+    renderizarRoteiro('');
+  });
+
+  document.getElementById('btnGerarRoteiro').addEventListener('click', () => {
+    const nome = document.getElementById('selectRoteiroBase').value;
+    if (!nome) return;
+    
+    // Clonar o visual do roteiro para o previewOverlay (o mesmo usado pelo Orçamento)
+    const previewCont = document.getElementById('previewContainer');
+    const timelineOrig = document.getElementById('roteiroTimeline');
+    if (!previewCont || !timelineOrig) return;
+    
+    // Configura o visual da exportação
+    previewCont.innerHTML = `
+      <div style="padding:40px; font-family:var(--ff-body)">
+        <h1 style="color:var(--crimson); font-family:var(--ff-display); text-align:center; font-size:32px; margin-bottom:10px">Roteiro Personalizado</h1>
+        <h2 style="color:var(--gold-dk); text-align:center; margin-bottom:40px; letter-spacing:0.05em; text-transform:uppercase">${nome}</h2>
+        <div style="background:white; border-radius:8px; padding:30px; box-shadow:0 10px 30px rgba(0,0,0,0.05)">
+          ${timelineOrig.innerHTML}
+        </div>
+      </div>
+    `;
+    
+    // Esconder botões que possam ter ido junto (empty state, etc) se houver,
+    // mas a timeline já é limpa e feita apenas para leitura.
+    
+    // Mostrar overlay
+    document.getElementById('previewOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  });
+
+  document.getElementById('btnPrevisualizarRoteiro')?.addEventListener('click', () => {
+    const previewCont = document.getElementById('previewContainer');
+    if (!previewCont) return;
+    
+    const nome = document.getElementById('editRoteiroNome').value || 'Pré-visualização';
+    const txtPessoas = (roteiroEmEdicao.cliente?.adultos ? `${roteiroEmEdicao.cliente.adultos} Ad` : '') + (roteiroEmEdicao.cliente?.criancas > 0 ? `, ${roteiroEmEdicao.cliente.criancas} Cr` : '');
+    
+    const diasHtml = roteiroEmEdicao.dias.map((dia, index) => {
+      const badgeGuiado = dia.tourGuiado ? `<span class="badge" style="background:var(--gold); color:var(--surface); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle">Tour Guiado</span>` : '';
+      
+      let meetingInfo = '';
+      const parts = [];
+      if (dia.dataDoTour) {
+        const d = new Date(dia.dataDoTour);
+        const strData = isNaN(d) ? dia.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        parts.push(`📅 ${strData}`);
+      }
+      if (dia.horarioEncontro) parts.push(`⏰ ${dia.horarioEncontro}`);
+      if (dia.localEncontro) parts.push(`📍 ${dia.localEncontro}`);
+      if (parts.length > 0) {
+        meetingInfo = `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
+      }
+
+      let blocosHtml = dia.blocos.map((bloco, bIdx) => {
+        const tituloRota = bloco.nomeDaRota || 'Sequência';
+        const cidadeText = bloco.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${bloco.cidade}</span>` : '';
+        return `
+          <div style="margin-bottom:${bIdx === dia.blocos.length - 1 ? '0' : '16px'}">
+            <div style="margin-bottom:8px; display:flex; align-items:center">${cidadeText} <strong style="font-family:var(--ff-display); color:var(--crimson); font-size:14px">${tituloRota}</strong></div>
+            <div class="dia-atracoes">
+              ${bloco.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('<div style="height:1px; background:var(--border-lt); margin:12px 0"></div>');
+
+      return `
+        <div class="dia-card">
+          <div class="dia-header" style="flex-direction:column; align-items:flex-start">
+            <div style="margin-bottom:8px">
+              <span class="dia-numero" style="font-size:16px; margin-right:8px">Dia ${index + 1}</span>
+              ${badgeGuiado}
+            </div>
+            ${meetingInfo}
+          </div>
+          ${blocosHtml}
+        </div>
+      `;
+    }).join('');
+
+    previewCont.innerHTML = `
+      <div style="padding:40px; font-family:var(--ff-body)">
+        <h1 style="color:var(--crimson); font-family:var(--ff-display); text-align:center; font-size:32px; margin-bottom:10px">Roteiro Personalizado</h1>
+        <h2 style="color:var(--gold-dk); text-align:center; margin-bottom:10px; letter-spacing:0.05em; text-transform:uppercase">${nome}</h2>
+        ${roteiroEmEdicao.cliente?.nome ? `<div style="text-align:center; color:var(--ink-mid); margin-bottom:30px">Para: <strong>${roteiroEmEdicao.cliente.nome}</strong> (${txtPessoas})</div>` : '<div style="margin-bottom:30px"></div>'}
+        <div style="background:white; border-radius:8px; padding:30px; box-shadow:0 10px 30px rgba(0,0,0,0.05)">
+          <div class="timeline">
+            ${diasHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('previewOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    attachChipEvents();
+  });
+
+  document.getElementById('btnCancelarEdicaoRoteiro').addEventListener('click', fecharEditorRoteiro);
+
+  document.getElementById('btnAddDiaRoteiro').addEventListener('click', () => {
+    roteiroEmEdicao.dias.push({
+      dataDoTour: '', horarioEncontro: '', localEncontro: '', tourGuiado: false,
+      blocos: [{ cidade: '', nomeDaRota: '', atracoesDoDia: [] }]
+    });
+    renderEditDias();
+  });
+
+  document.getElementById('btnSalvarEdicaoRoteiro').addEventListener('click', async () => {
+    try {
+      const novoNome = document.getElementById('editRoteiroNome').value.trim();
+      if (!novoNome) return alert('Dê um nome ao roteiro.');
+      if (!roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) return alert('Adicione pelo menos um dia ao roteiro.');
+
+      const btn = document.getElementById('btnSalvarEdicaoRoteiro');
+      btn.textContent = 'Salvando...'; btn.disabled = true;
+
+      // Se mudou o nome e o antigo existia, precisamos deletar o antigo do backend
+      if (roteiroOriginalNome && roteiroOriginalNome !== novoNome) {
+        await fetch(`/api/roteiros/${encodeURIComponent(roteiroOriginalNome)}`, { method: 'DELETE' });
+        delete dbRotas[roteiroOriginalNome];
+      }
+
+      const res = await fetch(`/api/roteiros/${encodeURIComponent(novoNome)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roteiroEmEdicao)
+      });
+
+      if (res.ok) {
+        dbRotas[novoNome] = roteiroEmEdicao;
+        preencherSelectRoteiros(novoNome);
+        fecharEditorRoteiro();
+        renderizarRoteiro(novoNome);
+        
+        // Atualiza também o select de cotações, se a função existir no app.js
+        if (typeof preencherSelectRoteiroVinculado === 'function') {
+          preencherSelectRoteiroVinculado(novoNome);
+        }
+      } else {
+        const text = await res.text();
+        alert('Erro ao salvar roteiro (Servidor retornou erro): ' + text);
+      }
+      
+      btn.textContent = 'Salvar Roteiro'; btn.disabled = false;
+    } catch (err) {
+      alert('Erro crítico ao salvar. Verifique se você não foi desconectado e se a sua internet está ativa. Detalhe: ' + err.message);
+      console.error(err);
+      const btn = document.getElementById('btnSalvarEdicaoRoteiro');
+      if (btn) { btn.textContent = 'Salvar Roteiro'; btn.disabled = false; }
+    }
+  });
+}
+
+function abrirEditorRoteiro(nome) {
+  document.getElementById('editRoteiroNome').value = nome === 'Novo Roteiro' ? '' : nome;
+  
+  // Preenche dados do cliente
+  document.getElementById('rotClienteNome').value = roteiroEmEdicao.cliente?.nome || '';
+  document.getElementById('rotClienteAdultos').value = roteiroEmEdicao.cliente?.adultos || '2';
+  document.getElementById('rotClienteCriancas').value = roteiroEmEdicao.cliente?.criancas || '0';
+  document.getElementById('rotClienteData').value = roteiroEmEdicao.cliente?.dataOrcamento || '';
+
+  document.getElementById('roteiroTimeline').style.display = 'none';
+  document.getElementById('roteiroEditContainer').style.display = 'block';
+  
+  // Esconde botoes da header
+  document.getElementById('btnNovoRoteiro').style.display = 'none';
+  document.getElementById('btnEditarRoteiro').style.display = 'none';
+  document.getElementById('btnExcluirRoteiro').style.display = 'none';
+  document.getElementById('btnGerarRoteiro').style.display = 'none';
+  document.getElementById('selectRoteiroBase').disabled = true;
+
+  renderEditDias();
+}
+
+function fecharEditorRoteiro() {
+  document.getElementById('roteiroEditContainer').style.display = 'none';
+  document.getElementById('roteiroTimeline').style.display = 'block';
+  document.getElementById('selectRoteiroBase').disabled = false;
+  
+  // Restaura botoes baseado na seleção
+  const val = document.getElementById('selectRoteiroBase').value;
+  document.getElementById('btnNovoRoteiro').style.display = 'inline-block';
+  document.getElementById('btnEditarRoteiro').style.display = val ? 'inline-block' : 'none';
+  document.getElementById('btnExcluirRoteiro').style.display = val ? 'inline-block' : 'none';
+  document.getElementById('btnGerarRoteiro').style.display = 'inline-block';
+}
+
+function renderEditDias() {
+  const container = document.getElementById('editRoteiroDiasList');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (!roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-sec); font-size:12px; font-style:italic">Nenhum dia adicionado ainda.</p>';
+    return;
+  }
+  
+  roteiroEmEdicao.dias.forEach((dia, idx) => {
+    let blocosHtml = '';
+    
+    dia.blocos.forEach((bloco, bIdx) => {
+      const atracoesHtml = bloco.atracoesDoDia.map((atr, aIdx) => 
+        `<div class="chip-atracao ${!atracaoMap.has(atr.toLowerCase()) ? 'missing' : ''}"
+              draggable="true" 
+              ondragstart="dragStartAtracao(event, ${idx}, ${bIdx}, ${aIdx})"
+              ondragover="dragOverAtracao(event)"
+              ondrop="dropAtracao(event, ${idx}, ${bIdx}, ${aIdx})">
+          <span style="cursor:grab; margin-right:4px; opacity:0.5; user-select:none">⋮⋮</span>
+          ${atr}
+          <span style="margin-left:8px; cursor:pointer; color:#ff4444" onclick="delAtracaoBloco(${idx}, ${bIdx}, ${aIdx})">✕</span>
+        </div>`
+      ).join('');
+      
+      blocosHtml += `
+        <div style="border-left: 2px solid var(--gold); padding-left: 12px; margin-bottom: 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <strong style="color:var(--crimson); font-size:12px">Sequência ${bIdx + 1}</strong>
+            ${dia.blocos.length > 1 ? `<button class="btn-secondary" style="padding:2px 6px; font-size:10px" onclick="delBloco(${idx}, ${bIdx})">Remover Sequência</button>` : ''}
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+            <datalist id="dlRotas_${idx}_${bIdx}"></datalist>
+            <datalist id="dlAtracoes_${idx}_${bIdx}"></datalist>
+            <div class="field" style="margin:0"><input type="text" list="datalistCidades" placeholder="Cidade" value="${bloco.cidade}" onchange="updBlocoEdit(${idx}, ${bIdx}, 'cidade', this.value); atualizarDatalists(${idx}, ${bIdx})"></div>
+            <div class="field" style="margin:0"><input type="text" list="dlRotas_${idx}_${bIdx}" placeholder="Título (ex: Asakusa + Ueno)" value="${bloco.nomeDaRota}" onchange="selecionarBlocoRoteiro(${idx}, ${bIdx}, this.value)"></div>
+          </div>
+          <div class="dia-atracoes" style="margin-bottom:8px; min-height:30px" ondragover="dragOverAtracao(event)" ondrop="dropAtracaoBlock(event, ${idx}, ${bIdx})">${atracoesHtml}</div>
+          <div class="field" style="margin:0">
+            <input type="text" list="dlAtracoes_${idx}_${bIdx}" placeholder="+ Adicionar atração" onchange="addAtracaoBloco(${idx}, ${bIdx}, this.value); this.value=''" >
+          </div>
+        </div>
+      `;
+    });
+
+    const card = document.createElement('div');
+    card.className = 'dia-card card';
+    card.style.marginBottom = '16px';
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <h4 style="margin:0; font-family:var(--ff-display); color:var(--crimson)">Dia ${idx + 1}</h4>
+        <div>
+          <label style="font-size:12px; margin-right:12px; cursor:pointer">
+            <input type="checkbox" ${dia.tourGuiado ? 'checked' : ''} onchange="updDiaEdit(${idx}, 'tourGuiado', this.checked)">
+            Tour Guiado
+          </label>
+          <button class="btn-secondary" onclick="delDia(${idx})" style="padding:4px 8px; font-size:12px; border-color:#ff4444; color:#ff4444">Excluir Dia</button>
+        </div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px; background:#f9f9f9; padding:8px; border-radius:4px; border:1px solid #eee">
+        <div class="field" style="margin:0">
+          <label style="font-size:10px; color:var(--gold-dk); margin-bottom:2px">Data do Tour</label>
+          <input type="date" value="${dia.dataDoTour || ''}" onchange="updDiaEdit(${idx}, 'dataDoTour', this.value)">
+        </div>
+        <div class="field" style="margin:0">
+          <label style="font-size:10px; color:var(--gold-dk); margin-bottom:2px">Horário de Encontro</label>
+          <input type="time" value="${dia.horarioEncontro || ''}" onchange="updDiaEdit(${idx}, 'horarioEncontro', this.value)">
+        </div>
+        <div class="field" style="margin:0">
+          <label style="font-size:10px; color:var(--gold-dk); margin-bottom:2px">Local de Encontro</label>
+          <input type="text" placeholder="Ex: Lobby do Hotel" value="${dia.localEncontro || ''}" onchange="updDiaEdit(${idx}, 'localEncontro', this.value)">
+        </div>
+      </div>
+
+      ${blocosHtml}
+      
+      <button class="btn-secondary" style="margin-top:8px; width:100%; border-style:dashed" onclick="adicionarNovaSequencia(${idx})">
+        + Adicionar nova sequência no mesmo dia
+      </button>
+    `;
+    container.appendChild(card);
+    
+    // Inicializa datalists para o card criado
+    dia.blocos.forEach((bloco, bIdx) => {
+      atualizarDatalists(idx, bIdx);
+    });
+  });
+}
+
+window.updRotCliente = function(field, val) {
+  if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {};
+  roteiroEmEdicao.cliente[field] = val;
+};
+
+window.updDiaEdit = function(idx, campo, valor) { roteiroEmEdicao.dias[idx][campo] = valor; };
+window.updBlocoEdit = function(idx, bIdx, campo, valor) { roteiroEmEdicao.dias[idx].blocos[bIdx][campo] = valor; };
+window.addAtracaoBloco = function(idx, bIdx, nome) { if(!nome.trim()) return; roteiroEmEdicao.dias[idx].blocos[bIdx].atracoesDoDia.push(nome.trim()); renderEditDias(); };
+window.delAtracaoBloco = function(idx, bIdx, atrIdx) { roteiroEmEdicao.dias[idx].blocos[bIdx].atracoesDoDia.splice(atrIdx, 1); renderEditDias(); };
+window.adicionarNovaSequencia = function(idx) { roteiroEmEdicao.dias[idx].blocos.push({ cidade: '', nomeDaRota: '', atracoesDoDia: [] }); renderEditDias(); };
+window.delBloco = function(idx, bIdx) { roteiroEmEdicao.dias[idx].blocos.splice(bIdx, 1); renderEditDias(); };
+window.delDia = function(idx) { roteiroEmEdicao.dias.splice(idx, 1); renderEditDias(); };
+window.dragStartAtracao = function(e, dIdx, bIdx, aIdx) {
+  e.dataTransfer.setData('text/plain', JSON.stringify({ dIdx, bIdx, aIdx }));
+  e.dataTransfer.effectAllowed = 'move';
+};
+
+window.dragOverAtracao = function(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+};
+
+window.dropAtracao = function(e, targetDIdx, targetBIdx, targetAIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  try {
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const { dIdx, bIdx, aIdx } = data;
+    const sourceArr = roteiroEmEdicao.dias[dIdx].blocos[bIdx].atracoesDoDia;
+    const targetArr = roteiroEmEdicao.dias[targetDIdx].blocos[targetBIdx].atracoesDoDia;
+    
+    if (dIdx === targetDIdx && bIdx === targetBIdx) {
+      if (aIdx === targetAIdx) return; // Nenhuma mudança
+      const item = sourceArr.splice(aIdx, 1)[0];
+      // Ajuste de índice devido ao splice anterior na mesma array
+      const adjTargetIdx = (aIdx < targetAIdx) ? targetAIdx - 1 : targetAIdx;
+      // Para arrastar visualmente de forma mais natural, podemos apenas inserir na nova posicao 
+      // mas é mais simples só usar o targetAIdx diretamente
+      targetArr.splice(targetAIdx, 0, item);
+    } else {
+      const item = sourceArr.splice(aIdx, 1)[0];
+      targetArr.splice(targetAIdx, 0, item);
+    }
+    renderEditDias();
+  } catch(err) {
+    console.error('Drag and drop error', err);
+  }
+};
+
+window.dropAtracaoBlock = function(e, targetDIdx, targetBIdx) {
+  e.preventDefault();
+  try {
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const { dIdx, bIdx, aIdx } = data;
+    const sourceArr = roteiroEmEdicao.dias[dIdx].blocos[bIdx].atracoesDoDia;
+    const targetArr = roteiroEmEdicao.dias[targetDIdx].blocos[targetBIdx].atracoesDoDia;
+    
+    // So realiza se o drop for direto no container e nao num chip filho
+    if (e.target.classList.contains('dia-atracoes') && !(dIdx === targetDIdx && bIdx === targetBIdx)) {
+      const item = sourceArr.splice(aIdx, 1)[0];
+      targetArr.push(item);
+      renderEditDias();
+    }
+  } catch(err) {
+    console.error('Drag and drop error on block', err);
+  }
+};
