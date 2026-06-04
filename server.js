@@ -16,6 +16,17 @@ const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'database.json');
 const defaultData = { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
 
+const basicAuth = require('express-basic-auth');
+if (process.env.APP_PASS) {
+  const users = {};
+  users[process.env.APP_USER || 'admin'] = process.env.APP_PASS;
+  app.use(basicAuth({
+    users: users,
+    challenge: true,
+    realm: 'HeianQuoteAuth'
+  }));
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, path) => {
