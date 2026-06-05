@@ -239,11 +239,19 @@ function abrirOrcamento(id, directEdit = false) {
   preencherTextosForm(orc.textos || {});
   renderEstadiasReadOnlyForm(); renderToursForm(); renderTransportesForm(); renderExperienciasForm(); renderItensAdicionaisForm();
   updateResumo();
+  document.getElementById('orcamentosEmptyState').style.display = 'none';
+  
   if (directEdit) {
-    navToPage('orcamento');
+    document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+    document.getElementById('orcamentosEditorWrapper').style.display = 'block';
   } else {
+    document.getElementById('orcamentosEditorWrapper').style.display = 'none';
+    document.getElementById('orcamentosPreviewWrapper').style.display = 'block';
     renderPreview();
   }
+  
+  // Atualiza visual selection na lista
+  renderListaOrcamentos();
   
   if (state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(state.orcamento.notionClienteId);
@@ -297,7 +305,7 @@ function novoOrcamento() {
   navToPage('orcamento');
 }
 
-function renderListaOrcamentos() {
+function renderListaOrcamentos(filterQuery = '') {
   const cont = document.getElementById('orcamentosLista');
   if (!state.orcamentosDB.length) { cont.innerHTML = '<div class="orc-empty">Nenhuma cotação salva ainda.</div>'; return; }
   cont.innerHTML = '<div class="orc-list">' + state.orcamentosDB.map(orc => {
@@ -313,15 +321,16 @@ function renderListaOrcamentos() {
     if (orc.cliente?.criancas > 0) txtPessoas += `, ${orc.cliente.criancas} Cr`;
     if (orc.cliente?.pessoas) txtPessoas = orc.cliente.pessoas; // backward compatibility
     
-    return `<div class="orc-card">
-      <div class="orc-info" onclick="abrirOrcamento(${orc.id})" style="flex:1;cursor:pointer">
-        <div class="orc-nome">${orc.nome||'Sem nome'}</div>
-        <div class="orc-meta">${orc.cliente?.nome||''} ${txtPessoas?'· '+txtPessoas:''} · ${fmtDate(orc.atualizadoEm)}</div>
-      </div>
-      <div class="orc-total" onclick="abrirOrcamento(${orc.id})" style="margin:0 24px;cursor:pointer">¥${fmt(total)}</div>
-      <div class="orc-actions">
-        <button class="btn-icon" onclick="abrirOrcamento(${orc.id})">✎ Abrir</button>
-        <button class="btn-danger" onclick="excluirOrcamento(${orc.id})">✕</button>
+    
+    const isSelected = state.orcamento && state.orcamento.id === orc.id ? 'selected' : '';
+    return `<div class="list-card ${isSelected}" 
+                 onclick="abrirOrcamento(${orc.id}, false)" 
+                 onmouseenter="previewOrcamento(${orc.id})">
+      <div class="list-card-title">${orc.nome||'Sem nome'}</div>
+      <div class="list-card-subtitle">${orc.cliente?.nome||''} ${txtPessoas?'· '+txtPessoas:''}</div>
+      <div class="list-card-meta">
+        <span>${fmtDate(orc.atualizadoEm)}</span>
+        <span>¥${fmt(total)}</span>
       </div>
     </div>`;
   }).join('') + '</div>';
@@ -465,11 +474,16 @@ function setupNav() {
       navToPage(pg);
     }
   }));
-  document.getElementById('btnNovoOrc').addEventListener('click', () => {
-    history.pushState({ page: 'orcamento' }, '', '#orcamento');
-    novoOrcamento();
-    navToPage('orcamento');
-  });
+  const btnNovoOrcList = document.getElementById('btnNovoOrcList');
+  if (btnNovoOrcList) {
+    btnNovoOrcList.addEventListener('click', () => {
+      novoOrcamento();
+      document.getElementById('orcamentosEmptyState').style.display = 'none';
+      document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+      document.getElementById('orcamentosEditorWrapper').style.display = 'block';
+      renderListaOrcamentos();
+    });
+  }
 
   window.addEventListener('popstate', (e) => {
     if (e.state && e.state.page) {
@@ -2740,7 +2754,41 @@ window.handleAcaoClienteCotacao = async function() {
 };
 
 window.editarCotacaoAtual = function() {
-  document.getElementById('previewOverlay').classList.add('hidden');
-  document.body.style.overflow = '';
-  navToPage('orcamento');
+  // Se tiver um overlay antigo escondemos
+  const overlay = document.getElementById('previewOverlay');
+  if(overlay) { overlay.classList.add('hidden'); document.body.style.overflow = ''; }
+  
+  document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+  document.getElementById('orcamentosEditorWrapper').style.display = 'block';
+};
+
+window.previewOrcamento = function(id) {
+  // Só atualiza o preview se estivermos vendo um preview, nao se estivermos editando!
+  if (document.getElementById('orcamentosEditorWrapper').style.display === 'block') {
+    return;
+  }
+  // Se ja esta selecionado, nao faz nada
+  if (state.orcamento && state.orcamento.id === id) return;
+  
+  // Carrega e renderiza o preview sutilmente
+  const orc = state.orcamentosDB.find(o => o.id === id);
+  if (!orc) return;
+  state.orcamento = JSON.parse(JSON.stringify(orc));
+  
+  document.getElementById('orcamentosEmptyState').style.display = 'none';
+  document.getElementById('orcamentosEditorWrapper').style.display = 'none';
+  document.getElementById('orcamentosPreviewWrapper').style.display = 'block';
+  
+  renderPreview();
+  renderListaOrcamentos(); // update highlight
+};
+
+window.filterOrcamentosList = function() {
+  const q = document.getElementById('pesquisaOrcamentosList').value.toLowerCase();
+  renderListaOrcamentos(q);
+};
+
+window.hoverCliente = function(id) {
+  if (window.clienteAtualVisualizado === id) return;
+  abrirDetalhesCliente(id, true);
 };

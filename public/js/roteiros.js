@@ -490,7 +490,7 @@ function setupEditorEvents() {
   });
 
   document.getElementById('btnEditarRoteiro').addEventListener('click', () => {
-    const nome = document.getElementById('selectRoteiroBase').value;
+    const nome = window.roteiroAtualVisualizado;
     const formatPeriodo = (d1, d2) => {
       if (!d1 && !d2) return
       const f1 = d1 ? d1.split('-').reverse().slice(0, 2).join('/') : '';
@@ -514,7 +514,7 @@ function setupEditorEvents() {
   });
 
   document.getElementById('btnExcluirRoteiro').addEventListener('click', async () => {
-    const nome = document.getElementById('selectRoteiroBase').value;
+    const nome = window.roteiroAtualVisualizado;
     if (!nome) return;
     if (!confirm(`Tem certeza que deseja excluir o roteiro "${nome}"?`)) return;
     
@@ -525,13 +525,13 @@ function setupEditorEvents() {
   });
 
   document.getElementById('chkIncluirDescricoesPdf')?.addEventListener('change', () => {
-    const nome = document.getElementById('selectRoteiroBase').value;
+    const nome = window.roteiroAtualVisualizado;
     if (nome) renderizarRoteiro(nome);
   });
 
   document.getElementById('btnGerarRoteiro').addEventListener('click', () => {
     try {
-      let nome = document.getElementById('selectRoteiroBase').value;
+      let nome = window.roteiroAtualVisualizado;
       const roteiroEditContainer = document.getElementById('roteiroEditContainer');
       const isEditMode = roteiroEditContainer && roteiroEditContainer.style.display !== 'none';
       
@@ -915,7 +915,7 @@ function fecharEditorRoteiro() {
   // document.getElementById('selectRoteiroBase').disabled = false;
   
   // Restaura botoes baseado na seleção
-  const val = document.getElementById('selectRoteiroBase').value;
+  const val = window.roteiroAtualVisualizado;
   document.getElementById('btnNovoRoteiro').style.display = 'inline-block';
   document.getElementById('btnEditarRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnExcluirRoteiro').style.display = val ? 'inline-block' : 'none';
@@ -1927,4 +1927,32 @@ window.handleAcaoClienteRoteiro = async function() {
       btn.disabled = false;
     }
   }
+};
+
+window.selecionarRoteiro = function(nome, isHover = false) {
+  if (document.getElementById('roteiroEditContainer').style.display === 'block') {
+    if (isHover) return; // Não troca no hover se estiver no modo edição
+  }
+  
+  if (nome && dbRotas[nome]) {
+    window.roteiroAtualVisualizado = nome;
+    if(!isHover) renderListaRoteiros(document.getElementById('pesquisaRoteirosList').value);
+    
+    document.getElementById('roteirosEmptyState').style.display = 'none';
+    document.getElementById('roteirosDetailWrapper').style.display = 'block';
+    
+    // Mostra o preview
+    document.getElementById('roteiroEditContainer').style.display = 'none';
+    document.getElementById('roteiroTimeline').style.display = 'block';
+    document.getElementById('roteiroPreviewHeader').style.display = 'flex';
+    document.getElementById('roteiroPreviewTitle').textContent = nome;
+    
+    renderizarRoteiro(nome);
+  }
+};
+
+
+window.filterRoteirosList = function() {
+  const q = document.getElementById('pesquisaRoteirosList').value;
+  renderListaRoteiros(q);
 };
