@@ -518,6 +518,506 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
+  <!-- ── BASE DE DADOS ───────────────────────────────────────────────────────── -->
+﻿<!DOCTYPE html><html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heian Tour ÔÇö Or├ºamentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&amp;family=Jost:wght@300;400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+<script>
+window.addEventListener('error', function(e) {
+  let errBox = document.getElementById('debugErrorBox');
+  if (!errBox) {
+    errBox = document.createElement('div');
+    errBox.id = 'debugErrorBox';
+    errBox.style.position = 'fixed';
+    errBox.style.bottom = '10px';
+    errBox.style.right = '10px';
+    errBox.style.backgroundColor = 'red';
+    errBox.style.color = 'white';
+    errBox.style.padding = '10px';
+    errBox.style.zIndex = '999999';
+    errBox.style.maxWidth = '400px';
+    errBox.style.fontSize = '12px';
+    document.body.appendChild(errBox);
+  }
+  errBox.innerHTML += '<p>' + e.message + ' at ' + e.filename + ':' + e.lineno + '</p>';
+});
+window.addEventListener('unhandledrejection', function(e) {
+  let errBox = document.getElementById('debugErrorBox');
+  if (!errBox) {
+    errBox = document.createElement('div');
+    errBox.id = 'debugErrorBox';
+    errBox.style.position = 'fixed';
+    errBox.style.bottom = '10px';
+    errBox.style.right = '10px';
+    errBox.style.backgroundColor = 'red';
+    errBox.style.color = 'white';
+    errBox.style.padding = '10px';
+    errBox.style.zIndex = '999999';
+    errBox.style.maxWidth = '400px';
+    errBox.style.fontSize = '12px';
+    document.body.appendChild(errBox);
+  }
+  errBox.innerHTML += '<p>Unhandled Promise: ' + e.reason + '</p>';
+});
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><img src="assets/logo.png" alt="Heian Tour"></div>
+  <nav class="sidebar-nav">
+    <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gest├úo & Vendas</div>
+    <a class="nav-item active" data-page="dashboard">­ƒôè &nbsp;Dashboard</a>
+    <a class="nav-item" data-page="clientes">­ƒæÑ &nbsp;Clientes</a>
+    <a class="nav-item" data-page="roteiros">­ƒù║´©Å &nbsp;Roteiros de Viagem</a>
+    <a class="nav-item" data-page="meus">­ƒÆ░ &nbsp;Cota├º├Áes</a>
+    
+    <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
+    <a class="nav-item" data-page="orcamento">Ôùê &nbsp;Criar Cota├º├úo R├ípida</a>
+    <a class="nav-item" data-page="base">Ôùç &nbsp;Base de Dados</a>
+    <a class="nav-item" data-page="config">Ôùë &nbsp;Configura├º├Áes</a>
+  </nav>
+  
+  <div class="sidebar-cambio" style="background: var(--warm-white); padding: 18px 20px; border-top: 2px solid var(--border); margin-top: auto; margin-bottom: 24px; box-shadow: 0 -4px 10px rgba(0,0,0,0.1);">
+    <div style="font-size: 11px; font-weight: 700; color: var(--crimson-dk); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+      <span>C├ómbio no App</span>
+      <div>
+        <button id="btnToggleMenuCambioConfig" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0 6px" title="Configurar C├ómbio">ÔÜÖ´©Å</button>
+        <button id="btnRefreshCambioMenu" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0" title="Zerar valores">Ôƒ│</button>
+      </div>
+    </div>
+    
+    <div id="menuCambioConfig" style="display:none; flex-direction:column; gap:6px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed rgba(107,31,42,0.2)">
+      <div style="font-size:10px; color:var(--crimson); font-weight:600; margin-bottom:2px">TAXAS AUTOM├üTICAS:</div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">┬ÑÔåÆUS$</span><input type="number" id="menuCambioRateUSD" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">┬ÑÔåÆR$</span><input type="number" id="menuCambioRateBRL" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
+      <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px">
+        <button id="btnMenuCambioFetch" style="flex:1; font-size:10px; padding:5px; background:var(--crimson); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500" title="Buscar do dia">­ƒîì Do Dia</button>
+        <button id="btnMenuCambioSave" style="flex:1; font-size:10px; padding:5px; background:var(--ink); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500" title="Salvar taxa no servidor">­ƒÆ¥ Salvar</button>
+      </div>
+      <div id="menuCambioStatus" style="font-size:10px; color:var(--crimson); font-weight:600; margin-top:2px; text-align:center"></div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:6px">
+      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">JPY ┬Ñ</span><input type="number" id="menuCambioJPY" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">USD $</span><input type="number" id="menuCambioUSD" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">BRL R$</span><input type="number" id="menuCambioBRL" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
+    </div>
+  </div>
+
+  <div class="sidebar-sync">
+    <button id="btnSync" class="btn-sync">Ôå╗ Sincronizar Sheets</button>
+    <p id="syncStatus" class="sync-status"></p>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- ÔöÇÔöÇ MOBILE HEADER ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div class="mobile-header">
+    <button id="mobileMenuToggle" class="btn-mobile-menu" aria-label="Abrir Menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <img src="assets/logo.png" alt="Heian Tour" class="mobile-logo" style="height:24px;">
+  </div>
+
+  <!-- ÔöÇÔöÇ OR├çAMENTO ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div id="page-orcamento" class="page active">
+    <div class="page-header">
+      <h1 id="orcTitulo">Nova Cota├º├úo</h1>
+      <div class="header-actions">
+        <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
+        <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro Ô×ö</button>
+        <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)">ÔÜí Exportar para Roteiro</button>
+        <button id="btnPreview" class="btn-secondary">Visualizar PDF</button>
+        <button id="btnPrint" class="btn-primary">Exportar PDF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Dados do Cliente<button id="btnImportNotion" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);">ÔÜí Importar do Notion</button></h2>
+      <div class="form-grid">
+  <div class="field" id="notionSelectWrapper" style="display:none; grid-column: span 2; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+    <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
+    <select id="notionClienteSelect" style="width: 100%; padding: 8px; margin-top: 5px;">
+      <option value="">Carregando clientes...</option>
+    </select>
+  </div>
+        <div class="field" style="grid-column: span 3"><label>Nome da Cota├º├úo</label><input type="text" id="orcNome" placeholder="Ex: Gisela ÔÇö Set/2026"></div>
+        <div class="field" style="grid-column: span 1">
+          <label>Status da Venda</label>
+          <select id="orcStatus" style="width: 100%; padding: 8px; border: 1px solid var(--border-dk); border-radius: 4px; outline: none; background: #fff;">
+            <option value="Pendente">­ƒƒí Pendente</option>
+            <option value="Fechado">­ƒƒó Fechado</option>
+            <option value="Perdido">­ƒö┤ Perdido</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-top:12px; margin-bottom:8px;">
+        <h3 style="margin:0; font-size:16px; color:#5c1d24; font-family: 'Playfair Display', serif;">Dados do Cliente (Cabe├ºa)</h3>
+        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteCotacao()">­ƒæñ Editar Cliente</button>
+      </div>
+      <div class="form-grid" style="margin-top:0">
+        <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" ></div>
+        <div class="field" style="max-width:90px"><label>Adultos</label><input type="number" id="clienteAdultos" value="2" min="1" ></div>
+        <div class="field" style="max-width:90px"><label>Crian├ºas</label><input type="number" id="clienteCriancas" value="0" min="0" ></div>
+        <div class="field"><label>Data do Or├ºamento</label><input type="date" id="clienteDataOrcamento"></div>
+      </div>
+      
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <div class="subsection-title" style="margin: 0;">Estadias (Herdadas do Cliente)</div>
+      </div>
+      <div id="estadiasReadOnlyList" style="margin-bottom: 20px; font-size: 14px; color: #475569; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <p class="hint" style="margin:0;">Nenhuma estadia. Edite o cliente na aba "Clientes (Notion)" para adicionar estadias.</p>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <div class="subsection-title" style="margin: 0;">Valores Base para Tours Guiados (┬Ñ)</div>
+      </div>
+      <div style="margin-bottom: 20px; padding: 15px; background: #fffcf0; border: 1px solid #fde68a; border-radius: 6px;">
+        <div class="form-grid" style="grid-template-columns: repeat(5, 1fr); gap: 10px;">
+          <div class="field"><label>4 Horas</label><input type="number" id="baseTour4h" placeholder="Ex: 35000" oninput="updBaseTour('4h', this.value)"></div>
+          <div class="field"><label>6 Horas</label><input type="number" id="baseTour6h" placeholder="Ex: 45000" oninput="updBaseTour('6h', this.value)"></div>
+          <div class="field"><label>8 Horas</label><input type="number" id="baseTour8h" placeholder="Ex: 55000" oninput="updBaseTour('8h', this.value)"></div>
+          <div class="field"><label>10 Horas</label><input type="number" id="baseTour10h" placeholder="Ex: 65000" oninput="updBaseTour('10h', this.value)"></div>
+          <div class="field"><label>12 Horas</label><input type="number" id="baseTour12h" placeholder="Ex: 75000" oninput="updBaseTour('12h', this.value)"></div>
+        </div>
+        <p style="margin: 5px 0 0 0; font-size: 11px; color: #b45309;">Esses valores servem de guia para o or├ºamento e auto-preenchem a lista de tours e a importa├º├úo do roteiro.</p>
+      </div>
+    </div>
+
+    <div class="card" style="display: none;">
+      <h2 class="card-title">Roteiro Vinculado</h2>
+      <p class="hint">Voc├¬ pode criar um roteiro vinculado a este or├ºamento ou gerar um esqueleto autom├ítico com base nas estadias.</p>
+      <div class="form-grid" style="align-items:end; margin-bottom: 12px">
+        <div class="field">
+          <label>Roteiro Selecionado</label>
+          <select id="orcRoteiroVinculado" class="select-roteiro" style="width:100%">
+             <option value="">Nenhum roteiro vinculado</option>
+          </select>
+        </div>
+        <button id="btnGerarRoteiroEstadias" class="btn-secondary">Gerar Esqueleto via Estadias</button>
+      </div>
+      <div id="orcRoteiroStatus" style="font-size:12px; color:var(--ink-lt)">
+        Salve a cota├º├úo para gravar o v├¡nculo do roteiro no servidor.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2 class="card-title">Roteiriza├º├úo e Suporte</h2>
+        <label class="toggle"><input type="checkbox" id="consultoriaToggle"><span class="toggle-slider"></span></label>
+      </div>
+      <div id="consultoriaFields" class="hidden">
+        <div class="form-grid">
+          <div class="field"><label>Valor ┬Ñ</label><input type="number" id="consultoriaValor" placeholder="Ex: 30000"></div>
+          <div class="field"><label>Descri├º├úo</label><input type="text" id="consultoriaDesc" placeholder="Ex: Roteiriza├º├úo + Suporte completo"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Tours</h2>
+      <div id="toursList"></div>
+      <button class="btn-add" id="btnAddTour">+ Adicionar Tour</button>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Transportes</h2>
+      <div id="transportesList"></div>
+      <button class="btn-add" id="btnAddTransporte">+ Adicionar Transporte</button>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Experi├¬ncias <span class="optional-badge">opcional</span></h2>
+      <div id="experienciasList"></div>
+      <button class="btn-add" id="btnAddExperiencia">+ Adicionar Experi├¬ncia</button>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Itens Adicionais <span class="optional-badge">opcional</span></h2>
+      <div id="itensAdicionaisList"></div>
+      <button class="btn-add" id="btnAddItemAdicional">+ Adicionar Item Adicional</button>
+    </div>
+
+
+    <div class="card" id="cardTextosCustom">
+      <div class="card-title-row">
+        <h2 class="card-title">Ô£Å Personalizar Textos do PDF</h2>
+        <button class="btn-secondary" onclick="toggleCardTextos()" id="btnToggleTextos" style="font-size:11px;padding:6px 14px">Expandir</button>
+      </div>
+      <div id="textosCustomForm" class="hidden">
+        <p class="hint" style="margin-bottom:16px">Personalize qualquer t├¡tulo ou r├│tulo que aparece no PDF desta cota├º├úo.</p>
+        <div class="subsection-title">Capa</div>
+        <div class="form-grid">
+          <div class="field"><label>R├│tulo da capa</label><input type="text" id="tx_coverLabel" placeholder="COTA├ç├âO DE VIAGEM"></div>
+          <div class="field"><label>Subt├¡tulo da capa</label><input type="text" id="tx_coverSub" placeholder="Roteiro personalizado"></div>
+        </div>
+        <div class="subsection-title">T├¡tulos das Se├º├Áes</div>
+        <div class="form-grid">
+          <div class="field"><label>Estadias</label><input type="text" id="tx_secEstadias" placeholder="Estadias"></div>
+          <div class="field"><label>Transporte</label><input type="text" id="tx_secTransp" placeholder="Transporte"></div>
+          <div class="field"><label>Tours</label><input type="text" id="tx_secTours" placeholder="Tours"></div>
+          <div class="field"><label>Experi├¬ncias</label><input type="text" id="tx_secExp" placeholder="Experi├¬ncias"></div>
+          <div class="field"><label>Resumo financeiro</label><input type="text" id="tx_secResumo" placeholder="Resumo Financeiro"></div>
+        </div>
+        <div class="subsection-title">R├│tulos do Resumo Financeiro</div>
+        <div class="form-grid">
+          <div class="field"><label>Total Tours</label><input type="text" id="tx_lblTours" placeholder="Total Tours"></div>
+          <div class="field"><label>Total Transportes</label><input type="text" id="tx_lblTransp" placeholder="Total Transportes"></div>
+          <div class="field"><label>Total Experi├¬ncias</label><input type="text" id="tx_lblExp" placeholder="Total Experi├¬ncias"></div>
+          <div class="field"><label>Roteiriza├º├úo e Suporte</label><input type="text" id="tx_lblCons" placeholder="Roteiriza├º├úo e Suporte"></div>
+          <div class="field"><label>Total Geral</label><input type="text" id="tx_lblTotal" placeholder="Total Geral"></div>
+          <div class="field"><label>Sinal 30%</label><input type="text" id="tx_lblSinal" placeholder="Sinal 30% ÔÇö Tours"></div>
+        </div>
+        <div class="subsection-title">T├¡tulos do Rodap├®</div>
+        <div class="form-grid">
+          <div class="field"><label>Observa├º├Áes</label><input type="text" id="tx_secObs" placeholder="Observa├º├Áes Importantes"></div>
+          <div class="field"><label>Condi├º├Áes</label><input type="text" id="tx_secCond" placeholder="Condi├º├Áes de Pagamento"></div>
+          <div class="field"><label>Cancelamento</label><input type="text" id="tx_secCanc" placeholder="Pol├¡ticas de Cancelamento"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-resumo">
+      <h2 class="card-title">Resumo Financeiro</h2>
+      <div class="resumo-grid" id="resumoGrid"></div>
+    </div>
+  </div>
+
+  <!-- ÔöÇÔöÇ ROTEIROS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div id="page-roteiros" class="page">
+    <div class="page-header">
+      <h1>Visualizador de Roteiros</h1>
+      <div class="header-actions">
+        <input type="text" list="roteirosList" id="selectRoteiroBase" class="select-roteiro" placeholder="Pesquisar Roteiro..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; outline: none; transition: border-color 0.2s;">
+        <datalist id="roteirosList"></datalist>
+        <button id="btnNovoRoteiro" class="btn-secondary">+ Novo</button>
+        <button id="btnEditarRoteiro" class="btn-secondary" style="display:none">Editar</button>
+        <button id="btnExcluirRoteiro" class="btn-secondary" style="display:none; color:#e06666; border-color:rgba(224,102,102,0.3)">Ô£û</button>
+        <button id="btnIrParaCotacao" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ô×ö Ir para Cota├º├úo</button>
+        <label style="font-size:12px; margin-right:10px; display:inline-flex; align-items:center; cursor:pointer; color:var(--text-sec)">
+          <input type="checkbox" id="chkIncluirDescricoesPdf" style="margin-right:6px; accent-color:var(--crimson)">
+          Incluir descri├º├Áes no PDF
+        </label>
+        <button id="btnGerarRoteiro" class="btn-primary" disabled="">Exportar/Visualizar</button>
+      </div>
+    </div>
+    
+    <div class="roteiro-container" id="roteiroEditContainer" style="display:none; margin-bottom: 16px;">
+      <div id="roteiroEditHeaderDisplay" style="text-align: center; margin-bottom: 24px; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <h2 id="roteiroEditTitle" style="margin: 0; color: var(--gold-dk); font-size: 22px; font-weight: 600;">Roteiro em Edi├º├úo</h2>
+        <p id="roteiroEditSubtitle" style="margin: 6px 0 0 0; color: var(--text-sec); font-size: 15px; font-weight: 500;">Cliente: - | Viagem: -</p>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom: 24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+        <div class="field" style="margin:0; width:100%; max-width:300px">
+          <label>Nome do Roteiro (Salvo na Base)</label>
+          <input type="text" id="editRoteiroNome" placeholder="Ex: Roteiro do Cliente">
+        </div>
+        <div style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center;">
+          <div style="flex:1"></div>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
+            <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
+            <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pr├®-visualizar (Salva)</button>
+            <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
+            <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card" style="margin-bottom: 24px">
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
+          <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);" type="button" onclick="toggleImportNotionRoteiro()">ÔÜí Importar do Notion</button></h2>
+          <div>
+            <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteRoteiro()">­ƒæñ Editar Cliente</button>
+          </div>
+        </div>
+        <div class="form-grid" id="rotNotionSelectWrapper" style="display:none; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+          <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
+          <select id="rotNotionClienteSelect" style="width: 100%; padding: 8px; margin-top: 5px;" onchange="vincularClienteRoteiroFromSelect()">
+            <option value="">Carregando clientes...</option>
+          </select>
+        </div>
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr">
+          <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" ></div>
+          <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" ></div>
+          <div class="field"><label>Crian├ºas</label><input type="number" id="rotClienteCriancas" value="0" min="0" ></div>
+        </div>
+        <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
+          <div class="field"><label>Data de In├¡cio</label><input type="date" id="rotClienteData" ></div>
+          <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" ></div>
+        </div>
+        <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
+          <div class="field"><label>Voo Chegada</label><input type="text" id="rotClienteVooChegada" placeholder="Ex: JL01 10/10 14:00" onchange="updRotCliente('vooChegada', this.value)"></div>
+          <div class="field"><label>Voo Partida</label><input type="text" id="rotClienteVooPartida" placeholder="Ex: JL02 20/10 18:00" onchange="updRotCliente('vooPartida', this.value)"></div>
+        </div>
+        
+        <div style="margin-top:12px; text-align: right;">
+          <button class="btn-primary" id="btnGerarDiasAutomaticamente" style="font-size:11px; padding: 6px 12px; border-radius:4px;" title="Cria automaticamente todos os dias baseado na Data de In├¡cio e Data Final.">Ô£¿ Gerar Dias Automaticamente</button>
+        </div>
+        <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
+        <div id="rotEstadiasList"></div>
+        <button class="btn-add" id="btnRotAddEstadia" style="margin-top:8px; border-style:dashed">+ Adicionar Estadia</button>
+        
+      </div>
+
+      <div id="editRoteiroDiasList"></div>
+      <button class="btn-add" id="btnAddDiaRoteiro" style="margin-top:12px">+ Adicionar Dia</button>
+    </div>
+    <div class="roteiro-container">
+      <!-- Layout Principal: Timeline + Atra├º├Áes R├ípidas -->
+      <div class="roteiro-timeline" id="roteiroTimeline">
+        <div class="empty-state">Selecione um roteiro base acima para visualizar os dias.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÔöÇÔöÇ MEUS OR├çAMENTOS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div id="page-meus" class="page">
+    <div class="page-header">
+      <h1>Minhas Cota├º├Áes</h1>
+      <button class="btn-primary" id="btnNovoOrc">+ Nova Cota├º├úo</button>
+    </div>
+    <div id="orcamentosLista"></div>
+  </div>
+
+
+  <!-- ÔöÇÔöÇ DASHBOARD ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <h1>Dashboard Financeiro e Estrat├®gico</h1>
+    </div>
+    <div class="dashboard-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px;">
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Vendas (Ganhas)</h3>
+        <p id="kpiVendasTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--crimson); margin-top: 5px; font-weight: 600;">┬Ñ 0</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Lucro L├¡quido Estimado</h3>
+        <p id="kpiLucroTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--gold-dk); margin-top: 5px; font-weight: 600;">┬Ñ 0</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Taxa de Convers├úo</h3>
+        <p id="kpiConversao" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0%</p>
+        <p id="kpiStats" style="font-size: 11px; color: var(--ink-lt); margin-top: 5px;">0 Fechadas / 0 Totais</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Neg├│cios Pendentes</h3>
+        <p id="kpiPendentes" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0</p>
+      </div>
+    </div>
+    
+    <div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+      <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Evolu├º├úo de Vendas (Fechadas)</h3>
+        <canvas id="chartEvolucaoVendas" height="250"></canvas>
+      </div>
+      <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Top Destinos (Em Alta)</h3>
+        <canvas id="chartTopDestinos" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÔöÇÔöÇ CLIENTES ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  <div id="page-clientes" class="page">
+    <div class="page-header">
+      <h1 class="page-title">Clientes (CRM Notion)</h1>
+      <div class="header-actions">
+        <button id="btnRefreshClientes" class="btn-secondary">Ôå╗ Atualizar do Notion</button>
+        <button id="btnNovoCliente" class="btn-primary">+ Novo Cliente</button>
+      </div>
+    </div>
+    
+    <div class="card" style="padding: 0;">
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; align-items: center; border-radius: 8px 8px 0 0;">
+        <input type="text" id="filtroClienteNome" placeholder="­ƒöì Buscar cliente por nome..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" onkeyup="renderClientesTabela()">
+        <select id="filtroClienteStatus" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; min-width: 180px;" onchange="renderClientesTabela()">
+          <option value="">Filtrar por Status (Todos)</option>
+          <option value="In├¡cio/call de d├║vidas">In├¡cio/call de d├║vidas</option>
+          <option value="Em Negocia├º├úo">Em Negocia├º├úo</option>
+          <option value="Negocia├º├úo Aprovada">Negocia├º├úo Aprovada</option>
+          <option value="Roteiro Rascunho">Roteiro Rascunho</option>
+          <option value="Roteiro vers├úo final">Roteiro vers├úo final</option>
+          <option value="Em Viagem">Em Viagem</option>
+          <option value="Atendimento P├│s">Atendimento P├│s</option>
+          <option value="Finalizados">Finalizados</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+      <table class="data-table" id="clientesTable" style="margin-top: 0;">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Status</th>
+            <th>Viagem</th>
+            <th>A├º├Áes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="4" style="text-align: center; padding: 20px;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Cliente -->
+  <div id="modalCliente" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 22px; padding-right: 20px;">
+    <h2 class="modal-title" id="modalClienteTitle" style="margin-bottom: 0;">Novo Cliente</h2>
+    <div style="display:flex; flex-wrap:wrap; gap: 8px;">
+      <button id="btnAcessoCotacao" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;" type="button">Abrir Cota├º├úo</button>
+      <button id="btnAcessoRoteiro" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;" type="button">Abrir Roteiro</button>
+    </div>
+  </div>
+      <button class="modal-close" onclick="closeClienteModal()">├ù</button>
+      
+      <div class="form-grid">
+        <div class="field"><label>Nome</label><input type="text" id="mcNome"></div>
+        <div class="field"><label>Status</label>
+          <select id="mcStatus">
+            <option value="In├¡cio/call de d├║vidas">In├¡cio/call de d├║vidas</option>
+            <option value="Em Negocia├º├úo">Em Negocia├º├úo</option>
+            <option value="Negocia├º├úo Aprovada">Negocia├º├úo Aprovada</option>
+            <option value="Roteiro Rascunho">Roteiro Rascunho</option>
+            <option value="Roteiro vers├úo final">Roteiro vers├úo final</option>
+            <option value="Em Viagem">Em Viagem</option>
+            <option value="Atendimento P├│s">Atendimento P├│s</option>
+            <option value="Finalizados">Finalizados</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="field"><label>Adultos</label><input type="number" id="mcAdultos" value="2" min="1"></div>
+        <div class="field"><label>Crian├ºas</label><input type="number" id="mcCriancas" value="0" min="0"></div>
+        <div class="field"><label>Voo Chegada (Info)</label><input type="text" id="mcVooChegada"></div>
+        <div class="field"><label>Voo Partida (Info)</label><input type="text" id="mcVooPartida"></div>
+        <div class="field"><label>Data In├¡cio</label><input type="date" id="mcDataInicio"></div>
+        <div class="field"><label>Data Fim</label><input type="date" id="mcDataFim"></div>
+      </div>
+      
+      <hr style="border:0; border-top:1px solid #e2e8f0; margin: 20px 0;">
+      <h3 style="font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Estadias do Cliente</h3>
+      <div id="estadiasList"></div>
+      <button class="btn-add" id="btnAddEstadia" type="button" style="margin-bottom: 20px;">+ Adicionar Estadia</button>
+      
+      
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeClienteModal()">Cancelar</button>
+        <button class="btn-primary" id="btnSalvarClienteModal">Salvar no Notion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÔöÇÔöÇ BASE DE DADOS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ -->
+  
   <!-- ── CONFIGURAÇÕES ──────────────────────────────────────────────────── -->
   <div id="page-config" class="page">
     <div class="page-header"><h1>Configurações</h1></div>
