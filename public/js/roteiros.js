@@ -345,7 +345,7 @@ function renderizarRoteiro(roteiroNome) {
         const pText = formatarPessoas(el); const p = pText ? (el.horario ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
         const h = el.horario ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horario}</span>` : '';
         return `
-          <div style="display:flex; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); border-radius:8px; border-left:4px solid #C4A35A">
+          <div style="display:flex; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); border-radius:8px; border-left:4px solid #C4A35A">
              <div style="flex:1">
                <div style="color:#C4A35A; font-weight:bold; font-size:13px; font-family:var(--ff-display); text-transform:uppercase; margin-bottom:2px">DESLOCAMENTO</div>
                <div style="font-size:12px; color:var(--ink-dark); margin-bottom:4px">${el.cidadeOrigem} -> ${el.cidadeDestino || 'Destino'}</div>
@@ -357,7 +357,7 @@ function renderizarRoteiro(roteiroNome) {
         const pText = formatarPessoas(el); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
         const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
         return `
-          <div style="display:flex; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); border-radius:8px; border-left:4px solid var(--crimson)">
+          <div style="display:flex; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); border-radius:8px; border-left:4px solid var(--crimson)">
              <div style="flex:1">
                <div style="color:var(--crimson); font-weight:bold; font-size:13px; font-family:var(--ff-display); text-transform:uppercase; margin-bottom:2px">Tickets & Experiências</div>
                <div style="font-size:12px; color:var(--text-sec); margin-bottom:4px">${el.nomeExp || 'Experiência a definir'} - ${el.adultos||0} Adultos ${el.compradoHeian !== false ? '<strong style="color:#C4A35A">[✔️ EMITIDO P/ HEIAN]</strong>' : ''}</div>
@@ -371,7 +371,7 @@ function renderizarRoteiro(roteiroNome) {
         
         let atracoesHTML = '';
         if (incluirDesc) {
-          atracoesHTML = '<div style="display:flex; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
+          atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
           el.atracoesDoDia.forEach((atrNome, idxAtr) => {
             const atr = atracaoMap.get(atrNome.toLowerCase());
             const desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
@@ -403,7 +403,7 @@ function renderizarRoteiro(roteiroNome) {
 
         return `
           <div style="margin-bottom:12px; position:relative">
-            <div style="display:flex; align-items:center; margin-bottom:10px">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; margin-bottom:10px">
               ${cidadeText}
               <strong style="color:var(--crimson); font-size:13px; font-weight:600">${tituloRota}</strong>
             </div>
@@ -606,7 +606,7 @@ function setupEditorEvents() {
             
             let atracoesHTML = '';
             if (incluirDesc && el.atracoesDoDia) {
-              atracoesHTML = '<div style="display:flex; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
+              atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
               el.atracoesDoDia.forEach((atrNome, idxAtr) => {
                 const atr = atracaoMap ? atracaoMap.get(atrNome.toLowerCase()) : null;
                 const desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
@@ -639,7 +639,7 @@ function setupEditorEvents() {
             
             return `
               <div style="margin-bottom:12px; position:relative">
-                <div style="display:flex; align-items:center; margin-bottom:10px">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; margin-bottom:10px">
                   ${cidadeText}
                   <strong style="color:var(--crimson); font-size:13px; font-weight:600">${tituloRota}</strong>
                 </div>
@@ -658,7 +658,7 @@ function setupEditorEvents() {
             
             return `
               <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
-                <div style="margin-bottom:4px; display:flex; align-items:center">
+                <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
                   <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
@@ -669,7 +669,7 @@ function setupEditorEvents() {
             const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
             return `
               <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
-                <div style="margin-bottom:4px; display:flex; align-items:center">
+                <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
                   <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
@@ -690,7 +690,7 @@ function setupEditorEvents() {
         return `
           <div class="dia-card">
             <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
-              <div style="margin-bottom:0px; display:flex; align-items:center; flex-wrap:wrap;">
+              <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center; flex-wrap:wrap;">
                 <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${dia.numeroDia || (index + 1)}${dataText}</span>
                 ${badgeGuiado}
                 ${badgeDeslocamento}
@@ -729,7 +729,7 @@ function setupEditorEvents() {
                   }).join('')}
                 </div>
               </div>` : ''}
-              ${(cliente.vooChegada || cliente.vooPartida) ? `<div style="display:flex; justify-content:space-between; background:var(--bg); border:1px solid #eaeaea; border-radius:8px; padding:20px; margin-bottom:30px;">
+              ${(cliente.vooChegada || cliente.vooPartida) ? `<div style="display:flex; flex-wrap:wrap; justify-content:space-between; background:var(--bg); border:1px solid #eaeaea; border-radius:8px; padding:20px; margin-bottom:30px;">
                 ${cliente.vooChegada ? `<div style="flex:1"><div style="font-size:10px; color:var(--gold-dk); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px">Voo de Chegada</div><div style="font-size:14px; color:var(--ink); font-weight:500">${cliente.vooChegada}</div></div>` : ''}
                 ${cliente.vooPartida ? `<div style="flex:1; padding-left:20px; border-left:1px solid #eaeaea"><div style="font-size:10px; color:var(--gold-dk); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px">Voo de Partida</div><div style="font-size:14px; color:var(--ink); font-weight:500">${cliente.vooPartida}</div></div>` : ''}
               </div>` : ''}
@@ -959,12 +959,12 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       const isLast = eIdx === dia.elementos.length - 1;
       const btnUp = isFirst ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Cima" onclick="moverElemento(${idx}, ${eIdx}, -1)">⬆️</button>`;
       const btnDown = isLast ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Baixo" onclick="moverElemento(${idx}, ${eIdx}, 1)">⬇️</button>`;
-      const controles = `<div style="display:flex;gap:4px">${btnUp}${btnDown}<button class="btn-secondary" style="padding:2px 6px; font-size:10px" onclick="delElemento(${idx}, ${eIdx})">✕ Remover</button></div>`;
+      const controles = `<div style="display:flex; flex-wrap:wrap;gap:4px">${btnUp}${btnDown}<button class="btn-secondary" style="padding:2px 6px; font-size:10px" onclick="delElemento(${idx}, ${eIdx})">✕ Remover</button></div>`;
 
       if (el.tipo === 'info') {
         elementosHtml += `
           <div style="border-left: 2px solid var(--gold-lt); padding-left: 12px; margin-bottom: 16px; background:#fcfcfc; padding-top:8px; padding-bottom:8px; border-radius:8px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">📅 Info de Encontro</strong>
               ${controles}
             </div>
@@ -985,7 +985,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       } else if (el.tipo === 'texto') {
         elementosHtml += `
           <div style="border-left: 2px solid var(--ink-lt); padding-left: 12px; margin-bottom: 16px; padding-top:8px; padding-bottom:8px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">📝 Texto Livre / Comunicação</strong>
               ${controles}
             </div>
@@ -996,7 +996,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       } else if (el.tipo === 'transporte') {
         elementosHtml += `
           <div style="border-left: 4px solid #C4A35A; padding-left: 12px; margin-bottom: 16px; background:rgba(196,163,90,0.08); padding-top:8px; padding-bottom:8px; border-radius:8px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <strong style="color:#9c8248; font-size:11px; text-transform:uppercase">Deslocamento</strong>
               ${controles}
             </div>
@@ -1010,7 +1010,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <input type="text" list="datalistCidades" autocomplete="off" placeholder="Para onde vai?" value="${el.cidadeDestino || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'cidadeDestino', this.value); atualizarOpcoesTransporte(${idx}, ${eIdx})">
               </div>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:8px">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px">
               <div class="field" style="flex:2; margin:0">
                 <label style="font-size:10px;color:var(--ink-mid)">Opção de Transporte</label>
                 <select id="selTransp_${idx}_${eIdx}" onchange="selecionarTransporte(${idx}, ${eIdx}, this.value)" style="width:100%; font-size:12px; padding:6px">
@@ -1029,8 +1029,8 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <label style="font-size:10px;color:var(--ink-mid)">Crianças</label>
                 <input type="number" value="${el.criancas !== undefined ? el.criancas : (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0}" onchange="updElementoEdit(${idx}, ${eIdx}, 'criancas', parseInt(this.value)||0)" style="width:50px">
               </div>
-              <div class="field" style="margin:0; display:flex; align-items:flex-end">
-                <label style="font-size:11px; display:flex; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
+              <div class="field" style="margin:0; display:flex; flex-wrap:wrap; align-items:flex-end">
+                <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
                   <input type="checkbox" ${el.compradoHeian !== false ? 'checked' : ''} onchange="updElementoEdit(${idx}, ${eIdx}, 'compradoHeian', this.checked)" style="margin-right:6px"> EMITIDO P/ HEIAN
                 </label>
               </div>
@@ -1043,16 +1043,16 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                           `<span style="cursor:pointer; color:var(--crimson); font-size:12px" onclick="delElemento(${idx}, ${eIdx})">Excluir</span>`;
         elementosHtml += `
           <div style="border-left: 4px solid var(--crimson); padding-left: 12px; margin-bottom: 16px; background:rgba(107,31,42,0.08); padding-top:8px; padding-bottom:8px; border-radius:8px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase">Tickets & Experiências</strong>
               <div>${controles}</div>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:8px">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px">
               <div class="field" style="flex:1; margin:0">
                 <input type="text" placeholder="Buscar Experiência..." value="${el.filtro || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'filtro', this.value); atualizarOpcoesExperiencia(${idx}, ${eIdx})">
               </div>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:8px">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px">
               <div class="field" style="flex:2; margin:0">
                 <label style="font-size:10px;color:var(--ink-mid)">Item Encontrado</label>
                 <select id="selExp_${idx}_${eIdx}" onchange="selecionarExperiencia(${idx}, ${eIdx}, this.value)" style="width:100%; font-size:12px; padding:6px; border: 1px solid var(--border); border-radius: 4px;">
@@ -1071,8 +1071,8 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <label style="font-size:10px;color:var(--ink-mid)">Crianças</label>
                 <input type="number" value="${el.criancas !== undefined ? el.criancas : (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0}" onchange="updElementoEdit(${idx}, ${eIdx}, 'criancas', parseInt(this.value)||0)" style="width:50px">
               </div>
-              <div class="field" style="margin:0; display:flex; align-items:flex-end">
-                <label style="font-size:11px; display:flex; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
+              <div class="field" style="margin:0; display:flex; flex-wrap:wrap; align-items:flex-end">
+                <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
                   <input type="checkbox" ${el.compradoHeian !== false ? 'checked' : ''} onchange="updElementoEdit(${idx}, ${eIdx}, 'compradoHeian', this.checked)" style="margin-right:6px"> EMITIDO P/ HEIAN
                 </label>
               </div>
@@ -1092,7 +1092,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         ).join('');
         elementosHtml += `
           <div style="border-left: 2px solid var(--gold); padding-left: 12px; margin-bottom: 16px; padding-top:8px; padding-bottom:8px">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <strong style="color:var(--crimson); font-size:12px">🚩 Sequência de Atrações</strong>
               ${controles}
             </div>
@@ -1125,19 +1125,19 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
     }
 
     card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin:-20px -20px 16px -20px; border-radius:8px 8px 0 0; padding:12px 20px; background:var(--crimson); color:white">
-        <div style="display:flex; align-items:center;">
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin:-20px -20px 16px -20px; border-radius:8px 8px 0 0; padding:12px 20px; background:var(--crimson); color:white">
+        <div style="display:flex; flex-wrap:wrap; align-items:center;">
           <span style="margin:0; font-family:var(--ff-display); color:white; font-size:18px; margin-right: 6px;">Dia</span>
           <input type="number" min="1" max="99" value="${dia.numeroDia || (idx + 1)}" onchange="updDiaEdit(${idx}, 'numeroDia', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 4px; font-size: 16px; font-family:var(--ff-display); font-weight: bold; width: 44px; margin-right: 12px; text-align:center;" />
           <input type="date" value="${dataValue}" onchange="updDiaEdit(${idx}, 'data', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 6px; font-size: 13px; font-weight: bold; width: 130px; font-family: inherit; color-scheme: dark;" />
           <span style="font-size: 14px; font-weight: 600; margin-left: 6px;">${dataText}</span>
         </div>
-        <div style="display:flex; align-items:center;">
-          <label style="font-size:12px; margin-right:12px; cursor:pointer; display:flex; align-items:center; padding:4px 12px; border-radius:16px; font-weight:600; background:${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.2)'}; color:${dia.tourGuiado ? 'var(--crimson)' : '#fff'}; border: 1px solid ${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.4)'}">
+        <div style="display:flex; flex-wrap:wrap; align-items:center;">
+          <label style="font-size:12px; margin-right:12px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; padding:4px 12px; border-radius:16px; font-weight:600; background:${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.2)'}; color:${dia.tourGuiado ? 'var(--crimson)' : '#fff'}; border: 1px solid ${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.4)'}">
             <input type="checkbox" ${dia.tourGuiado ? 'checked' : ''} onchange="updDiaEdit(${idx}, 'tourGuiado', this.checked)" style="margin-right:6px; accent-color:var(--crimson)">
             ${dia.tourGuiado ? '⭐ TOUR GUIADO' : 'Tour Guiado'}
           </label>
-          <div style="display:flex; gap: 4px; margin-right: 8px;">
+          <div style="display:flex; flex-wrap:wrap; gap: 4px; margin-right: 8px;">
             <button class="btn-secondary" onclick="moverDia(${idx}, 'up')" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para cima">↑</button>
             <button class="btn-secondary" onclick="moverDia(${idx}, 'down')" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para baixo">↓</button>
           </div>
@@ -1147,7 +1147,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       
       ${elementosHtml}
       
-      <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; flex-wrap:wrap">
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'sequencia')">+ Sequência</button>
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'texto')">+ Texto Livre</button>
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'info')">+ Info Encontro</button>
