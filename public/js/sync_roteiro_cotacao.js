@@ -120,7 +120,7 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     pontos: locais.join('\n'),
                     duracao: duracao,
                     valor: state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0,
-                    desconto: 0, descontoAtivo: false, observacao: ''
+                    desconto: 5, descontoAtivo: false, observacao: ''
                 });
             }
         }

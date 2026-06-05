@@ -174,7 +174,7 @@ function abrirOrcamento(id) {
   document.getElementById('clienteCriancas').value = notionCli ? notionCli.criancas : (orc.cliente?.criancas || '0');
   document.getElementById('clienteDataOrcamento').value = orc.cliente?.dataOrcamento || today();
 
-  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 0, '6h': 0, '8h': 0, '10h': 0, '12h': 0 };
+  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
   document.getElementById('baseTour4h').value = state.orcamento.valoresTour['4h'] || '';
   document.getElementById('baseTour6h').value = state.orcamento.valoresTour['6h'] || '';
   document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'] || '';
@@ -243,12 +243,12 @@ function novoOrcamento() {
   document.getElementById('clienteCriancas').value = '0';
   document.getElementById('clienteDataOrcamento').value = today();
   
-  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 0, '6h': 0, '8h': 0, '10h': 0, '12h': 0 };
-  document.getElementById('baseTour4h').value = '';
-  document.getElementById('baseTour6h').value = '';
-  document.getElementById('baseTour8h').value = '';
-  document.getElementById('baseTour10h').value = '';
-  document.getElementById('baseTour12h').value = '';
+  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
+  document.getElementById('baseTour4h').value = state.orcamento.valoresTour['4h'];
+  document.getElementById('baseTour6h').value = state.orcamento.valoresTour['6h'];
+  document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'];
+  document.getElementById('baseTour10h').value = state.orcamento.valoresTour['10h'];
+  document.getElementById('baseTour12h').value = state.orcamento.valoresTour['12h'];
   
   document.getElementById('orcTitulo').textContent = 'Nova Cotação';
   document.getElementById('consultoriaToggle').checked = false;
@@ -548,8 +548,21 @@ function addEstadia() {
 }
 
 function updBaseTour(horas, val) {
-  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 0, '6h': 0, '8h': 0, '10h': 0, '12h': 0 };
-  state.orcamento.valoresTour[horas] = parseFloat(val) || 0;
+  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
+  const numVal = parseFloat(val) || 0;
+  state.orcamento.valoresTour[horas] = numVal;
+  
+  let changed = false;
+  state.orcamento.tours.forEach(t => {
+    if (t.duracao === horas) {
+      t.valor = numVal;
+      changed = true;
+    }
+  });
+  if (changed) {
+    renderToursForm();
+    updateResumo();
+  }
   autoSave();
 }
 
@@ -599,7 +612,8 @@ function calcTotalTour(t) {
   return base;
 }
 function addTour() {
-  state.orcamento.tours.push({ id: Date.now(), data: '', descricao: '', pontos: '', duracao: '', valor: 0, descontoAtivo: false, desconto: 0, observacao: '' });
+  const val6h = (state.orcamento.valoresTour && state.orcamento.valoresTour['6h']) || 65000;
+  state.orcamento.tours.push({ id: Date.now(), data: '', descricao: '', pontos: '', duracao: '6h', valor: val6h, descontoAtivo: false, desconto: 5, observacao: '' });
   renderToursForm(); updateResumo();
 }
 function renderToursForm() {
