@@ -338,6 +338,7 @@ function navToPage(pg) {
   const pageEl = document.getElementById('page-' + pg);
   if (pageEl) pageEl.classList.add('active');
   if (pg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
+  if (pg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
 }
 
 function setupMenuCambio() {

@@ -117,18 +117,18 @@ async function carregarBases() {
 }
 
 function preencherSelectRoteiros(selectValue = '') {
-  const select = document.getElementById('selectRoteiroBase');
-  if (!select) return;
+  const input = document.getElementById('selectRoteiroBase');
+  const dataList = document.getElementById('roteirosList');
+  if (!input || !dataList) return;
   
-  select.innerHTML = '<option value="">Selecione um Roteiro Base...</option>';
+  dataList.innerHTML = '';
   Object.keys(dbRotas).forEach(roteiroName => {
     const opt = document.createElement('option');
     opt.value = roteiroName;
-    opt.textContent = roteiroName;
-    select.appendChild(opt);
+    dataList.appendChild(opt);
   });
   if (selectValue) {
-    select.value = selectValue;
+    input.value = selectValue;
   }
 }
 

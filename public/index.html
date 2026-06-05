@@ -275,9 +275,8 @@ window.addEventListener('unhandledrejection', function(e) {
     <div class="page-header">
       <h1>Visualizador de Roteiros</h1>
       <div class="header-actions">
-        <select id="selectRoteiroBase" class="select-roteiro">
-          <option value="">Selecione um Roteiro Base...</option>
-        </select>
+        <input type="text" list="roteirosList" id="selectRoteiroBase" class="select-roteiro" placeholder="Pesquisar Roteiro..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; outline: none; transition: border-color 0.2s;">
+        <datalist id="roteirosList"></datalist>
         <button id="btnNovoRoteiro" class="btn-secondary">+ Novo</button>
         <button id="btnEditarRoteiro" class="btn-secondary" style="display:none">Editar</button>
         <button id="btnExcluirRoteiro" class="btn-secondary" style="display:none; color:#e06666; border-color:rgba(224,102,102,0.3)">✖</button>
