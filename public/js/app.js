@@ -161,7 +161,7 @@ function autoSave() {
   }, 800);
 }
 
-function abrirOrcamento(id) {
+function abrirOrcamento(id, directEdit = false) {
   localStorage.setItem('heian_last_orcamento_id', id);
   const orc = state.orcamentosDB.find(o => o.id === id);
   if (!orc) return;
@@ -239,7 +239,11 @@ function abrirOrcamento(id) {
   preencherTextosForm(orc.textos || {});
   renderEstadiasReadOnlyForm(); renderToursForm(); renderTransportesForm(); renderExperienciasForm(); renderItensAdicionaisForm();
   updateResumo();
-  navToPage('orcamento');
+  if (directEdit) {
+    navToPage('orcamento');
+  } else {
+    renderPreview();
+  }
   
   if (state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(state.orcamento.notionClienteId);
@@ -464,6 +468,7 @@ function setupNav() {
   document.getElementById('btnNovoOrc').addEventListener('click', () => {
     history.pushState({ page: 'orcamento' }, '', '#orcamento');
     novoOrcamento();
+    navToPage('orcamento');
   });
 
   window.addEventListener('popstate', (e) => {
@@ -2732,4 +2737,10 @@ window.handleAcaoClienteCotacao = async function() {
       btn.disabled = false;
     }
   }
+};
+
+window.editarCotacaoAtual = function() {
+  document.getElementById('previewOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  navToPage('orcamento');
 };
