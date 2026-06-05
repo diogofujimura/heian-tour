@@ -1772,54 +1772,89 @@ window.updateRoteiroHeader = function() {
 };
 
 
-window.abrirModalVincularClienteRoteiro = async function() {
-    const btn = document.getElementById('btnVincularClienteRoteiro');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Carregando...';
-    btn.disabled = true;
+window.toggleImportNotionRoteiro = async function() {
+    const btn = document.getElementById('btnImportNotionRoteiro');
+    const selectWrapper = document.getElementById('rotNotionSelectWrapper');
+    const select = document.getElementById('rotNotionClienteSelect');
 
-    try {
-        if (typeof window.notionClients === 'undefined' || !window.notionClients || window.notionClients.length === 0) {
-            const res = await fetch('/api/notion/clientes');
-            if (res.ok) {
-                window.notionClients = await res.json();
+    if (selectWrapper.style.display === 'none') {
+        selectWrapper.style.display = 'block';
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Carregando...';
+        
+        try {
+            if (typeof window.notionClients === 'undefined' || !window.notionClients || window.notionClients.length === 0) {
+                const res = await fetch('/api/notion/clientes');
+                if (res.ok) {
+                    window.notionClients = await res.json();
+                }
             }
-        }
-        
-        if (typeof window.notionClients === 'undefined' || !window.notionClients || window.notionClients.length === 0) {
-            alert('Não foi possível carregar os clientes do Notion. Verifique se existem clientes cadastrados.');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return;
-        }
+            
+            if (typeof window.notionClients === 'undefined' || !window.notionClients || window.notionClients.length === 0) {
+                alert('Não foi possível carregar os clientes do Notion.');
+                selectWrapper.style.display = 'none';
+                return;
+            }
 
-        const sel = document.getElementById('selClienteParaVincular');
-        if (!sel) return;
-        
-        sel.innerHTML = '<option value="">Selecione um cliente...</option>';
-        window.notionClients.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = c.nome + ' (' + (c.adultos||0) + ' Ad / ' + (c.criancas||0) + ' Cr) - ' + (c.dataInicio || 'Sem Data');
-            sel.appendChild(opt);
-        });
-        
-        document.getElementById('modalVincularClienteRoteiro').classList.remove('hidden');
-    } catch(e) {
-        console.error(e);
-        alert('Erro ao carregar clientes do Notion.');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+            select.innerHTML = '<option value="">Selecione um cliente...</option>';
+            window.notionClients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nome + ' (' + (c.adultos||0) + ' Ad / ' + (c.criancas||0) + ' Cr) - ' + (c.dataInicio || 'Sem Data');
+                select.appendChild(opt);
+            });
+        } catch(e) {
+            console.error(e);
+            alert('Erro ao carregar clientes do Notion.');
+            selectWrapper.style.display = 'none';
+        } finally {
+            btn.innerHTML = originalText;
+        }
+    } else {
+        selectWrapper.style.display = 'none';
     }
 }
 
-window.confirmarVincularClienteRoteiro = function() {
-    const notionId = document.getElementById('selClienteParaVincular').value;
-    if (!notionId) {
-        alert('Selecione um cliente primeiro.');
-        return;
-    }
+window.vincularClienteRoteiroFromSelect = function() {
+    const select = document.getElementById('rotNotionClienteSelect');
+    const notionId = select.value;
+    if (!notionId) return;
+    
+    const c = notionClients.find(x => x.id === notionId);
+    if (!c) return;
+    
+    if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {};
+    roteiroEmEdicao.cliente.notionClienteId = c.id;
+    roteiroEmEdicao.cliente.nome = c.nome;
+    roteiroEmEdicao.cliente.adultos = c.adultos;
+    roteiroEmEdicao.cliente.criancas = c.criancas;
+    roteiroEmEdicao.cliente.dataInicio = c.dataInicio;
+    roteiroEmEdicao.cliente.dataFim = c.dataFim;
+    roteiroEmEdicao.cliente.dataOrcamento = c.dataInicio;
+    roteiroEmEdicao.cliente.vooChegada = c.vooChegada || '';
+    roteiroEmEdicao.cliente.vooPartida = c.vooPartida || '';
+    
+    document.getElementById('rotClienteNome').value = c.nome || '';
+    document.getElementById('rotClienteAdultos').value = c.adultos || '';
+    document.getElementById('rotClienteCriancas').value = c.criancas || '';
+    document.getElementById('rotClienteData').value = c.dataInicio || '';
+    if(document.getElementById('rotClienteDataFim')) document.getElementById('rotClienteDataFim').value = c.dataFim || '';
+    if(document.getElementById('rotClienteVooChegada')) document.getElementById('rotClienteVooChegada').value = c.vooChegada || '';
+    if(document.getElementById('rotClienteVooPartida')) document.getElementById('rotClienteVooPartida').value = c.vooPartida || '';
+    
+    // Trava os campos imediatamente após o vínculo
+    ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+    });
+    
+    document.getElementById('rotNotionSelectWrapper').style.display = 'none';
+    select.value = '';
+    
+    if(typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
+    if(typeof updateRoteiroHeader === 'function') updateRoteiroHeader();
+    alert('Dados do cliente ' + c.nome + ' importados do Notion com sucesso!');
+}
     
     const c = notionClients.find(x => x.id === notionId);
     if (!c) return;

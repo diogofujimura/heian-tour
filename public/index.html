@@ -314,11 +314,16 @@ window.addEventListener('unhandledrejection', function(e) {
       
       <div class="card" style="margin-bottom: 24px">
         <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
-          <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente (Cabeça)</h2>
+          <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);" type="button" onclick="toggleImportNotionRoteiro()">⚡ Importar do Notion</button></h2>
           <div>
-          <button id="btnVincularClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px; margin-right:8px;" type="button" onclick="abrirModalVincularClienteRoteiro()">🔗 Vincular Cliente</button>
-          <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="if(typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId) { editarClienteNotion(roteiroEmEdicao.cliente.notionClienteId); } else { alert('Este roteiro não possui um cliente do Notion vinculado.'); }">👤 Editar Cliente</button>
+            <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="if(typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId) { editarClienteNotion(roteiroEmEdicao.cliente.notionClienteId); } else { alert('Este roteiro não possui um cliente do Notion vinculado.'); }">👤 Editar Cliente</button>
           </div>
+        </div>
+        <div class="form-grid" id="rotNotionSelectWrapper" style="display:none; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+          <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
+          <select id="rotNotionClienteSelect" style="width: 100%; padding: 8px; margin-top: 5px;" onchange="vincularClienteRoteiroFromSelect()">
+            <option value="">Carregando clientes...</option>
+          </select>
         </div>
         <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr">
           <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" ></div>
@@ -623,23 +628,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <script src="js/sync_roteiro_cotacao.js"></script>
 <script src="js/sync_clientes.js"></script>
 
-<!-- Modal Vincular Cliente ao Roteiro -->
-<div id="modalVincularClienteRoteiro" class="modal-overlay hidden">
-  <div class="modal" style="max-width:400px">
-    <h3>Vincular Cliente ao Roteiro</h3>
-    <div class="form-grid">
-      <div class="field">
-        <label>Selecione o Cliente do Notion</label>
-        <select id="selClienteParaVincular" style="width:100%">
-        </select>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="document.getElementById('modalVincularClienteRoteiro').classList.add('hidden')">Cancelar</button>
-      <button class="btn-primary" onclick="confirmarVincularClienteRoteiro()">Vincular</button>
-    </div>
-  </div>
-</div>
+
 
 <script src="js/dashboard.js"></script>
 </body></html>
