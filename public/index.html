@@ -140,7 +140,7 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-top:12px; margin-bottom:8px;">
         <h3 style="margin:0; font-size:16px; color:#5c1d24; font-family: 'Playfair Display', serif;">Dados do Cliente (Cabeça)</h3>
-        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="if(state.orcamento && state.orcamento.notionClienteId) { editarClienteNotion(state.orcamento.notionClienteId); } else { alert('Esta cotação não possui um cliente do Notion vinculado.'); }">👤 Editar Cliente</button>
+        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteCotacao()">👤 Editar Cliente</button>
       </div>
       <div class="form-grid" style="margin-top:0">
         <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" ></div>
@@ -316,7 +316,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
           <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);" type="button" onclick="toggleImportNotionRoteiro()">⚡ Importar do Notion</button></h2>
           <div>
-            <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="if(typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId) { editarClienteNotion(roteiroEmEdicao.cliente.notionClienteId); } else { alert('Este roteiro não possui um cliente do Notion vinculado.'); }">👤 Editar Cliente</button>
+            <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteRoteiro()">👤 Editar Cliente</button>
           </div>
         </div>
         <div class="form-grid" id="rotNotionSelectWrapper" style="display:none; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">

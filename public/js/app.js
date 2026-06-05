@@ -175,6 +175,8 @@ function abrirOrcamento(id) {
   
   const temCliente = !!orc.notionClienteId;
   const lockedStyle = temCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
+  const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
+  if(btnEditarCot) btnEditarCot.innerHTML = temCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
   ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
     if(el) { el.readOnly = temCliente; el.style = lockedStyle; }
@@ -2107,6 +2109,7 @@ function setupNotion() {
       try { updateStateFromUI(); } catch(e) { console.error('updateStateFromUI failed:', e) }
       selectWrapper.style.display = 'none';
       select.value = '';
+      const bEdit = document.getElementById('btnEditarClienteCotacao'); if(bEdit) bEdit.innerHTML = '👤 Editar Cliente';
       alert('Dados do cliente ' + c.nome + ' importados do Notion com sucesso!');
     }
   });
@@ -2658,3 +2661,72 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+
+window.handleAcaoClienteCotacao = async function() {
+  if (state.orcamento && state.orcamento.notionClienteId) {
+    editarClienteNotion(state.orcamento.notionClienteId);
+  } else {
+    // Modo "Salvar Cliente no Notion"
+    const nome = document.getElementById('clienteNome').value.trim();
+    if (!nome) return alert('Preencha pelo menos o Nome do Cliente para salvar no Notion.');
+    
+    const btn = document.getElementById('btnEditarClienteCotacao');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '⏳ Salvando...';
+    btn.disabled = true;
+
+    try {
+      const payload = {
+        nome: nome,
+        adultos: document.getElementById('clienteAdultos').value,
+        criancas: document.getElementById('clienteCriancas').value,
+        dataInicio: document.getElementById('clienteDataOrcamento').value || '',
+        dataFim: '',
+        status: 'Lead',
+        vooChegada: '',
+        vooPartida: ''
+      };
+
+      const res = await fetch('/api/notion/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Falha ao salvar no Notion');
+      
+      const newClient = await res.json();
+      state.orcamento.notionClienteId = newClient.id;
+      
+      // Salva localmente as estadias vazias se houver
+      await fetch('/api/clientes/local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: newClient.id, estadias: state.orcamento.estadias || [] })
+      });
+
+      // Recarrega NotionClients
+      window.notionClients = await fetch('/api/notion/clientes').then(r=>r.json());
+
+      btn.innerHTML = '👤 Editar Cliente';
+      btn.disabled = false;
+      
+      // Trava os campos e salva
+      ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+      });
+      
+      document.getElementById('notionSelectWrapper').style.display = 'none';
+      salvarOrcamentoAtual();
+      
+      alert('Cliente criado no Notion e vinculado com sucesso!');
+
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao salvar cliente no Notion.');
+      btn.innerHTML = oldHtml;
+      btn.disabled = false;
+    }
+  }
+};

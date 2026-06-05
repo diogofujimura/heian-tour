@@ -1853,5 +1853,79 @@ window.vincularClienteRoteiroFromSelect = function() {
     
     if(typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
     if(typeof updateRoteiroHeader === 'function') updateRoteiroHeader();
+    const bEdit = document.getElementById('btnEditarClienteRoteiro'); if(bEdit) bEdit.innerHTML = '👤 Editar Cliente';
     alert('Dados do cliente ' + c.nome + ' importados do Notion com sucesso!');
 }
+
+
+window.handleAcaoClienteRoteiro = async function() {
+  if (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId) {
+    editarClienteNotion(roteiroEmEdicao.cliente.notionClienteId);
+  } else {
+    // Modo "Salvar Cliente no Notion"
+    const nome = document.getElementById('rotClienteNome').value.trim();
+    if (!nome) return alert('Preencha pelo menos o Nome do Cliente para salvar no Notion.');
+    
+    const btn = document.getElementById('btnEditarClienteRoteiro');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '⏳ Salvando...';
+    btn.disabled = true;
+
+    try {
+      if(!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {};
+      
+      const payload = {
+        nome: nome,
+        adultos: document.getElementById('rotClienteAdultos').value,
+        criancas: document.getElementById('rotClienteCriancas').value,
+        dataInicio: document.getElementById('rotClienteData') ? document.getElementById('rotClienteData').value : '',
+        dataFim: document.getElementById('rotClienteDataFim') ? document.getElementById('rotClienteDataFim').value : '',
+        status: 'Lead',
+        vooChegada: document.getElementById('rotClienteVooChegada') ? document.getElementById('rotClienteVooChegada').value : '',
+        vooPartida: document.getElementById('rotClienteVooPartida') ? document.getElementById('rotClienteVooPartida').value : ''
+      };
+
+      const res = await fetch('/api/notion/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Falha ao salvar no Notion');
+      
+      const newClient = await res.json();
+      roteiroEmEdicao.cliente.notionClienteId = newClient.id;
+      
+      // Salva localmente as estadias
+      const estadiasArr = roteiroEmEdicao.estadias ? roteiroEmEdicao.estadias : [];
+      await fetch('/api/clientes/local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: newClient.id, estadias: estadiasArr })
+      });
+
+      // Recarrega NotionClients
+      window.notionClients = await fetch('/api/notion/clientes').then(r=>r.json());
+
+      btn.innerHTML = '👤 Editar Cliente';
+      btn.disabled = false;
+      
+      // Trava os campos
+      ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+      });
+      
+      document.getElementById('rotNotionSelectWrapper').style.display = 'none';
+      if(typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
+      if(typeof updateRoteiroHeader === 'function') updateRoteiroHeader();
+      
+      alert('Cliente criado no Notion e vinculado com sucesso!');
+
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao salvar cliente no Notion.');
+      btn.innerHTML = oldHtml;
+      btn.disabled = false;
+    }
+  }
+};
