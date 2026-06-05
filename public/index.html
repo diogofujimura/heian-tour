@@ -44,6 +44,7 @@ window.addEventListener('unhandledrejection', function(e) {
   errBox.innerHTML += '<p>Unhandled Promise: ' + e.reason + '</p>';
 });
 </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -51,7 +52,8 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="sidebar-logo"><img src="assets/logo.png" alt="Heian Tour"></div>
   <nav class="sidebar-nav">
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gestão & Vendas</div>
-    <a class="nav-item active" data-page="clientes">👥 &nbsp;Clientes</a>
+    <a class="nav-item active" data-page="dashboard">📊 &nbsp;Dashboard</a>
+    <a class="nav-item" data-page="clientes">👥 &nbsp;Clientes</a>
     <a class="nav-item" data-page="roteiros">🗺️ &nbsp;Roteiros de Viagem</a>
     <a class="nav-item" data-page="meus">💰 &nbsp;Cotações</a>
     
@@ -126,7 +128,15 @@ window.addEventListener('unhandledrejection', function(e) {
       <option value="">Carregando clientes...</option>
     </select>
   </div>
-        <div class="field" style="grid-column: span 4"><label>Nome da Cotação</label><input type="text" id="orcNome" placeholder="Ex: Gisela — Set/2026"></div>
+        <div class="field" style="grid-column: span 3"><label>Nome da Cotação</label><input type="text" id="orcNome" placeholder="Ex: Gisela — Set/2026"></div>
+        <div class="field" style="grid-column: span 1">
+          <label>Status da Venda</label>
+          <select id="orcStatus" style="width: 100%; padding: 8px; border: 1px solid var(--border-dk); border-radius: 4px; outline: none; background: #fff;">
+            <option value="Pendente">🟡 Pendente</option>
+            <option value="Fechado">🟢 Fechado</option>
+            <option value="Perdido">🔴 Perdido</option>
+          </select>
+        </div>
       </div>
       <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-top:12px; margin-bottom:8px;">
         <h3 style="margin:0; font-size:16px; color:#5c1d24; font-family: 'Playfair Display', serif;">Dados do Cliente (Cabeça)</h3>
@@ -354,7 +364,44 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
 
-  <!-- ── CLIENTES NOTION ────────────────────────────────────────────────── -->
+  <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <h1>Dashboard Financeiro e Estratégico</h1>
+    </div>
+    <div class="dashboard-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px;">
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Vendas (Ganhas)</h3>
+        <p id="kpiVendasTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--crimson); margin-top: 5px; font-weight: 600;">¥ 0</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Lucro Líquido Estimado</h3>
+        <p id="kpiLucroTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--gold-dk); margin-top: 5px; font-weight: 600;">¥ 0</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Taxa de Conversão</h3>
+        <p id="kpiConversao" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0%</p>
+        <p id="kpiStats" style="font-size: 11px; color: var(--ink-lt); margin-top: 5px;">0 Fechadas / 0 Totais</p>
+      </div>
+      <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Negócios Pendentes</h3>
+        <p id="kpiPendentes" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0</p>
+      </div>
+    </div>
+    
+    <div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+      <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Evolução de Vendas (Fechadas)</h3>
+        <canvas id="chartEvolucaoVendas" height="250"></canvas>
+      </div>
+      <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+        <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Top Destinos (Em Alta)</h3>
+        <canvas id="chartTopDestinos" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CLIENTES ──────────────────────────────────────────────────────── -->
   <div id="page-clientes" class="page">
     <div class="page-header">
       <h1 class="page-title">Clientes (CRM Notion)</h1>
@@ -594,4 +641,5 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+<script src="js/dashboard.js"></script>
 </body></html>

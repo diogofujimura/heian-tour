@@ -102,6 +102,7 @@ function salvarOrcamentoAtual() {
     nome,
     cliente: { nome: document.getElementById('clienteNome').value, adultos: document.getElementById('clienteAdultos').value, criancas: document.getElementById('clienteCriancas').value, dataOrcamento: document.getElementById('clienteDataOrcamento').value },
     consultoria: { ativa: document.getElementById('consultoriaToggle').checked, valor: parseFloat(document.getElementById('consultoriaValor').value) || 0, descricao: document.getElementById('consultoriaDesc').value },
+    statusVenda: document.getElementById('orcStatus') ? document.getElementById('orcStatus').value : 'Pendente',
     atualizadoEm: nowISO(),
     criadoEm: state.orcamento.criadoEm || nowISO()
   };
@@ -143,6 +144,7 @@ function autoSave() {
         valor: parseFloat(document.getElementById('consultoriaValor').value) || 0,
         descricao: document.getElementById('consultoriaDesc').value
       },
+      statusVenda: document.getElementById('orcStatus') ? document.getElementById('orcStatus').value : 'Pendente',
       atualizadoEm: nowISO(),
       criadoEm: state.orcamento.criadoEm || nowISO(),
       roteiroVinculado: document.getElementById('orcRoteiroVinculado')?.value || '',
@@ -188,6 +190,9 @@ function abrirOrcamento(id) {
     sel.value = linked;
   }
 
+  if (document.getElementById('orcStatus')) {
+    document.getElementById('orcStatus').value = orc.statusVenda || 'Pendente';
+  }
   document.getElementById('orcTitulo').textContent = orc.nome || 'Cotação';
   const consAtiva = orc.consultoria?.ativa || false;
   document.getElementById('consultoriaToggle').checked = consAtiva;
@@ -302,6 +307,7 @@ function navToPage(pg) {
   if (navItem) navItem.classList.add('active');
   const pageEl = document.getElementById('page-' + pg);
   if (pageEl) pageEl.classList.add('active');
+  if (pg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
 }
 
 function setupMenuCambio() {
@@ -455,7 +461,8 @@ function setupNav() {
       }
     } else navToPage(hash);
   } else {
-    history.replaceState({ page: 'orcamento' }, '', '#orcamento');
+    history.replaceState({ page: 'dashboard' }, '', '#dashboard');
+    navToPage('dashboard');
   }
 }
 

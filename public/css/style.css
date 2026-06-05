@@ -660,3 +660,9 @@ html, body { height: 100%; font-family: var(--ff-body); background: var(--cream)
   }
 }
 
+
+@media screen and (max-width: 768px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
