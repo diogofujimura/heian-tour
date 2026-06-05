@@ -814,6 +814,15 @@ function setupEditorEvents() {
     if (!novoNome) return alert('Dê um nome ao roteiro.');
     if (!roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) return alert('Adicione pelo menos um dia ao roteiro.');
 
+    if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {};
+    roteiroEmEdicao.cliente.nome = document.getElementById('rotClienteNome').value;
+    roteiroEmEdicao.cliente.adultos = document.getElementById('rotClienteAdultos').value;
+    roteiroEmEdicao.cliente.criancas = document.getElementById('rotClienteCriancas').value;
+    roteiroEmEdicao.cliente.dataInicio = document.getElementById('rotClienteData') ? document.getElementById('rotClienteData').value : '';
+    roteiroEmEdicao.cliente.dataFim = document.getElementById('rotClienteDataFim') ? document.getElementById('rotClienteDataFim').value : '';
+    roteiroEmEdicao.cliente.vooChegada = document.getElementById('rotClienteVooChegada') ? document.getElementById('rotClienteVooChegada').value : '';
+    roteiroEmEdicao.cliente.vooPartida = document.getElementById('rotClienteVooPartida') ? document.getElementById('rotClienteVooPartida').value : '';
+
     const btn = document.getElementById('btnSalvarEdicaoRoteiro');
     btn.textContent = 'Salvando...'; btn.disabled = true;
 
@@ -869,6 +878,13 @@ function abrirEditorRoteiro(nome) {
   document.getElementById('rotClienteNome').value = notionCli ? notionCli.nome : (roteiroEmEdicao.cliente?.nome || '');
   document.getElementById('rotClienteAdultos').value = notionCli ? notionCli.adultos : (roteiroEmEdicao.cliente?.adultos || '2');
   document.getElementById('rotClienteCriancas').value = notionCli ? notionCli.criancas : (roteiroEmEdicao.cliente?.criancas || '0');
+  
+  const rotTemCliente = !!roteiroEmEdicao.notionClienteId;
+  const rotLockedStyle = rotTemCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
+  ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.readOnly = rotTemCliente; el.style = rotLockedStyle; }
+  });
   
   // Datas e voos (não estão mais na UI do Roteiro como editáveis globalmente, mas para garantir preenchemos)
   document.getElementById('rotClienteData').value = notionCli ? notionCli.dataInicio : (roteiroEmEdicao.cliente?.dataInicio || roteiroEmEdicao.cliente?.dataOrcamento || '');

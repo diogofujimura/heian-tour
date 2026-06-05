@@ -172,6 +172,13 @@ function abrirOrcamento(id) {
   document.getElementById('clienteNome').value = notionCli ? notionCli.nome : (orc.cliente?.nome || '');
   document.getElementById('clienteAdultos').value = notionCli ? notionCli.adultos : (orc.cliente?.adultos || '2');
   document.getElementById('clienteCriancas').value = notionCli ? notionCli.criancas : (orc.cliente?.criancas || '0');
+  
+  const temCliente = !!orc.notionClienteId;
+  const lockedStyle = temCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
+  ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.readOnly = temCliente; el.style = lockedStyle; }
+  });
   document.getElementById('clienteDataOrcamento').value = orc.cliente?.dataOrcamento || today();
 
   if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};
@@ -248,6 +255,11 @@ function novoOrcamento() {
   document.getElementById('clienteNome').value = '';
   document.getElementById('clienteAdultos').value = '2';
   document.getElementById('clienteCriancas').value = '0';
+  
+  ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.readOnly = false; el.style = ''; }
+  });
   document.getElementById('clienteDataOrcamento').value = today();
   
   if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};

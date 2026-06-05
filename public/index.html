@@ -143,9 +143,9 @@ window.addEventListener('unhandledrejection', function(e) {
         <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="if(state.orcamento && state.orcamento.notionClienteId) { editarClienteNotion(state.orcamento.notionClienteId); } else { alert('Esta cotação não possui um cliente do Notion vinculado.'); }">👤 Editar Cliente</button>
       </div>
       <div class="form-grid" style="margin-top:0">
-        <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
-        <div class="field" style="max-width:90px"><label>Adultos</label><input type="number" id="clienteAdultos" value="2" min="1" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
-        <div class="field" style="max-width:90px"><label>Crianças</label><input type="number" id="clienteCriancas" value="0" min="0" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
+        <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" ></div>
+        <div class="field" style="max-width:90px"><label>Adultos</label><input type="number" id="clienteAdultos" value="2" min="1" ></div>
+        <div class="field" style="max-width:90px"><label>Crianças</label><input type="number" id="clienteCriancas" value="0" min="0" ></div>
         <div class="field"><label>Data do Orçamento</label><input type="date" id="clienteDataOrcamento"></div>
       </div>
       
@@ -321,13 +321,13 @@ window.addEventListener('unhandledrejection', function(e) {
           </div>
         </div>
         <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr">
-          <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
-          <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
-          <div class="field"><label>Crianças</label><input type="number" id="rotClienteCriancas" value="0" min="0" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
+          <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" ></div>
+          <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" ></div>
+          <div class="field"><label>Crianças</label><input type="number" id="rotClienteCriancas" value="0" min="0" ></div>
         </div>
         <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
-          <div class="field"><label>Data de Início</label><input type="date" id="rotClienteData" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
-          <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" readonly style="background:#f1f5f9; cursor:not-allowed"></div>
+          <div class="field"><label>Data de Início</label><input type="date" id="rotClienteData" ></div>
+          <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" ></div>
         </div>
         <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
           <div class="field"><label>Voo Chegada</label><input type="text" id="rotClienteVooChegada" placeholder="Ex: JL01 10/10 14:00" onchange="updRotCliente('vooChegada', this.value)"></div>
