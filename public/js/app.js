@@ -14,6 +14,7 @@ const state = {
   atracoesDB: [],
   rotasDB: []
 };
+window.state = state;
 
 function emptyOrc() {
   return { id: null, orcStatus: 'Pendente', notionClienteId: null, nome: '', cliente: { nome: '', pessoas: '', dataOrcamento: '' }, valoresTour: { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 }, estadias: [], consultoria: { ativa: false, valor: 0, descricao: '' }, tours: [], transportes: [], experiencias: [], itensAdicionais: [], textos: {}, criadoEm: null, atualizadoEm: null };
@@ -21,6 +22,14 @@ function emptyOrc() {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // Mover o editor de cotações para dentro do novo layout 3-pane
+  const orcEditor = document.getElementById('page-orcamento');
+  const orcWrapper = document.getElementById('orcamentosEditorWrapper');
+  if (orcEditor && orcWrapper) {
+    orcWrapper.appendChild(orcEditor);
+    orcEditor.style.display = 'block';
+  }
+
   await loadConfig();
   await loadDB();
   setupNotion();
@@ -162,6 +171,7 @@ function autoSave() {
 }
 
 function abrirOrcamento(id, directEdit = false) {
+  if (typeof navToPage === 'function') navToPage(directEdit ? 'orcamento' : 'meus');
   localStorage.setItem('heian_last_orcamento_id', id);
   const orc = state.orcamentosDB.find(o => o.id === id);
   if (!orc) return;
@@ -179,7 +189,7 @@ function abrirOrcamento(id, directEdit = false) {
   if(btnEditarCot) btnEditarCot.innerHTML = temCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
   ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) { el.readOnly = temCliente; el.style = lockedStyle; }
+    if(el) { el.readOnly = temCliente; el.style.cssText = lockedStyle; }
   });
   document.getElementById('clienteDataOrcamento').value = orc.cliente?.dataOrcamento || today();
 
@@ -250,8 +260,17 @@ function abrirOrcamento(id, directEdit = false) {
     renderPreview();
   }
   
-  // Atualiza visual selection na lista
-  renderListaOrcamentos();
+  // Atualiza visual selection na lista de forma performática
+  const listContainer = document.getElementById('orcamentosLista');
+  if (listContainer) {
+    listContainer.querySelectorAll('.list-card').forEach(card => {
+      if (card.dataset.id === String(id)) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+  }
   
   if (state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(state.orcamento.notionClienteId);
@@ -272,7 +291,7 @@ function novoOrcamento() {
   
   ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) { el.readOnly = false; el.style = ''; }
+    if(el) { el.readOnly = false; el.style.cssText = ''; }
   });
   document.getElementById('clienteDataOrcamento').value = today();
   const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
@@ -324,10 +343,16 @@ function renderListaOrcamentos(filterQuery = '') {
     
     const isSelected = state.orcamento && state.orcamento.id === orc.id ? 'selected' : '';
     return `<div class="list-card ${isSelected}" 
+                 data-id="${orc.id}"
                  onclick="abrirOrcamento(${orc.id}, false)" 
                  onmouseenter="previewOrcamento(${orc.id})">
-      <div class="list-card-title">${orc.nome||'Sem nome'}</div>
-      <div class="list-card-subtitle">${orc.cliente?.nome||''} ${txtPessoas?'· '+txtPessoas:''}</div>
+      <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${orc.nome||'Sem nome'}</div>
+        <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); abrirOrcamento(${orc.id}, true)" title="Editar">
+          ✏️
+        </button>
+      </div>
+      <div class="list-card-subtitle" style="margin-top: 4px;">${orc.cliente?.nome||''} ${txtPessoas?'· '+txtPessoas:''}</div>
       <div class="list-card-meta">
         <span>${fmtDate(orc.atualizadoEm)}</span>
         <span>¥${fmt(total)}</span>
@@ -344,14 +369,25 @@ function excluirOrcamento(id) {
 
 // ── NAV & HISTORY API ──────────────────────────────────────────────────────────
 function navToPage(pg) {
+  let targetPg = pg;
+  if (pg === 'orcamento') {
+    targetPg = 'meus';
+  }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const navItem = document.querySelector(`[data-page="${pg}"]`);
   if (navItem) navItem.classList.add('active');
-  const pageEl = document.getElementById('page-' + pg);
+  const pageEl = document.getElementById('page-' + targetPg);
   if (pageEl) pageEl.classList.add('active');
-  if (pg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
-  if (pg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
+  
+  if (pg === 'orcamento') {
+    document.getElementById('orcamentosEmptyState').style.display = 'none';
+    document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+    document.getElementById('orcamentosEditorWrapper').style.display = 'block';
+  }
+  
+  if (targetPg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
+  if (targetPg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
 }
 
 function setupMenuCambio() {
@@ -470,6 +506,7 @@ function setupNav() {
     history.pushState({ page: pg }, '', '#' + pg);
     if (pg === 'orcamento') {
       novoOrcamento();
+      navToPage('orcamento');
     } else {
       navToPage(pg);
     }
@@ -478,6 +515,7 @@ function setupNav() {
   if (btnNovoOrcList) {
     btnNovoOrcList.addEventListener('click', () => {
       novoOrcamento();
+      navToPage('orcamento');
       document.getElementById('orcamentosEmptyState').style.display = 'none';
       document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
       document.getElementById('orcamentosEditorWrapper').style.display = 'block';
@@ -489,6 +527,7 @@ function setupNav() {
     if (e.state && e.state.page) {
       if (e.state.page === 'orcamento') {
         novoOrcamento();
+        navToPage('orcamento');
       } else {
         navToPage(e.state.page);
       }
@@ -504,10 +543,13 @@ function setupNav() {
       const lastId = localStorage.getItem('heian_last_orcamento_id');
       if (lastId) {
         const idNum = parseInt(lastId, 10);
-        // Ensure state.orcamentosDB is populated before trying to open it
-        setTimeout(() => abrirOrcamento(idNum), 100); 
+        setTimeout(() => {
+          abrirOrcamento(idNum, true);
+          navToPage('orcamento');
+        }, 100); 
       } else {
         novoOrcamento();
+        navToPage('orcamento');
       }
     } else navToPage(hash);
   } else {
@@ -570,20 +612,20 @@ function coletarTextos() {
 }
 
 function setupOrcamento() {
-  document.getElementById('btnAddEstadia').addEventListener('click', () => addEstadia());
-  document.getElementById('btnAddTour').addEventListener('click', () => addTour());
-  document.getElementById('btnAddTransporte').addEventListener('click', () => addTransporte());
-  document.getElementById('btnAddExperiencia').addEventListener('click', () => addExperiencia());
-  document.getElementById('btnAddItemAdicional').addEventListener('click', () => addItemAdicional());
+  document.getElementById('btnAddEstadia')?.addEventListener('click', () => addEstadia());
+  document.getElementById('btnAddTour')?.addEventListener('click', () => addTour());
+  document.getElementById('btnAddTransporte')?.addEventListener('click', () => addTransporte());
+  document.getElementById('btnAddExperiencia')?.addEventListener('click', () => addExperiencia());
+  document.getElementById('btnAddItemAdicional')?.addEventListener('click', () => addItemAdicional());
   const _btnSalvar = document.getElementById('btnSalvarOrc');
   if (_btnSalvar) _btnSalvar.addEventListener('click', salvarOrcamentoAtual);
   document.getElementById('clienteAdultos')?.addEventListener('change', propagarPessoas);
   document.getElementById('clienteCriancas')?.addEventListener('change', propagarPessoas);
-  document.getElementById('consultoriaToggle').addEventListener('change', e => {
-    document.getElementById('consultoriaFields').classList.toggle('hidden', !e.target.checked);
+  document.getElementById('consultoriaToggle')?.addEventListener('change', e => {
+    document.getElementById('consultoriaFields')?.classList.toggle('hidden', !e.target.checked);
     updateResumo();
   });
-  document.getElementById('consultoriaValor').addEventListener('input', updateResumo);
+  document.getElementById('consultoriaValor')?.addEventListener('input', updateResumo);
   // Auto-save quando dados do cliente mudam
   ['orcNome','clienteNome','clienteAdultos','clienteCriancas','clienteDataOrcamento','consultoriaDesc'].forEach(id => {
     const el = document.getElementById(id);
@@ -1159,15 +1201,15 @@ function setupBase() {
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById(tab.dataset.tab).classList.add('active');
+    document.getElementById(tab.dataset.tab)?.classList.add('active');
   }));
-  document.getElementById('searchTransporte').addEventListener('input', e => renderTabelaTransportes(e.target.value));
-  document.getElementById('searchExperiencia').addEventListener('input', e => renderTabelaExperiencias(e.target.value));
-  document.getElementById('searchAtracao').addEventListener('input', e => renderTabelaAtracoes(e.target.value));
+  document.getElementById('searchTransporte')?.addEventListener('input', e => renderTabelaTransportes(e.target.value));
+  document.getElementById('searchExperiencia')?.addEventListener('input', e => renderTabelaExperiencias(e.target.value));
+  document.getElementById('searchAtracao')?.addEventListener('input', e => renderTabelaAtracoes(e.target.value));
   if(document.getElementById('searchRota')) document.getElementById('searchRota').addEventListener('input', e => renderTabelaRotas(e.target.value));
-  document.getElementById('btnNovoTransporte').addEventListener('click', () => abrirModalTransporte());
-  document.getElementById('btnNovaExperiencia').addEventListener('click', () => abrirModalExperiencia());
-  document.getElementById('btnNovaAtracao').addEventListener('click', () => abrirModalAtracao());
+  document.getElementById('btnNovoTransporte')?.addEventListener('click', () => abrirModalTransporte());
+  document.getElementById('btnNovaExperiencia')?.addEventListener('click', () => abrirModalExperiencia());
+  document.getElementById('btnNovaAtracao')?.addEventListener('click', () => abrirModalAtracao());
 }
 function renderTabelaTransportes(filtro) {
   if (filtro === undefined) {
@@ -1412,7 +1454,16 @@ function syncDOMToState() {
 
 // ── PREVIEW / PDF ─────────────────────────────────────────────────────────────
 function setupPreview() {
-  document.getElementById('btnPreview').addEventListener('click', ()=>{renderPreview();document.getElementById('previewOverlay').classList.remove('hidden');});
+  document.getElementById('btnPreview').addEventListener('click', ()=>{
+    renderPreview();
+    const wrapper = document.getElementById('orcamentosEditorWrapper');
+    if (wrapper && wrapper.style.display === 'block') {
+      wrapper.style.display = 'none';
+      document.getElementById('orcamentosPreviewWrapper').style.display = 'block';
+    } else {
+      document.getElementById('previewOverlay').classList.remove('hidden');
+    }
+  });
   document.getElementById('btnPrint').addEventListener('click', ()=>{
     renderPreview();
     document.getElementById('previewOverlay').classList.remove('hidden');
@@ -1440,22 +1491,27 @@ function setupPreview() {
 }
 
 function renderPreview() {
-  // Sync: captura qualquer valor que ainda esteja no campo sem ter disparado evento
-  syncDOMToState();
   const o = state.orcamento;
   const usd = getUSD();
-  const nomeCliente = document.getElementById('clienteNome').value || 'Cliente';
-  const ad = parseInt(document.getElementById('clienteAdultos')?.value)||0;
-  const cr = parseInt(document.getElementById('clienteCriancas')?.value)||0;
+  
+  // Só faz a sincronização de DOM se o editor estiver visível
+  const editorVisivel = document.getElementById('orcamentosEditorWrapper') && document.getElementById('orcamentosEditorWrapper').style.display === 'block';
+  if (editorVisivel) {
+    syncDOMToState();
+  }
+
+  const nomeCliente = editorVisivel ? (document.getElementById('clienteNome').value || 'Cliente') : (o.cliente?.nome || 'Cliente');
+  const ad = editorVisivel ? (parseInt(document.getElementById('clienteAdultos')?.value)||0) : (parseInt(o.cliente?.adultos)||0);
+  const cr = editorVisivel ? (parseInt(document.getElementById('clienteCriancas')?.value)||0) : (parseInt(o.cliente?.criancas)||0);
   let txtPessoas = '';
   if(ad) txtPessoas += `${ad} Ad`;
   if(cr) txtPessoas += `, ${cr} Cr`;
   const periodo = txtPessoas;
-  const dataOrc     = document.getElementById('clienteDataOrcamento').value || today();
-  const consAtiva   = document.getElementById('consultoriaToggle').checked;
-  const consValor   = parseFloat(document.getElementById('consultoriaValor').value)||0;
-  const consDesc    = document.getElementById('consultoriaDesc').value || 'Roteirização e suporte completo';
-  const orcNome     = document.getElementById('orcNome').value || nomeCliente;
+  const dataOrc     = editorVisivel ? (document.getElementById('clienteDataOrcamento').value || today()) : (o.cliente?.dataOrcamento || today());
+  const consAtiva   = editorVisivel ? document.getElementById('consultoriaToggle').checked : (o.consultoria?.ativa || false);
+  const consValor   = editorVisivel ? (parseFloat(document.getElementById('consultoriaValor').value)||0) : (o.consultoria?.valor || 0);
+  const consDesc    = editorVisivel ? (document.getElementById('consultoriaDesc').value || 'Roteirização e suporte completo') : (o.consultoria?.descricao || 'Roteirização e suporte completo');
+  const orcNome     = editorVisivel ? (document.getElementById('orcNome').value || nomeCliente) : (o.nome || nomeCliente);
 
   const tT  = (o.tours || []).reduce((s,t)=>s+calcTotalTour(t),0);
   const tTr = (o.transportes || []).reduce((s,t)=>s+calcTotalTransporte(t),0);
@@ -2049,6 +2105,7 @@ window.deletarRota = async function(id) {
 
 // ── NOTION SETUP ────────────────────────────────────────────────────────────
 let notionClients = [];
+window.notionClients = notionClients;
 
 function setupNotion() {
   const btn = document.getElementById('btnImportNotion');
@@ -2066,7 +2123,7 @@ function setupNotion() {
         try {
           const res = await fetch('/api/notion/clientes');
           if (!res.ok) throw new Error('Erro na API');
-          notionClients = await res.json();
+          notionClients = await res.json(); window.notionClients = notionClients;
         } catch (e) {
           console.error(e);
           select.innerHTML = '<option>Erro ao carregar do Notion</option>';
@@ -2150,7 +2207,10 @@ function setupClientesTab() {
   const btnSalvar = document.getElementById('btnSalvarClienteModal');
   
   if(btnRefresh) btnRefresh.addEventListener('click', loadClientesTabela);
-  if(btnNovo) btnNovo.addEventListener('click', () => abrirClienteModal());
+  if(btnNovo) btnNovo.addEventListener('click', () => {
+    if (typeof navToPage === 'function') navToPage('clientes');
+    abrirClienteModal();
+  });
   if(btnSalvar) btnSalvar.addEventListener('click', salvarClienteNotion);
   const btnAdd = document.getElementById('btnAddEstadia');
   if(btnAdd) btnAdd.addEventListener('click', () => {
@@ -2172,7 +2232,7 @@ async function loadClientesTabela() {
   try {
     const res = await fetch('/api/notion/clientes');
     if (!res.ok) throw new Error('Erro na API');
-    notionClients = await res.json();
+    notionClients = await res.json(); window.notionClients = notionClients;
     renderClientesTabela();
   } catch(e) {
     console.error(e);
@@ -2207,15 +2267,39 @@ function renderClientesTabela() {
 
     const card = document.createElement('div');
     card.className = 'list-card ' + isSelected;
+    card.dataset.id = c.id;
     card.onclick = () => abrirDetalhesCliente(c.id);
     card.onmouseenter = () => hoverCliente(c.id);
     
+    let datasViagem = 'Sem data';
+    if (c.dataInicio && c.dataFim) {
+      datasViagem = `📅 ${fmtDataBR(c.dataInicio)} a ${fmtDataBR(c.dataFim)}`;
+    } else if (c.dataInicio) {
+      datasViagem = `📅 ${fmtDataBR(c.dataInicio)}`;
+    }
+
+    let passageiros = '';
+    const ad = parseInt(c.adultos) || 0;
+    const cr = parseInt(c.criancas) || 0;
+    if (ad > 0) passageiros += `${ad} Ad`;
+    if (cr > 0) passageiros += `, ${cr} Cr`;
+    if (!passageiros) passageiros = 'Sem passageiros';
+    else passageiros = `👥 ${passageiros}`;
+
     card.innerHTML = `
-      <div class="list-card-title" style="color:var(--crimson)">${c.nome}</div>
-      <div class="list-card-subtitle">${c.email || 'Sem email'}</div>
-      <div class="list-card-meta">
-        <span>${c.dataViagem ? fmtDataBR(c.dataViagem) : '-'}</span>
-        <span style="color:${statusColor}; font-weight:600;">${c.status || 'Novo'}</span>
+      <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${c.nome}</div>
+        <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); editarClienteCard('${c.id}')" title="Editar">
+          ✏️
+        </button>
+      </div>
+      <div class="list-card-subtitle" style="margin-top: 4px; font-size: 11px; color: var(--ink-lt); display: flex; gap: 8px; flex-wrap: wrap;">
+        <span>${datasViagem}</span>
+        <span>·</span>
+        <span>${passageiros}</span>
+      </div>
+      <div class="list-card-meta" style="margin-top: 8px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="color:${statusColor}; font-weight:600; background: rgba(196,163,90,0.08); padding: 2px 6px; border-radius: 4px;">${c.status || 'Novo'}</span>
       </div>
     `;
     listContainer.appendChild(card);
@@ -2225,6 +2309,8 @@ function abrirClienteModal(cliente = null) {
   
   document.getElementById('clientesEmptyState').style.display = 'none';
   document.getElementById('clientesDetailWrapper').style.display = 'block';
+  document.getElementById('clientesPreviewContainer').style.display = 'none';
+  document.getElementById('clientesEditorContainer').style.display = 'block';
 
   if(cliente) {
     currentEditingClienteId = cliente.id;
@@ -2292,17 +2378,21 @@ function abrirClienteModal(cliente = null) {
 }
 
 window.closeClienteModal = function() {
-  
-  document.getElementById('clientesEmptyState').style.display = 'block';
-  document.getElementById('clientesDetailWrapper').style.display = 'none';
-
+  if (window.clienteAtualVisualizado) {
+    document.getElementById('clientesPreviewContainer').style.display = 'block';
+    document.getElementById('clientesEditorContainer').style.display = 'none';
+    abrirDetalhesCliente(window.clienteAtualVisualizado);
+  } else {
+    document.getElementById('clientesEmptyState').style.display = 'block';
+    document.getElementById('clientesDetailWrapper').style.display = 'none';
+  }
 }
 
 window.editarClienteNotion = async function(id) {
     if (!notionClients || notionClients.length === 0) {
       try {
         const res = await fetch('/api/notion/clientes');
-        notionClients = await res.json();
+        notionClients = await res.json(); window.notionClients = notionClients;
       } catch (e) {
         console.error('Erro ao carregar clientes do Notion:', e);
       }
@@ -2361,8 +2451,11 @@ async function salvarClienteNotion() {
 
     if(!res.ok) throw new Error('Falha ao comunicar com Notion API');
     
-    closeClienteModal();
+    window.clienteAtualVisualizado = cliId;
     await loadClientesTabela(); // Recarrega a lista
+    
+    // Mostra o preview atualizado diretamente
+    abrirDetalhesCliente(cliId);
     
     if (typeof syncClienteAtivo === 'function') {
         await syncClienteAtivo(cliId);
@@ -2742,7 +2835,7 @@ window.handleAcaoClienteCotacao = async function() {
       });
 
       // Recarrega NotionClients
-      window.notionClients = await fetch('/api/notion/clientes').then(r=>r.json());
+      notionClients = await fetch('/api/notion/clientes').then(r=>r.json()); window.notionClients = notionClients;
 
       btn.innerHTML = '👤 Editar Cliente';
       btn.disabled = false;
@@ -2794,7 +2887,18 @@ window.previewOrcamento = function(id) {
   document.getElementById('orcamentosPreviewWrapper').style.display = 'block';
   
   renderPreview();
-  renderListaOrcamentos(); // update highlight
+  
+  // Atualiza visual selection na lista de forma performática
+  const listContainer = document.getElementById('orcamentosLista');
+  if (listContainer) {
+    listContainer.querySelectorAll('.list-card').forEach(card => {
+      if (card.dataset.id === String(id)) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+  }
 };
 
 window.filterOrcamentosList = function() {
@@ -2802,7 +2906,272 @@ window.filterOrcamentosList = function() {
   renderListaOrcamentos(q);
 };
 
+window.abrirDetalhesCliente = function(id, isHover = false) {
+  if (typeof notionClients === 'undefined') return;
+  const c = notionClients.find(x => x.id === id);
+  if (!c) return;
+  
+  window.clienteAtualVisualizado = id;
+  
+  // Atualiza classe selected de forma performática
+  const listContainer = document.getElementById('tabelaClientesList');
+  if (listContainer) {
+    listContainer.querySelectorAll('.list-card').forEach(card => {
+      if (card.dataset.id === id) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+  }
+  
+  const emptyState = document.getElementById('clientesEmptyState');
+  if (emptyState) emptyState.style.display = 'none';
+  const detailWrapper = document.getElementById('clientesDetailWrapper');
+  if (detailWrapper) detailWrapper.style.display = 'block';
+  
+  document.getElementById('clientesPreviewContainer').style.display = 'block';
+  document.getElementById('clientesEditorContainer').style.display = 'none';
+  
+  fetch(`/api/clientes/local/${c.id}`).then(r=>r.json()).then(d => {
+    const estadias = d.estadias || [];
+    renderPreviewCliente(c, estadias);
+  }).catch(e => {
+    console.error(e);
+    const estadias = [];
+    if (c.hotel) {
+      c.hotel.split('\n').filter(l => l.trim()).forEach(line => {
+        let cidade = ''; let hotel = line.trim(); let dataInicio = ''; let dataFim = '';
+        const dateMatch = line.match(/\((\d{2}\/\d{2}\/\d{4})\s*(?:a|-|até)\s*(\d{2}\/\d{2}\/\d{4})\)/);
+        if (dateMatch) {
+          const parseDate = d => { const p = d.split('/'); return p[2]+'-'+p[1]+'-'+p[0]; };
+          dataInicio = parseDate(dateMatch[1]); dataFim = parseDate(dateMatch[2]);
+          hotel = line.substring(0, dateMatch.index).trim();
+        }
+        const dashIndex = hotel.indexOf(' - ');
+        if (dashIndex > -1) { cidade = hotel.substring(0, dashIndex).trim(); hotel = hotel.substring(dashIndex + 3).trim(); }
+        estadias.push({ id: Date.now() + Math.random(), cidade, dataInicio, dataFim, hotel });
+      });
+    }
+    renderPreviewCliente(c, estadias);
+  });
+};
+
 window.hoverCliente = function(id) {
   if (window.clienteAtualVisualizado === id) return;
   abrirDetalhesCliente(id, true);
 };
+
+window.editarClienteCard = function(id) {
+  if (typeof notionClients === 'undefined') return;
+  const c = notionClients.find(x => x.id === id);
+  if (!c) return;
+
+  window.clienteAtualVisualizado = id;
+  renderClientesTabela();
+
+  document.getElementById('clientesPreviewContainer').style.display = 'none';
+  document.getElementById('clientesEditorContainer').style.display = 'block';
+
+  abrirClienteModal(c);
+};
+
+window.renderPreviewCliente = function(cliente, estadias = []) {
+  const container = document.getElementById('clientesPreviewContainer');
+  if (!container) return;
+
+  let datasViagem = 'Sem data definida';
+  if (cliente.dataInicio && cliente.dataFim) {
+    datasViagem = `${fmtDataBR(cliente.dataInicio)} a ${fmtDataBR(cliente.dataFim)}`;
+  } else if (cliente.dataInicio) {
+    datasViagem = `${fmtDataBR(cliente.dataInicio)}`;
+  }
+
+  let passageiros = '';
+  const ad = parseInt(cliente.adultos) || 0;
+  const cr = parseInt(cliente.criancas) || 0;
+  if (ad > 0) passageiros += `${ad} Adulto(s)`;
+  if (cr > 0) passageiros += `, ${cr} Criança(s)`;
+  if (!passageiros) passageiros = 'Nenhum passageiro informado';
+
+  let statusColor = '#9c8248';
+  if (cliente.status === 'Fechado' || cliente.status === 'Negociação Aprovada' || cliente.status === 'Finalizados') {
+    statusColor = '#6B1F2A';
+  } else if (cliente.status === 'Cancelado') {
+    statusColor = '#806A6D';
+  }
+
+  let estadiasHTML = '';
+  if (estadias && estadias.length > 0) {
+    estadiasHTML = estadias.map(est => `
+      <div class="preview-estadia-card" style="padding: 12px 16px; border-radius: 8px; background: rgba(196,163,90,0.04); border: 1px solid var(--border); margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <strong style="color: var(--crimson); font-size: 14px;">${est.cidade || 'Cidade não informada'}</strong>
+          <span style="font-size: 12px; color: var(--ink-lt);">
+            ${est.dataInicio && est.dataFim ? `📅 ${fmtDataBR(est.dataInicio)} a ${fmtDataBR(est.dataFim)}` : 'Sem período informado'}
+          </span>
+        </div>
+        <div style="font-size: 13px; color: var(--ink-dk);">${est.hotel || 'Hotel não informado'}</div>
+      </div>
+    `).join('');
+  } else {
+    estadiasHTML = `<p style="font-size: 13px; color: var(--ink-lt); font-style: italic;">Nenhuma estadia cadastrada.</p>`;
+  }
+
+  container.innerHTML = `
+    <div class="preview-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+      <div>
+        <h2 style="font-family: var(--ff-display); font-size: 28px; font-weight: 400; color: var(--crimson); margin: 0; line-height: 1.2;">
+          ${cliente.nome}
+        </h2>
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+          <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${statusColor}; background: rgba(196,163,90,0.08); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(196,163,90,0.2);">
+            ${cliente.status || 'Novo'}
+          </span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="editarClienteCard('${cliente.id}')" style="padding: 8px 16px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+        ✏️ Editar Cliente
+      </button>
+    </div>
+
+    <div class="preview-body" style="display: flex; flex-direction: column; gap: 24px;">
+      <div class="preview-section-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; background: var(--warm-white); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">Período da Viagem</div>
+          <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500;">${datasViagem}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">Passageiros</div>
+          <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500;">${passageiros}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">Voo de Chegada</div>
+          <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500; white-space: pre-wrap;">${cliente.vooChegada || 'Não informado'}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">Voo de Partida</div>
+          <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500; white-space: pre-wrap;">${cliente.vooPartida || 'Não informado'}</div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600;">Estadias e Hotéis</h3>
+        <div class="preview-estadias-list">
+          ${estadiasHTML}
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 20px;">
+        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600;">Hub de Acesso Rápido</h3>
+        <div style="display: flex; gap: 12px;" id="previewHubButtonsContainer">
+          <button id="btnAcessoCotacaoPreview" class="btn-secondary" style="flex: 1; padding: 12px; border-radius: 8px; font-size: 13px;">Carregando cotação...</button>
+          <button id="btnAcessoRoteiroPreview" class="btn-secondary" style="flex: 1; padding: 12px; border-radius: 8px; font-size: 13px;">Carregando roteiro...</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  formatHubButtonsPreview(cliente.id);
+};
+
+function formatHubButtonsPreview(clienteId) {
+  const btnCotacao = document.getElementById('btnAcessoCotacaoPreview');
+  const btnRoteiro = document.getElementById('btnAcessoRoteiroPreview');
+  if (!btnCotacao || !btnRoteiro) return;
+  
+  const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : null;
+  const clienteNome = cliente ? cliente.nome : '';
+
+  let roteiroNome = null;
+  if (typeof dbRotas !== 'undefined' && clienteNome) {
+    for (const [k, v] of Object.entries(dbRotas)) {
+      if (v.cliente && v.cliente.nome === clienteNome) {
+        roteiroNome = k;
+        break;
+      }
+    }
+  }
+
+  const orc = state.orcamentosDB.find(o => o.notionClienteId === clienteId);
+
+  if (orc) {
+    btnCotacao.innerText = 'Abrir Cotação';
+    btnCotacao.onclick = () => { 
+      closeClienteModal(); 
+      abrirOrcamento(orc.id, true); 
+    };
+  } else {
+    btnCotacao.innerText = 'Gerar Cotação';
+    btnCotacao.onclick = () => { 
+      closeClienteModal(); 
+      novoOrcamento();
+      state.orcamento.notionClienteId = clienteId;
+      const nome = cliente.nome || '';
+      document.getElementById('orcNome').value = 'Cotação - ' + nome;
+      document.getElementById('clienteNome').value = nome;
+      document.getElementById('clienteAdultos').value = cliente.adultos || '2';
+      document.getElementById('clienteCriancas').value = cliente.criancas || '0';
+      state.orcamento.cliente.nome = nome;
+      state.orcamento.cliente.adultos = cliente.adultos || '2';
+      state.orcamento.cliente.criancas = cliente.criancas || '0';
+      state.orcamento.nome = 'Cotação - ' + nome;
+      
+      fetch(`/api/clientes/local/${clienteId}`).then(r=>r.json()).then(d => {
+        state.orcamento.estadias = JSON.parse(JSON.stringify(d.estadias || []));
+        renderEstadiasReadOnlyForm();
+      }).catch(e => {
+        console.error(e);
+      }).finally(() => {
+        navToPage('orcamento');
+        document.getElementById('orcamentosEmptyState').style.display = 'none';
+        document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+        document.getElementById('orcamentosEditorWrapper').style.display = 'block';
+        updateResumo();
+      });
+    };
+  }
+
+  const rotNomeLinkado = (orc && orc.orcRoteiroVinculado) ? orc.orcRoteiroVinculado : roteiroNome;
+  
+  if (rotNomeLinkado) {
+    btnRoteiro.innerText = 'Abrir Roteiro';
+    btnRoteiro.onclick = () => { 
+      closeClienteModal(); 
+      if (typeof window.editarRoteiroCard === 'function') {
+        window.editarRoteiroCard(rotNomeLinkado);
+      }
+    };
+  } else {
+    btnRoteiro.innerText = 'Criar Roteiro';
+    btnRoteiro.onclick = () => {
+      closeClienteModal(); 
+      if (typeof navToPage === 'function') navToPage('roteiros');
+      
+      roteiroOriginalNome = '';
+      roteiroEmEdicao = { 
+        notionClienteId: clienteId,
+        cliente: {
+          nome: cliente.nome,
+          adultos: cliente.adultos || 2,
+          criancas: cliente.criancas || 0,
+          dataInicio: cliente.dataInicio || '',
+          dataFim: cliente.dataFim || '',
+          vooChegada: cliente.vooChegada || '',
+          vooPartida: cliente.vooPartida || '',
+          estadias: []
+        },
+        dias: []
+      };
+      
+      document.getElementById('roteirosEmptyState').style.display = 'none';
+      document.getElementById('roteirosDetailWrapper').style.display = 'block';
+      if (typeof abrirEditorRoteiro === 'function') abrirEditorRoteiro('Novo Roteiro');
+      
+      fetch(`/api/clientes/local/${clienteId}`).then(r => r.json()).then(d => {
+        roteiroEmEdicao.cliente.estadias = JSON.parse(JSON.stringify(d.estadias || []));
+        if (typeof renderRotEstadias === 'function') renderRotEstadias();
+      }).catch(e => console.error(e));
+    };
+  }
+}

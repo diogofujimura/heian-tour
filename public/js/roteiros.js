@@ -74,6 +74,7 @@ function migrarDiaParaNovaEstrutura(dia) {
 // public/js/roteiros.js
 let dbAtracoes = [];
 let dbRotas = {};
+window.dbRotas = dbRotas;
 let atracaoMap = new Map(); // Mapa rápido de nome -> atracao
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -90,7 +91,7 @@ async function carregarBases() {
       fetch('/api/roteiros')
     ]);
     dbAtracoes = await resAtr.json();
-    dbRotas = await resRotas.json();
+    dbRotas = await resRotas.json(); window.dbRotas = dbRotas;
 
     // Criar mapa rápido
     dbAtracoes.forEach(a => {
@@ -117,18 +118,21 @@ async function carregarBases() {
 }
 
 function preencherSelectRoteiros(selectValue = '') {
+  // Atualiza a lista lateral 3-pane de roteiros
+  renderListaRoteiros();
+  
   const input = document.getElementById('selectRoteiroBase');
   const dataList = document.getElementById('roteirosList');
-  if (!input || !dataList) return;
-  
-  dataList.innerHTML = '';
-  Object.keys(dbRotas).forEach(roteiroName => {
-    const opt = document.createElement('option');
-    opt.value = roteiroName;
-    dataList.appendChild(opt);
-  });
-  if (selectValue) {
-    input.value = selectValue;
+  if (input && dataList) {
+    dataList.innerHTML = '';
+    Object.keys(dbRotas).forEach(roteiroName => {
+      const opt = document.createElement('option');
+      opt.value = roteiroName;
+      dataList.appendChild(opt);
+    });
+    if (selectValue) {
+      input.value = selectValue;
+    }
   }
 }
 
@@ -487,6 +491,10 @@ function setupEditorEvents() {
 window.novoRoteiro = function() {
     roteiroOriginalNome = '';
     roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: [] };
+    
+    document.getElementById('roteirosEmptyState').style.display = 'none';
+    document.getElementById('roteirosDetailWrapper').style.display = 'block';
+    
     abrirEditorRoteiro('Novo Roteiro');
 };  document.getElementById('btnEditarRoteiro').addEventListener('click', () => {
     const nome = window.roteiroAtualVisualizado;
@@ -879,7 +887,7 @@ function abrirEditorRoteiro(nome) {
   const rotLockedStyle = rotTemCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
   ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) { el.readOnly = rotTemCliente; el.style = rotLockedStyle; }
+    if(el) { el.readOnly = rotTemCliente; el.style.cssText = rotLockedStyle; }
   });
   const btnEditarRot = document.getElementById('btnEditarClienteRoteiro');
   if(btnEditarRot) btnEditarRot.innerHTML = rotTemCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
@@ -1935,7 +1943,18 @@ window.selecionarRoteiro = function(nome, isHover = false) {
   
   if (nome && dbRotas[nome]) {
     window.roteiroAtualVisualizado = nome;
-    if(!isHover) renderListaRoteiros(document.getElementById('pesquisaRoteirosList').value);
+    
+    // Atualiza a classe 'selected' nos cards de forma performática
+    const listContainer = document.getElementById('roteirosLista');
+    if (listContainer) {
+      listContainer.querySelectorAll('.list-card').forEach(card => {
+        if (card.dataset.nome === nome) {
+          card.classList.add('selected');
+        } else {
+          card.classList.remove('selected');
+        }
+      });
+    }
     
     document.getElementById('roteirosEmptyState').style.display = 'none';
     document.getElementById('roteirosDetailWrapper').style.display = 'block';
@@ -1955,3 +1974,75 @@ window.filterRoteirosList = function() {
   const q = document.getElementById('pesquisaRoteirosList').value;
   renderListaRoteiros(q);
 };
+
+window.renderListaRoteiros = function(filtro = '') {
+  const listContainer = document.getElementById('roteirosLista');
+  if(!listContainer) return;
+  listContainer.innerHTML = '';
+  const q = filtro.toLowerCase();
+  
+  Object.keys(dbRotas).sort().forEach(nome => {
+    if (!nome.toLowerCase().includes(q)) return;
+    
+    const r = dbRotas[nome];
+    const isSelected = window.roteiroAtualVisualizado === nome ? 'selected' : '';
+    const numDias = r.dias ? r.dias.length : 0;
+    
+    const card = document.createElement('div');
+    card.className = 'list-card ' + isSelected;
+    card.dataset.nome = nome;
+    card.onclick = () => selecionarRoteiro(nome);
+    card.onmouseenter = () => { if(window.roteiroAtualVisualizado !== nome) selecionarRoteiro(nome, true); };
+    
+    card.innerHTML = `
+      <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${nome}</div>
+        <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); window.editarRoteiroCard('${nome}')" title="Editar">
+          ✏️
+        </button>
+      </div>
+      <div class="list-card-subtitle" style="margin-top: 4px;">${numDias} dia(s) de roteiro</div>
+      <div class="list-card-meta">
+        <span>${r.cliente?.notionClienteId ? 'Vinc. Cliente' : ''}</span>
+      </div>
+    `;
+    listContainer.appendChild(card);
+  });
+};
+
+window.editarRoteiroCard = function(nome) {
+  if (!nome) return;
+  if (nome !== 'Novo Roteiro' && !dbRotas[nome]) return;
+  
+  if (typeof navToPage === 'function') navToPage('roteiros');
+  window.roteiroAtualVisualizado = nome;
+  
+  renderListaRoteiros(document.getElementById('pesquisaRoteirosList')?.value || '');
+  
+  roteiroOriginalNome = nome;
+  const data = dbRotas[nome];
+  if (Array.isArray(data)) {
+    roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: JSON.parse(JSON.stringify(data)) };
+  } else {
+    roteiroEmEdicao = JSON.parse(JSON.stringify(data));
+    if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {nome:'', adultos:2, criancas:0, dataOrcamento:''};
+    if (!roteiroEmEdicao.dias) roteiroEmEdicao.dias = [];
+  }
+  
+  document.getElementById('roteirosEmptyState').style.display = 'none';
+  document.getElementById('roteirosDetailWrapper').style.display = 'block';
+  
+  abrirEditorRoteiro(nome);
+};
+
+// Vincula o botão Novo Roteiro da lista lateral
+document.addEventListener('DOMContentLoaded', () => {
+  const btnNovoR = document.getElementById('btnNovoRoteiroList');
+  if (btnNovoR) {
+    btnNovoR.onclick = () => {
+      if (typeof navToPage === 'function') navToPage('roteiros');
+      window.novoRoteiro();
+    };
+  }
+});
+

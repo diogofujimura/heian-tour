@@ -8,7 +8,7 @@ async function syncClienteAtivo(notionClienteId) {
       // Refresh notionClients if not found
       const resNotion = await fetch('/api/notion/clientes');
       if (resNotion.ok) {
-        notionClients = await resNotion.json();
+        notionClients = await resNotion.json(); window.notionClients = notionClients;
         c = notionClients.find(x => x.id === notionClienteId);
       }
     }

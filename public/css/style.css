@@ -678,11 +678,14 @@ html, body {
 
 /* ── 3-PANE LAYOUT (MODERN) ────────────────────────────────────────────── */
 .pane-layout {
-  display: flex;
+  display: none;
   flex: 1;
   height: 100vh;
   overflow: hidden;
   background: transparent;
+}
+.pane-layout.active {
+  display: flex;
 }
 
 .pane-list {
@@ -764,6 +767,7 @@ html, body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .list-card::before {
@@ -815,6 +819,43 @@ html, body {
   display: flex;
   justify-content: space-between;
 }
+
+/* Estilos para o botão minimalista de editar nos cards */
+.btn-card-edit-minimalist {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-lt);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  opacity: 0.3;
+}
+
+.list-card:hover .btn-card-edit-minimalist {
+  opacity: 1;
+}
+
+.btn-card-edit-minimalist:hover {
+  background: rgba(107, 31, 42, 0.05);
+  color: var(--crimson);
+}
+
+/* Estilos adicionais para o Preview de Clientes */
+.preview-estadia-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.preview-estadia-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 31, 42, 0.04);
+  border-color: rgba(196, 163, 90, 0.3) !important;
+}
+
 
 .search-input-modern {
   width: 100%;
