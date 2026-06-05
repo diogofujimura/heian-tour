@@ -1175,6 +1175,7 @@ function renderTabelaTransportes(filtro) {
     filtro = el ? el.value : '';
   }
   const tbody = document.querySelector('#tabelaTransportes tbody');
+  if(!tbody) return;
   const lista = filtro ? state.transportesDB.filter(t=>[t.trecho,t.tipo,t.linha,t.categoria].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.transportesDB;
   tbody.innerHTML = lista.map(t=>`<tr><td>${t.trecho}</td><td>${t.idade||''}</td><td>${t.tipo}</td><td>${t.linha}</td><td>${t.categoria}</td><td class="preco-cell">¥${fmt(t.preco_jpy)}</td><td>${t.tempo||'—'}</td><td><button class="btn-icon" onclick="abrirModalTransporte(${t.id})">✎</button> <button class="btn-icon" onclick="deletarTransporte(${t.id})">✕</button></td></tr>`).join('');
 }
@@ -1184,6 +1185,7 @@ function renderTabelaExperiencias(filtro) {
     filtro = el ? el.value : '';
   }
   const tbody = document.querySelector('#tabelaExperiencias tbody');
+  if(!tbody) return;
   const lista = filtro ? state.experienciasDB.filter(e=>e.nome.toLowerCase().includes(filtro.toLowerCase())) : state.experienciasDB;
   tbody.innerHTML = lista.map(e=>`<tr><td>${e.nome}</td><td>${e.tipo}</td><td class="preco-cell">¥${fmt(e.preco_jpy)}</td><td>${e.observacao||'—'}</td><td><button class="btn-icon" onclick="abrirModalExperiencia(${e.id})">✎</button> <button class="btn-icon" onclick="deletarExperiencia(${e.id})">✕</button></td></tr>`).join('');
 }
@@ -1240,6 +1242,7 @@ function renderTabelaAtracoes(filtro) {
     filtro = el ? el.value : '';
   }
   const tbody = document.querySelector('#tabelaAtracoes tbody');
+  if(!tbody) return;
   const lista = filtro ? state.atracoesDB.filter(a=>[a['Nome da Atração'],a['Bairro'],a['Cidade']].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.atracoesDB;
   tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td>${a['Nome da Atração']}</td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao(${a.id})">✎</button> <button class="btn-icon" onclick="deletarAtracao(${a.id})">✕</button></td></tr>`).join('');
 }

@@ -1,0 +1,72 @@
+const fs = require('fs');
+let html = fs.readFileSync('public/index.html', 'utf8');
+
+const baseHtml = `<!-- ── BASE DE DADOS ───────────────────────────────────────────────────────── -->
+  <div id="page-base" class="page">
+    <div class="page-header">
+      <h1>Base de Dados</h1>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="transportes-tab">Transportes</button>
+      <button class="tab" data-tab="experiencias-tab">Experiências</button>
+      <button class="tab" data-tab="atracoes-tab">Atrações (Roteiros)</button>
+      <button class="tab" data-tab="rotas-tab">Rotas (Sequências)</button>
+    </div>
+    <div id="transportes-tab" class="tab-content active">
+      <div class="table-header">
+        <input type="text" id="searchTransporte" placeholder="Buscar transporte..." class="search-input">
+        <button class="btn-primary" id="btnNovoTransporte">+ Novo Transporte</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaTransportes" class="data-table">
+          <thead><tr><th>Trecho</th><th>Idade</th><th>Tipo</th><th>Linha</th><th>Categoria</th><th>Preço ¥</th><th>Tempo</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="experiencias-tab" class="tab-content">
+      <div class="table-header">
+        <input type="text" id="searchExperiencia" placeholder="Buscar experiência..." class="search-input">
+        <button class="btn-primary" id="btnNovaExperiencia">+ Nova Experiência</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaExperiencias" class="data-table">
+          <thead><tr><th>Nome</th><th>Tipo</th><th>Preço ¥</th><th>Observação</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="atracoes-tab" class="tab-content">
+      <div class="table-header">
+        <input type="text" id="searchAtracao" placeholder="Buscar atração..." class="search-input">
+        <button class="btn-primary" id="btnNovaAtracao">+ Nova Atração</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaAtracoes" class="data-table">
+          <thead><tr><th>Cidade</th><th>Bairro</th><th>Nome da Atração</th><th>Preço (Ingresso)</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="rotas-tab" class="tab-content">
+      <div class="table-header">
+        <input type="text" id="searchRota" placeholder="Buscar rota..." class="search-input">
+        <button class="btn-primary" id="btnNovaRota">+ Nova Rota Base</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaRotas" class="data-table">
+          <thead><tr><th>Cidade</th><th>Nome da Rota</th><th>Atrações</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+const target = '<!-- ── CONFIGURAÇÕES';
+if (html.includes(target) && !html.includes('id="page-base"')) {
+  html = html.replace(target, baseHtml + '\n\n  ' + target);
+  fs.writeFileSync('public/index.html', html, 'utf8');
+  console.log('Restored perfectly clean page-base!');
+} else {
+  console.log('Target not found or page-base already exists.');
+}
