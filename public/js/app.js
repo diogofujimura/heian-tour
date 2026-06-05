@@ -16,7 +16,7 @@ const state = {
 };
 
 function emptyOrc() {
-  return { id: null, notionClienteId: null, nome: '', cliente: { nome: '', pessoas: '', dataOrcamento: '' }, valoresTour: { '4h': 0, '6h': 0, '8h': 0, '10h': 0, '12h': 0 }, estadias: [], consultoria: { ativa: false, valor: 0, descricao: '' }, tours: [], transportes: [], experiencias: [], itensAdicionais: [], textos: {}, criadoEm: null, atualizadoEm: null };
+  return { id: null, orcStatus: 'Pendente', notionClienteId: null, nome: '', cliente: { nome: '', pessoas: '', dataOrcamento: '' }, valoresTour: { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 }, estadias: [], consultoria: { ativa: false, valor: 0, descricao: '' }, tours: [], transportes: [], experiencias: [], itensAdicionais: [], textos: {}, criadoEm: null, atualizadoEm: null };
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -174,12 +174,19 @@ function abrirOrcamento(id) {
   document.getElementById('clienteCriancas').value = notionCli ? notionCli.criancas : (orc.cliente?.criancas || '0');
   document.getElementById('clienteDataOrcamento').value = orc.cliente?.dataOrcamento || today();
 
-  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
-  document.getElementById('baseTour4h').value = state.orcamento.valoresTour['4h'] || '';
-  document.getElementById('baseTour6h').value = state.orcamento.valoresTour['6h'] || '';
-  document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'] || '';
-  document.getElementById('baseTour10h').value = state.orcamento.valoresTour['10h'] || '';
-  document.getElementById('baseTour12h').value = state.orcamento.valoresTour['12h'] || '';
+  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};
+  const defs = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
+  ['4h','6h','8h','10h','12h'].forEach(k => {
+    if (!state.orcamento.valoresTour[k] || state.orcamento.valoresTour[k] === 0) {
+      state.orcamento.valoresTour[k] = defs[k];
+    }
+  });
+
+  document.getElementById('baseTour4h').value = state.orcamento.valoresTour['4h'];
+  document.getElementById('baseTour6h').value = state.orcamento.valoresTour['6h'];
+  document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'];
+  document.getElementById('baseTour10h').value = state.orcamento.valoresTour['10h'];
+  document.getElementById('baseTour12h').value = state.orcamento.valoresTour['12h'];
   
   if (document.getElementById('orcRoteiroVinculado')) {
     const sel = document.getElementById('orcRoteiroVinculado');
@@ -243,7 +250,14 @@ function novoOrcamento() {
   document.getElementById('clienteCriancas').value = '0';
   document.getElementById('clienteDataOrcamento').value = today();
   
-  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
+  if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};
+  const defs = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
+  ['4h','6h','8h','10h','12h'].forEach(k => {
+    if (!state.orcamento.valoresTour[k] || state.orcamento.valoresTour[k] === 0) {
+      state.orcamento.valoresTour[k] = defs[k];
+    }
+  });
+
   document.getElementById('baseTour4h').value = state.orcamento.valoresTour['4h'];
   document.getElementById('baseTour6h').value = state.orcamento.valoresTour['6h'];
   document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'];
