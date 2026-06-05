@@ -1845,6 +1845,12 @@ window.confirmarVincularClienteRoteiro = function() {
     
     document.getElementById('modalVincularClienteRoteiro').classList.add('hidden');
     
+    // Trava os campos imediatamente após o vínculo
+    ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+    });
+    
     if(typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
     if(typeof updateRoteiroHeader === 'function') updateRoteiroHeader();
     
