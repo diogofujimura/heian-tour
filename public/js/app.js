@@ -263,6 +263,8 @@ function novoOrcamento() {
     if(el) { el.readOnly = false; el.style = ''; }
   });
   document.getElementById('clienteDataOrcamento').value = today();
+  const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
+  if(btnEditarCot) btnEditarCot.innerHTML = '💾 Salvar Cliente no Notion';
   
   if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};
   const defs = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
