@@ -178,6 +178,15 @@ function abrirOrcamento(id) {
   document.getElementById('baseTour8h').value = state.orcamento.valoresTour['8h'] || '';
   document.getElementById('baseTour10h').value = state.orcamento.valoresTour['10h'] || '';
   document.getElementById('baseTour12h').value = state.orcamento.valoresTour['12h'] || '';
+  
+  if (document.getElementById('orcRoteiroVinculado')) {
+    const sel = document.getElementById('orcRoteiroVinculado');
+    const linked = orc.orcRoteiroVinculado || orc.roteiroVinculado || '';
+    if (linked && !Array.from(sel.options).some(o => o.value === linked)) {
+      sel.add(new Option(linked, linked));
+    }
+    sel.value = linked;
+  }
 
   document.getElementById('orcTitulo').textContent = orc.nome || 'Cotação';
   const consAtiva = orc.consultoria?.ativa || false;

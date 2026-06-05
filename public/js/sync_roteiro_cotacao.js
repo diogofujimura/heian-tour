@@ -15,7 +15,11 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
     state.orcamento.nome = 'Cotação - ' + (nomeRoteiro || 'Roteiro Importado');
     state.orcamento.orcRoteiroVinculado = nomeRoteiro || '';
     if (document.getElementById('orcRoteiroVinculado')) {
-        document.getElementById('orcRoteiroVinculado').value = nomeRoteiro || '';
+        const sel = document.getElementById('orcRoteiroVinculado');
+        if (nomeRoteiro && !Array.from(sel.options).some(opt => opt.value === nomeRoteiro)) {
+            sel.add(new Option(nomeRoteiro, nomeRoteiro));
+        }
+        sel.value = nomeRoteiro || '';
     }
     
     // Herdando o Cliente do Notion e Estadias
