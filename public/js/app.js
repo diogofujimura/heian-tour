@@ -2178,43 +2178,51 @@ async function loadClientesTabela() {
 }
 
 function renderClientesTabela() {
-  const tbody = document.querySelector('#clientesTable tbody');
-  if(!tbody) return;
+  const listContainer = document.getElementById('tabelaClientesList');
+  if(!listContainer) return;
   
-  const termoNome = (document.getElementById('filtroClienteNome')?.value || '').toLowerCase();
-  const termoStatus = document.getElementById('filtroClienteStatus')?.value || '';
+  const termoNome = (document.getElementById('pesquisaClientesList')?.value || '').toLowerCase();
   
   const clientesFiltrados = notionClients.filter(c => {
-    const matchNome = (c.nome || '').toLowerCase().includes(termoNome);
-    const matchStatus = termoStatus === '' || c.status === termoStatus;
-    return matchNome && matchStatus;
+    const matchNome = (c.nome || '').toLowerCase().includes(termoNome) || (c.email || '').toLowerCase().includes(termoNome);
+    return matchNome;
   });
 
+  listContainer.innerHTML = '';
+
   if(clientesFiltrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum cliente encontrado com estes filtros.</td></tr>';
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color:#999;">Nenhum cliente encontrado.</div>';
     return;
   }
   
-  let html = '';
   clientesFiltrados.forEach(c => {
-    const dates = (c.dataInicio || c.dataFim) ? `${c.dataInicio || '?'} até ${c.dataFim || '?'}` : '-';
-    html += `
-      <tr>
-        <td><strong>${c.nome || 'Sem Nome'}</strong><br><small>${c.adultos} Ad / ${c.criancas} Cri</small></td>
-        <td><span class="status-badge">${c.status || 'Sem status'}</span></td>
-        <td>${dates}</td>
-        <td>
-          <button class="btn-primary" style="padding: 4px 8px; font-size: 11px; margin-right:5px; background:var(--gold-dk); border-color:var(--gold-dk)" onclick="abrirVisaoGeralCliente('${c.id}')"><i class="fa fa-eye"></i> Visualizar</button>
-          <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editarClienteNotion('${c.id}')">Editar</button>
-        </td>
-      </tr>
-    `;
-  });
-  tbody.innerHTML = html;
-}
+    let statusColor = '#9c8248'; // aberto
+    if(c.status === 'Fechado') statusColor = '#6B1F2A';
+    else if(c.status === 'Cancelado') statusColor = '#806A6D';
+    
+    const isSelected = window.clienteAtualVisualizado === c.id ? 'selected' : '';
 
+    const card = document.createElement('div');
+    card.className = 'list-card ' + isSelected;
+    card.onclick = () => abrirDetalhesCliente(c.id);
+    card.onmouseenter = () => hoverCliente(c.id);
+    
+    card.innerHTML = `
+      <div class="list-card-title" style="color:var(--crimson)">${c.nome}</div>
+      <div class="list-card-subtitle">${c.email || 'Sem email'}</div>
+      <div class="list-card-meta">
+        <span>${c.dataViagem ? fmtDataBR(c.dataViagem) : '-'}</span>
+        <span style="color:${statusColor}; font-weight:600;">${c.status || 'Novo'}</span>
+      </div>
+    `;
+    listContainer.appendChild(card);
+  });
+}
 function abrirClienteModal(cliente = null) {
-  document.getElementById('modalCliente').style.display = 'flex';
+  
+  document.getElementById('clientesEmptyState').style.display = 'none';
+  document.getElementById('clientesDetailWrapper').style.display = 'block';
+
   if(cliente) {
     currentEditingClienteId = cliente.id;
     document.getElementById('modalClienteTitle').innerText = 'Editar Cliente';
@@ -2281,7 +2289,10 @@ function abrirClienteModal(cliente = null) {
 }
 
 window.closeClienteModal = function() {
-  document.getElementById('modalCliente').style.display = 'none';
+  
+  document.getElementById('clientesEmptyState').style.display = 'block';
+  document.getElementById('clientesDetailWrapper').style.display = 'none';
+
 }
 
 window.editarClienteNotion = async function(id) {

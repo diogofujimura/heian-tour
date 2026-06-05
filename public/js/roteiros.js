@@ -483,13 +483,12 @@ let roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:
 let roteiroOriginalNome = '';
 
 function setupEditorEvents() {
-  document.getElementById('btnNovoRoteiro').addEventListener('click', () => {
+  // Removido listener antigo do btnNovoRoteiro
+window.novoRoteiro = function() {
     roteiroOriginalNome = '';
     roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: [] };
     abrirEditorRoteiro('Novo Roteiro');
-  });
-
-  document.getElementById('btnEditarRoteiro').addEventListener('click', () => {
+};  document.getElementById('btnEditarRoteiro').addEventListener('click', () => {
     const nome = window.roteiroAtualVisualizado;
     const formatPeriodo = (d1, d2) => {
       if (!d1 && !d2) return
@@ -896,7 +895,7 @@ function abrirEditorRoteiro(nome) {
   document.getElementById('roteiroEditContainer').style.display = 'block';
   
   // Esconde botoes da header
-  document.getElementById('btnNovoRoteiro').style.display = 'none';
+  // Removido hide do btnNovoRoteiro
   document.getElementById('btnEditarRoteiro').style.display = 'none';
   document.getElementById('btnExcluirRoteiro').style.display = 'none';
   document.getElementById('btnGerarRoteiro').style.display = 'none';
@@ -916,7 +915,7 @@ function fecharEditorRoteiro() {
   
   // Restaura botoes baseado na seleção
   const val = window.roteiroAtualVisualizado;
-  document.getElementById('btnNovoRoteiro').style.display = 'inline-block';
+  // Removido show do btnNovoRoteiro
   document.getElementById('btnEditarRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnExcluirRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnGerarRoteiro').style.display = 'inline-block';
