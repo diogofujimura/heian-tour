@@ -309,7 +309,7 @@ window.selecionarBlocoRoteiro = function(idx, eIdx, nomeRota) {
       atracoesParaAdicionar = Array.isArray(rotaEncontrada.atracoesDoDia)
         ? rotaEncontrada.atracoesDoDia
         : rotaEncontrada.atracoesDoDia.split(',').map(s => s.trim()).filter(Boolean);
-    }
+}
   }
 
   if (atracoesParaAdicionar && atracoesParaAdicionar.length > 0) {
@@ -320,18 +320,28 @@ window.selecionarBlocoRoteiro = function(idx, eIdx, nomeRota) {
 
 function renderizarRoteiro(roteiroNome) {
   const timeline = document.getElementById('roteiroTimeline');
+  if (!timeline) return;
   if (!roteiroNome) { timeline.innerHTML = '<div class="empty-state">Selecione um roteiro base acima para visualizar os dias.</div>'; return; }
   const rotasData = dbRotas[roteiroNome];
   if (!rotasData) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
   const rotas = Array.isArray(rotasData) ? rotasData : (rotasData.dias || []);
   if (rotas.length === 0) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
+  
   timeline.innerHTML = '';
   rotas.forEach((rotaOrig, index) => {
     const rota = migrarDiaParaNovaEstrutura(rotaOrig);
     const card = document.createElement('div');
     card.className = 'dia-card';
-    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:var(--surface); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle">Tour Guiado</span>` : '';
-    let elementosHtml = rota.elementos.map((el, eIdx) => {
+    card.style.marginBottom = '24px';
+    
+    const temDeslocamento = rota.elementos.some(el => el.tipo === 'transporte');
+    const temExperiencia = rota.elementos.some(el => el.tipo === 'experiencia');
+    
+    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center;">⭐ Tour Guiado</span>` : '';
+    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
+    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
+
+    let elementosHtml = rota.elementos.map(el => {
       if (el.tipo === 'info') {
         const parts = [];
         if (el.dataDoTour) {
@@ -339,73 +349,45 @@ function renderizarRoteiro(roteiroNome) {
           parts.push(`📅 ${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
         }
         if (el.horarioEncontro) parts.push(`🕒 ${el.horarioEncontro}`);
-   if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
+        if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
         if (el.localEncontro) parts.push(`📍 ${el.localEncontro}`);
         if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
-        return
+        return '';
       } else if (el.tipo === 'texto') {
         return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
       } else if (el.tipo === 'transporte') {
-        const pText = formatarPessoas(el); const p = pText ? (el.horario ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
-        const h = el.horario ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horario}</span>` : '';
+        const origem = el.cidadeOrigem || 'Origem';
+        const destino = el.cidadeDestino || 'Destino';
+        const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha})` : 'Deslocamento a definir';
+        const ctg = el.categoria ? ` - ${el.categoria}` : '';
+        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[⏱ ${el.tempo}]</span>` : '';
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
+        const h = el.horario ? `${el.horario}` : '';
+        const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
+        
         return `
-          <div style="display:flex; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); border-radius:8px; border-left:4px solid #C4A35A">
-             <div style="flex:1">
-               <div style="color:#C4A35A; font-weight:bold; font-size:13px; font-family:var(--ff-display); text-transform:uppercase; margin-bottom:2px">DESLOCAMENTO</div>
-               <div style="font-size:12px; color:var(--ink-dark); margin-bottom:4px">${el.cidadeOrigem} -> ${el.cidadeDestino || 'Destino'}</div>
-               <div style="font-size:12px; color:var(--text-sec); margin-bottom:4px">${el.tipoTransporte || 'Deslocamento'} (${el.linha || 'Geral'}) - ${el.categoria || 'Normal'} - ${el.adultos||0} Adultos ${el.tempo ? `<span style="color:var(--gold-dk); font-weight:bold;">⏱ ${el.tempo}</span>` : ''} ${el.compradoHeian !== false ? '<strong style="color:#C4A35A">[✔️ EMITIDO P/ HEIAN]</strong>' : ''}</div>
-               <div style="font-size:11px; color:var(--text-sec); font-weight:500">${h}${p}</div>
-             </div>
+          <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+            <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+              <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
+            </div>
+            <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
           </div>`;
       } else if (el.tipo === 'experiencia') {
-        const pText = formatarPessoas(el); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
         const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
         return `
-          <div style="display:flex; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; padding:16px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); border-radius:8px; border-left:4px solid var(--crimson)">
-             <div style="flex:1">
-               <div style="color:var(--crimson); font-weight:bold; font-size:13px; font-family:var(--ff-display); text-transform:uppercase; margin-bottom:2px">Tickets & Experiências</div>
-               <div style="font-size:12px; color:var(--text-sec); margin-bottom:4px">${el.nomeExp || 'Experiência a definir'} - ${el.adultos||0} Adultos ${el.compradoHeian !== false ? '<strong style="color:#C4A35A">[✔️ EMITIDO P/ HEIAN]</strong>' : ''}</div>
-               <div style="font-size:11px; color:var(--text-sec); font-weight:500">${h}${p}</div>
-             </div>
+          <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+            <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+              <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
+            </div>
+            <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
           </div>`;
       } else if (el.tipo === 'sequencia') {
         const tituloRota = el.nomeDaRota || 'Sequência';
         const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
-        const incluirDesc = document.getElementById('chkIncluirDescricoesPdf')?.checked;
-        
-        let atracoesHTML = '';
-        if (incluirDesc) {
-          atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
-          el.atracoesDoDia.forEach((atrNome, idxAtr) => {
-            const atr = atracaoMap.get(atrNome.toLowerCase());
-            let desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
-            desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
-            const isBairro = atr && (atr['Bairro'] === atr['Nome da Atração']);
-            
-            if (isBairro) {
-              const baseSpacing = idxAtr === 0 ? 'margin-top:4px;' : 'margin-top:12px;';
-              const bgStyle = 'background: linear-gradient(to right, rgba(212,175,55,0.12), transparent); padding: 6px 12px; border-radius: 6px;';
-              
-              atracoesHTML += `
-                <div style="${baseSpacing} ${bgStyle}">
-                  <strong style="font-size:14px; color:var(--ink-dark); display:block;">
-                    ${atrNome}
-                  </strong>
-                  ${desc !== 'Visitação livre.' ? `<div style="font-size:11px; color:var(--text-main); margin-top:2px; line-height:1.4;">${desc}</div>` : ''}
-                </div>`;
-            } else {
-              atracoesHTML += `
-                <div style="font-size:12px; color:var(--text-main); margin-bottom:4px; line-height:1.4; padding-left:11px; text-indent:-11px;">
-                  <span style="display:inline-block; width:5px; height:5px; background:var(--gold); border-radius:50%; margin-right:6px; vertical-align:middle; position:relative; top:-1px;"></span>
-                  <strong>${atrNome}</strong>${desc !== 'Visitação livre.' ? ` <span style="color:var(--text-sec);">— ${desc}</span>` : ''}
-                </div>`;
-            }
-          });
-          atracoesHTML += '</div>';
-        } else {
-          atracoesHTML = `<div class="dia-atracoes">${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}</div>`;
-        }
-
+        let atracoesHTML = `<div class="dia-atracoes">${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}</div>`;
         return `
           <div style="margin-bottom:12px; position:relative">
             <div style="display:flex; flex-wrap:wrap; align-items:center; margin-bottom:10px">
@@ -416,14 +398,132 @@ function renderizarRoteiro(roteiroNome) {
           </div>
         `;
       }
+      return '';
     }).join('');
+
+    let dataText = '';
+    if (rota.elementos.some(el => el.tipo === 'info' && el.dataDoTour)) {
+      const dTour = rota.elementos.find(el => el.tipo === 'info').dataDoTour;
+      const [yy, mm, dd] = dTour.split('-');
+      const dateObj = new Date(yy, mm - 1, dd);
+      const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      dataText = ` - ${dd}/${mm}/${yy} (${diasSemana[dateObj.getDay()]})`;
+    }
+
     card.innerHTML = `
-      <div class="dia-header" style="flex-direction:column; align-items:flex-start">
-        <div style="margin-bottom:8px">
-          <span class="dia-numero" style="font-size:16px; margin-right:8px; color:var(--ink-dark); font-weight:bold;">
-            Dia ${index + 1}${rota.elementos.some(el => el.tipo === 'info' && el.dataDoTour) ? ' - ' + new Date(rota.elementos.find(el => el.tipo === 'info').dataDoTour).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) + ' (' + new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' }).format(new Date(rota.elementos.find(el => el.tipo === 'info').dataDoTour)).charAt(0).toUpperCase() + new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' }).format(new Date(rota.elementos.find(el => el.tipo === 'info').dataDoTour)).slice(1) + ')' : ''}
-          </span>
+      <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
+        <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center;">
+          <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${index + 1}${dataText}</span>
           ${badgeGuiado}
+          ${badgeDeslocamento}
+          ${badgeExperiencia}
+        </div>
+      </div>
+      ${elementosHtml}
+    `;
+    timeline.appendChild(card);
+  });
+  if (typeof attachChipEvents === 'function') attachChipEvents();
+}
+
+window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
+  if (!timeline) return;
+  if (!roteiroNome) { timeline.innerHTML = '<div class="empty-state">Selecione um roteiro base acima para visualizar os dias.</div>'; return; }
+  const rotasData = dbRotas[roteiroNome];
+  if (!rotasData) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
+  const rotas = Array.isArray(rotasData) ? rotasData : (rotasData.dias || []);
+  if (rotas.length === 0) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
+  
+  timeline.innerHTML = '';
+  rotas.forEach((rotaOrig, index) => {
+    const rota = migrarDiaParaNovaEstrutura(rotaOrig);
+    const card = document.createElement('div');
+    card.className = 'dia-card';
+    card.style.marginBottom = '24px';
+    
+    const temDeslocamento = rota.elementos.some(el => el.tipo === 'transporte');
+    const temExperiencia = rota.elementos.some(el => el.tipo === 'experiencia');
+    
+    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center;">⭐ Tour Guiado</span>` : '';
+    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
+    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
+
+    let elementosHtml = rota.elementos.map(el => {
+      if (el.tipo === 'info') {
+        const parts = [];
+        if (el.dataDoTour) {
+          const d = new Date(el.dataDoTour);
+          parts.push(`📅 ${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
+        }
+        if (el.horarioEncontro) parts.push(`🕒 ${el.horarioEncontro}`);
+        if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
+        if (el.localEncontro) parts.push(`📍 ${el.localEncontro}`);
+        if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
+        return '';
+      } else if (el.tipo === 'texto') {
+        return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
+      } else if (el.tipo === 'transporte') {
+        const origem = el.cidadeOrigem || 'Origem';
+        const destino = el.cidadeDestino || 'Destino';
+        const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha})` : 'Deslocamento a definir';
+        const ctg = el.categoria ? ` - ${el.categoria}` : '';
+        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[⏱ ${el.tempo}]</span>` : '';
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
+        const h = el.horario ? `${el.horario}` : '';
+        const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
+        
+        return `
+          <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+            <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+              <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
+            </div>
+            <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+          </div>`;
+      } else if (el.tipo === 'experiencia') {
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
+        const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
+        return `
+          <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+            <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+              <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
+            </div>
+            <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+          </div>`;
+      } else if (el.tipo === 'sequencia') {
+        const tituloRota = el.nomeDaRota || 'Sequência';
+        const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
+        let atracoesHTML = `<div class="dia-atracoes">${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}</div>`;
+        return `
+          <div style="margin-bottom:12px; position:relative">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; margin-bottom:10px">
+              ${cidadeText}
+              <strong style="color:var(--crimson); font-size:13px; font-weight:600">${tituloRota}</strong>
+            </div>
+            ${atracoesHTML}
+          </div>
+        `;
+      }
+      return '';
+    }).join('');
+
+    let dataText = '';
+    if (rota.elementos.some(el => el.tipo === 'info' && el.dataDoTour)) {
+      const dTour = rota.elementos.find(el => el.tipo === 'info').dataDoTour;
+      const [yy, mm, dd] = dTour.split('-');
+      const dateObj = new Date(yy, mm - 1, dd);
+      const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      dataText = ` - ${dd}/${mm}/${yy} (${diasSemana[dateObj.getDay()]})`;
+    }
+
+    card.innerHTML = `
+      <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
+        <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center;">
+          <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${index + 1}${dataText}</span>
+          ${badgeGuiado}
+          ${badgeDeslocamento}
+          ${badgeExperiencia}
         </div>
       </div>
       ${elementosHtml}

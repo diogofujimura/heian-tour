@@ -2323,6 +2323,63 @@ let currentEditingClienteId = null;
 let currentEditingEstadias = [];
 let currentEditingViajantes = [];
 let currentEditingEmails = [];
+let editFotoPerfilBase64 = "";
+
+window.previewEditFotoPerfil = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  if (file.size > 250 * 1024) {
+    alert("A imagem selecionada é muito grande. Por favor, escolha uma imagem de até 250KB.");
+    input.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    editFotoPerfilBase64 = e.target.result;
+    const container = document.getElementById('mcFotoPerfilPreview');
+    if (container) {
+      container.innerHTML = `<img src="${editFotoPerfilBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+    }
+    const btnRemover = document.getElementById('mcBtnRemoverFoto');
+    if (btnRemover) btnRemover.style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.removerEditFotoPerfil = function() {
+  editFotoPerfilBase64 = "";
+  const fileInput = document.getElementById('mcFotoPerfilFile');
+  if (fileInput) fileInput.value = "";
+  const container = document.getElementById('mcFotoPerfilPreview');
+  if (container) {
+    const nome = document.getElementById('mcNome').value || "Cliente";
+    container.innerHTML = window.obterAvatarFallbackHTML(nome);
+  }
+  const btnRemover = document.getElementById('mcBtnRemoverFoto');
+  if (btnRemover) btnRemover.style.display = 'none';
+};
+
+window.obterAvatarFallbackHTML = function(nome) {
+  const iniciais = obterIniciaisNome(nome);
+  let hash = 0;
+  for (let i = 0; i < nome.length; i++) {
+    hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  const bg = `hsl(${hue}, 45%, 50%)`;
+  return `<div class="client-avatar-fallback" style="background-color: ${bg}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff;">${iniciais}</div>`;
+};
+
+function obterIniciaisNome(nome) {
+  if (!nome) return "HT";
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length >= 2) {
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+  return partes[0].substring(0, 2).toUpperCase();
+}
 
 function setupClientesTab() {
   const btnRefresh = document.getElementById('btnRefreshClientes');
@@ -2600,6 +2657,19 @@ function abrirClienteModal(cliente = null) {
   document.getElementById('clientesPreviewContainer').style.display = 'none';
   document.getElementById('clientesEditorContainer').style.display = 'block';
 
+  // Configurar input dinâmico de iniciais ao digitar
+  const mcNomeInput = document.getElementById('mcNome');
+  if (mcNomeInput) {
+    mcNomeInput.oninput = () => {
+      if (!editFotoPerfilBase64) {
+        const previewCont = document.getElementById('mcFotoPerfilPreview');
+        if (previewCont) {
+          previewCont.innerHTML = window.obterAvatarFallbackHTML(mcNomeInput.value);
+        }
+      }
+    };
+  }
+
   if(cliente) {
     currentEditingClienteId = cliente.id;
     document.getElementById('modalClienteTitle').innerText = 'Editar Cliente';
@@ -2659,7 +2729,6 @@ function abrirClienteModal(cliente = null) {
       // Viajantes: tentar local primeiro, fallback do Notion
       currentEditingViajantes = d.viajantes || [];
       if (currentEditingViajantes.length === 0 && cliente.viajantes) {
-        // Parse: "Nome Sobrenome (Idade)" por linha
         cliente.viajantes.split('\n').filter(l => l.trim()).forEach(line => {
           const text = line.trim();
           const ageMatch = text.match(/\((\d+)\)$/);
@@ -2685,12 +2754,27 @@ function abrirClienteModal(cliente = null) {
       }
       renderEmailsForm();
 
+      // Foto de perfil
+      editFotoPerfilBase64 = d.fotoPerfil || "";
+      const previewCont = document.getElementById('mcFotoPerfilPreview');
+      const btnRemover = document.getElementById('mcBtnRemoverFoto');
+      if (previewCont) {
+        if (editFotoPerfilBase64) {
+          previewCont.innerHTML = `<img src="${editFotoPerfilBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+          if (btnRemover) btnRemover.style.display = 'inline-block';
+        } else {
+          previewCont.innerHTML = window.obterAvatarFallbackHTML(cliente.nome || "");
+          if (btnRemover) btnRemover.style.display = 'none';
+        }
+      }
+
       formatHubButtons();
     }).catch(e => { 
       console.error(e); 
       currentEditingEstadias = []; 
       currentEditingViajantes = [];
       currentEditingEmails = [];
+      editFotoPerfilBase64 = "";
       if (cliente.hotel) {
         cliente.hotel.split('\n').filter(l => l.trim()).forEach(line => {
           let cidade = ''; let hotel = line.trim(); let dataInicio = ''; let dataFim = '';
@@ -2728,9 +2812,17 @@ function abrirClienteModal(cliente = null) {
       renderEstadiasForm();
       renderViajantesForm();
       renderEmailsForm();
+
+      const previewCont = document.getElementById('mcFotoPerfilPreview');
+      if (previewCont) {
+        previewCont.innerHTML = window.obterAvatarFallbackHTML(cliente.nome || "");
+      }
+      const btnRemover = document.getElementById('mcBtnRemoverFoto');
+      if (btnRemover) btnRemover.style.display = 'none';
     });
   } else {
     currentEditingClienteId = null;
+    editFotoPerfilBase64 = "";
     document.getElementById('modalClienteTitle').innerText = 'Novo Cliente';
     document.getElementById('mcNome').value = '';
     document.getElementById('mcStatus').value = 'Início/call de dúvidas';
@@ -2750,6 +2842,14 @@ function abrirClienteModal(cliente = null) {
     renderEstadiasForm();
     renderViajantesForm();
     renderEmailsForm();
+
+    const previewCont = document.getElementById('mcFotoPerfilPreview');
+    if (previewCont) {
+      previewCont.innerHTML = `<span>HT</span>`;
+    }
+    const btnRemover = document.getElementById('mcBtnRemoverFoto');
+    if (btnRemover) btnRemover.style.display = 'none';
+
     formatHubButtons();
   }
 }
@@ -2864,7 +2964,8 @@ async function salvarClienteNotion() {
         id: cliId,
         estadias: currentEditingEstadias,
         viajantes: currentEditingViajantes,
-        emails: currentEditingEmails
+        emails: currentEditingEmails,
+        fotoPerfil: editFotoPerfilBase64
       })
     });
     
@@ -3377,7 +3478,7 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
     const estadias = d.estadias || [];
     const viajantes = d.viajantes || [];
     const emails = d.emails || [];
-    renderPreviewCliente(c, estadias, viajantes, emails);
+    renderPreviewCliente(c, estadias, viajantes, emails, d.fotoPerfil || "");
   }).catch(e => {
     console.error(e);
     const estadias = [];
@@ -3395,7 +3496,7 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
         estadias.push({ id: Date.now() + Math.random(), cidade, dataInicio, dataFim, hotel });
       });
     }
-    renderPreviewCliente(c, estadias, [], []);
+    renderPreviewCliente(c, estadias, [], [], "");
   });
 };
 
@@ -3418,9 +3519,103 @@ window.editarClienteCard = function(id) {
   abrirClienteModal(c);
 };
 
-window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], emails = []) {
+window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], emails = [], fotoPerfil = "") {
   const container = document.getElementById('clientesPreviewContainer');
   if (!container) return;
+
+  let statusColor = '#9c8248';
+  if (cliente.status === 'Fechado' || cliente.status === 'Negociação Aprovada' || cliente.status === 'Finalizados') {
+    statusColor = '#6B1F2A';
+  } else if (cliente.status === 'Cancelado') {
+    statusColor = '#806A6D';
+  }
+
+  // Serializar coleções locais para a alternância rápida de abas
+  const estadiasStr = encodeURIComponent(JSON.stringify(estadias));
+  const viajantesStr = encodeURIComponent(JSON.stringify(viajantes));
+  const emailsStr = encodeURIComponent(JSON.stringify(emails));
+
+  // Renderizar o cabeçalho estático (Dynamics 365 Style)
+  let avatarHTML = "";
+  if (fotoPerfil) {
+    avatarHTML = `<div class="client-avatar-container"><img src="${fotoPerfil}"></div>`;
+  } else {
+    avatarHTML = `<div class="client-avatar-container">${window.obterAvatarFallbackHTML(cliente.nome || "")}</div>`;
+  }
+
+  container.innerHTML = `
+    <div class="client-detail-header">
+      <div class="client-profile-summary">
+        ${avatarHTML}
+        <div class="client-info-meta">
+          <h2>${cliente.nome || 'Cliente sem nome'}</h2>
+          <span class="client-status-badge" style="color: ${statusColor}; background: rgba(196, 163, 90, 0.08); border: 1px solid rgba(196, 163, 90, 0.2);">
+            ${cliente.status || 'Novo'}
+          </span>
+        </div>
+      </div>
+      <div class="client-actions-bar">
+        <button class="btn-secondary" onclick="window.location.href='mailto:${emails && emails[0] ? emails[0].email : (cliente.email || '')}'" title="Enviar E-mail" ${!(emails && emails[0] || cliente.email) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+          ✉️ E-mail
+        </button>
+        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\\D/g,'')}', '_blank');" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+          💬 WhatsApp
+        </button>
+        <button class="btn-secondary" onclick="navToPage('dashboard'); if(typeof selecionarClienteDashboard === 'function') selecionarClienteDashboard('${cliente.id}'); closeClienteModal();" title="Dashboard do Cliente">
+          📊 Dashboard
+        </button>
+        <button class="btn-primary" onclick="editarClienteCard('${cliente.id}')">
+          ✏️ Editar Cliente
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Navegação de Abas -->
+    <div class="tabs-client-nav">
+      <button class="tab-client-btn active" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
+      <button class="tab-client-btn" data-tab="roteiros" onclick="window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Roteiros</button>
+      <button class="tab-client-btn" data-tab="cotacoes" onclick="window.switchClientTab('cotacoes', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Cotações</button>
+    </div>
+
+    <!-- Conteúdo da Aba Ativa -->
+    <div id="clientTabContent" class="tab-client-content"></div>
+  `;
+
+  // Renderizar a primeira aba por padrão
+  renderAbaDadosCliente(cliente, estadias, viajantes, emails);
+};
+
+window.switchClientTab = function(tabName, clienteId, estadiasJson, viajantesJson, emailsJson) {
+  const nav = document.querySelector('.tabs-client-nav');
+  if (nav) {
+    nav.querySelectorAll('.tab-client-btn').forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : null;
+  if (!cliente) return;
+
+  const estadias = JSON.parse(decodeURIComponent(estadiasJson));
+  const viajantes = JSON.parse(decodeURIComponent(viajantesJson));
+  const emails = JSON.parse(decodeURIComponent(emailsJson));
+
+  if (tabName === 'dados') {
+    renderAbaDadosCliente(cliente, estadias, viajantes, emails);
+  } else if (tabName === 'roteiros') {
+    renderAbaRoteiros(cliente);
+  } else if (tabName === 'cotacoes') {
+    renderAbaCotacoes(cliente);
+  }
+};
+
+function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
+  const contentDiv = document.getElementById('clientTabContent');
+  if (!contentDiv) return;
 
   let datasViagem = 'Sem data definida';
   if (cliente.dataInicio && cliente.dataFim) {
@@ -3429,7 +3624,6 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     datasViagem = `${fmtDataBR(cliente.dataInicio)}`;
   }
 
-  // Contagem de passageiros a partir de viajantes
   let passageiros = '';
   if (viajantes && viajantes.length > 0) {
     let ad = 0, cr = 0;
@@ -3449,14 +3643,6 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     if (!passageiros) passageiros = 'Nenhum passageiro informado';
   }
 
-  let statusColor = '#9c8248';
-  if (cliente.status === 'Fechado' || cliente.status === 'Negociação Aprovada' || cliente.status === 'Finalizados') {
-    statusColor = '#6B1F2A';
-  } else if (cliente.status === 'Cancelado') {
-    statusColor = '#806A6D';
-  }
-
-  // Voo formatado
   let vooChegadaStr = 'Não informado';
   if (cliente.vooChegadaNum || cliente.vooChegadaHora) {
     vooChegadaStr = [cliente.vooChegadaNum, cliente.vooChegadaHora].filter(Boolean).join(' · ');
@@ -3470,11 +3656,10 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     vooPartidaStr = cliente.vooPartida;
   }
 
-  // Viajantes HTML
   let viajantesHTML = '';
   if (viajantes && viajantes.length > 0) {
     viajantesHTML = `<div style="display:flex; flex-direction:column; gap:6px;">` +
-      viajantes.map((v, i) => {
+      viajantes.map(v => {
         const nomeCompleto = [v.nome, v.sobrenome].filter(Boolean).join(' ') || 'Sem nome';
         const tipo = (parseInt(v.idade) < 12 && !isNaN(parseInt(v.idade))) ? '🧒' : '🧑';
         const idadeStr = v.idade ? `${v.idade} anos` : '';
@@ -3484,7 +3669,6 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
         </div>`;
       }).join('') + `</div>`;
   } else {
-    // Fallback: parse do Notion
     if (cliente.viajantes) {
       viajantesHTML = `<div style="font-size:13px; color:var(--ink-dk); white-space:pre-wrap;">${cliente.viajantes}</div>`;
     } else {
@@ -3492,7 +3676,6 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     }
   }
 
-  // Emails HTML
   let emailsHTML = '';
   if (emails && emails.length > 0) {
     emailsHTML = emails.map((e, i) => {
@@ -3522,40 +3705,7 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     estadiasHTML = `<p style="font-size: 13px; color: var(--ink-lt); font-style: italic;">Nenhuma estadia cadastrada.</p>`;
   }
 
-  container.innerHTML = `
-    <div class="preview-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-      <div>
-        <h2 style="font-family: var(--ff-display); font-size: 28px; font-weight: 400; color: var(--crimson); margin: 0; line-height: 1.2;">
-          ${cliente.nome}
-        </h2>
-        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
-          <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${statusColor}; background: rgba(196,163,90,0.08); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(196,163,90,0.2);">
-            ${cliente.status || 'Novo'}
-          </span>
-        </div>
-      </div>
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-        <button class="btn-secondary" onclick="window.location.href='mailto:${cliente.emails && cliente.emails[0] ? cliente.emails[0] : ''}'" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; display:flex; align-items:center; gap:6px; color:var(--ink-lt); background:#fff; border-color:var(--border);" title="Enviar E-mail" ${!(cliente.emails && cliente.emails[0]) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-          ✉️ E-mail
-        </button>
-        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\\D/g,'')}', '_blank');" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; display:flex; align-items:center; gap:6px; color:var(--ink-lt); background:#fff; border-color:var(--border);" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-          💬 WhatsApp
-        </button>
-        <button class="btn-secondary" onclick="navToPage('dashboard'); if(typeof selecionarClienteDashboard === 'function') selecionarClienteDashboard('${cliente.id}'); closeClienteModal();" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; display:flex; align-items:center; gap:6px; color:var(--ink-lt); background:#fff; border-color:var(--border);" title="Dashboard do Cliente">
-          📊 Dashboard
-        </button>
-        <button id="btnShortcutCotacaoTop" class="btn-secondary" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; display:flex; align-items:center; gap:6px; color:var(--ink-lt); background:#fff; border-color:var(--border);" title="Acessar Cotação">
-          💰 Cotação
-        </button>
-        <button id="btnShortcutRoteiroTop" class="btn-secondary" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; display:flex; align-items:center; gap:6px; color:var(--ink-lt); background:#fff; border-color:var(--border);" title="Acessar Roteiro">
-          🗺️ Roteiro
-        </button>
-        <button class="btn-primary" onclick="editarClienteCard('${cliente.id}')" style="padding: 6px 16px; border-radius: 6px; font-size: 12px; display: flex; align-items: center; gap: 6px; font-weight: 500;">
-          ✏️ Editar
-        </button>
-      </div>
-    </div>
-
+  contentDiv.innerHTML = `
     <div class="preview-body" style="display: flex; flex-direction: column; gap: 24px;">
       <div class="preview-section-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; background: var(--warm-white); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
         <div>
@@ -3592,144 +3742,326 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
           ${estadiasHTML}
         </div>
       </div>
-
-      <div style="border-top: 1px solid var(--border); padding-top: 20px;">
-        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600;">Hub de Acesso Rápido</h3>
-        <div style="display: flex; gap: 12px;" id="previewHubButtonsContainer">
-          <button id="btnAcessoCotacaoPreview" class="btn-secondary" style="flex: 1; padding: 12px; border-radius: 8px; font-size: 13px;">Carregando cotação...</button>
-          <button id="btnAcessoRoteiroPreview" class="btn-secondary" style="flex: 1; padding: 12px; border-radius: 8px; font-size: 13px;">Carregando roteiro...</button>
-        </div>
-      </div>
     </div>
   `;
+}
 
-  formatHubButtonsPreview(cliente.id);
+function renderAbaRoteiros(cliente) {
+  const contentDiv = document.getElementById('clientTabContent');
+  if (!contentDiv) return;
+
+  const clienteNome = cliente.nome || '';
+  const roteiros = typeof dbRotas !== 'undefined' ? Object.entries(dbRotas)
+    .filter(([nome, rot]) => {
+      return rot.notionClienteId === cliente.id || (rot.cliente && rot.cliente.nome === clienteNome);
+    })
+    .map(([nome, rot]) => ({ nome, ...rot })) : [];
+
+  if (roteiros.length === 0) {
+    contentDiv.innerHTML = `
+      <div style="text-align:center; padding: 40px 20px;">
+        <p style="color:var(--ink-lt); font-size:14px; margin-bottom:16px;">Nenhum roteiro vinculado a este cliente.</p>
+        <button class="btn-primary" onclick="window.criarRoteiroParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:8px; padding: 10px 18px; border-radius: 8px;">
+          ➕ Criar Roteiro
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  let cardsHTML = roteiros.map(r => {
+    const totalDias = (r.dias || []).length;
+    const meta = `${totalDias} dia(s)`;
+    return `
+      <div class="compact-card" data-roteiro-name="${r.nome}" onclick="window.selectRoteiroCompact('${r.nome}')">
+        <div class="compact-card-title">${r.nome}</div>
+        <div class="compact-card-meta">${meta}</div>
+        <div class="compact-card-footer">
+          <span class="compact-card-price" style="font-size:11px;">Roteiro</span>
+          <span class="compact-card-status" style="background:rgba(196,163,90,0.08); color:var(--gold-dk);">Ativo</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  contentDiv.innerHTML = `
+    <div class="compact-cards-grid">
+      ${cardsHTML}
+    </div>
+    <div id="roteiroActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
+      <strong id="roteiroActiveTitle" style="color:var(--crimson); font-size:15px;"></strong>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" id="btnAbrirRoteiroPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer;">🗺️ Abrir Editor</button>
+        <button class="btn-secondary" id="btnExcluirRoteiroPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer;">❌ Excluir</button>
+      </div>
+    </div>
+    <div id="roteiroActivePreview" class="tab-preview-section"></div>
+  `;
+
+  // Selecionar o primeiro roteiro da lista por padrão
+  window.selectRoteiroCompact(roteiros[0].nome);
+}
+
+window.selectRoteiroCompact = function(roteiroNome) {
+  const cardsGrid = document.querySelector('.compact-cards-grid');
+  if (cardsGrid) {
+    cardsGrid.querySelectorAll('.compact-card').forEach(card => {
+      if (card.dataset.roteiroName === roteiroNome) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+  }
+
+  const titleEl = document.getElementById('roteiroActiveTitle');
+  if (titleEl) titleEl.innerText = roteiroNome;
+
+  const btnAbrir = document.getElementById('btnAbrirRoteiroPreview');
+  if (btnAbrir) {
+    btnAbrir.onclick = () => {
+      closeClienteModal();
+      if (typeof navToPage === 'function') navToPage('roteiros');
+      if (typeof window.editarRoteiroCard === 'function') {
+        window.editarRoteiroCard(roteiroNome);
+      }
+    };
+  }
+
+  const btnExcluir = document.getElementById('btnExcluirRoteiroPreview');
+  if (btnExcluir) {
+    btnExcluir.onclick = async () => {
+      if (!confirm(`Tem certeza que deseja excluir o roteiro "${roteiroNome}"?`)) return;
+      try {
+        await fetch(`/api/roteiros/${encodeURIComponent(roteiroNome)}`, { method: 'DELETE' });
+        if (typeof dbRotas !== 'undefined') {
+          delete dbRotas[roteiroNome];
+        }
+        const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
+        renderAbaRoteiros(cli);
+      } catch(err) {
+        console.error(err);
+        alert('Erro ao excluir roteiro.');
+      }
+    };
+  }
+
+  const previewDiv = document.getElementById('roteiroActivePreview');
+  if (previewDiv) {
+    previewDiv.innerHTML = '<div style="color:var(--ink-lt); padding:20px;">Carregando roteiro...</div>';
+    setTimeout(() => {
+      if (window.renderizarRoteiroNoElemento) {
+        window.renderizarRoteiroNoElemento(roteiroNome, previewDiv);
+      }
+    }, 50);
+  }
 };
 
-function formatHubButtonsPreview(clienteId) {
-  const btnCotacao = document.getElementById('btnAcessoCotacaoPreview');
-  const btnRoteiro = document.getElementById('btnAcessoRoteiroPreview');
-  if (!btnCotacao || !btnRoteiro) return;
+window.criarRoteiroParaCliente = function(clienteId) {
+  closeClienteModal();
+  if (typeof navToPage === 'function') navToPage('roteiros');
   
   const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : null;
-  const clienteNome = cliente ? cliente.nome : '';
+  if (!cliente) return;
 
-  let roteiroNome = null;
-  if (typeof dbRotas !== 'undefined' && clienteNome) {
-    for (const [k, v] of Object.entries(dbRotas)) {
-      if (v.cliente && v.cliente.nome === clienteNome) {
-        roteiroNome = k;
-        break;
-      }
-    }
-  }
-
-  const orc = state.orcamentosDB.find(o => o.notionClienteId === clienteId);
-
-  const btnCotacaoTop = document.getElementById('btnShortcutCotacaoTop');
-
-  if (orc) {
-    btnCotacao.innerText = 'Abrir Cotação';
-    const handler = () => { 
-      closeClienteModal(); 
-      abrirOrcamento(orc.id, true); 
-    };
-    btnCotacao.onclick = handler;
-    if (btnCotacaoTop) {
-      btnCotacaoTop.onclick = handler;
-      btnCotacaoTop.innerText = '💰 Abrir Cotação';
-    }
-  } else {
-    btnCotacao.innerText = 'Gerar Cotação';
-    const handler = () => { 
-      closeClienteModal(); 
-      novoOrcamento();
-      state.orcamento.notionClienteId = clienteId;
-      const nome = cliente.nome || '';
-      document.getElementById('orcNome').value = 'Cotação - ' + nome;
-      document.getElementById('clienteNome').value = nome;
-      document.getElementById('clienteAdultos').value = cliente.adultos || '2';
-      document.getElementById('clienteCriancas').value = cliente.criancas || '0';
-      state.orcamento.cliente.nome = nome;
-      state.orcamento.cliente.adultos = cliente.adultos || '2';
-      state.orcamento.cliente.criancas = cliente.criancas || '0';
-      state.orcamento.nome = 'Cotação - ' + nome;
-      
-      fetch(`/api/clientes/local/${clienteId}`).then(r=>r.json()).then(d => {
-        state.orcamento.estadias = JSON.parse(JSON.stringify(d.estadias || []));
-        renderEstadiasReadOnlyForm();
-      }).catch(e => {
-        console.error(e);
-      }).finally(() => {
-        navToPage('orcamento');
-        document.getElementById('orcamentosEmptyState').style.display = 'none';
-        document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
-        document.getElementById('orcamentosEditorWrapper').style.display = 'block';
-        updateResumo();
-      });
-    };
-    btnCotacao.onclick = handler;
-    if (btnCotacaoTop) {
-      btnCotacaoTop.onclick = handler;
-      btnCotacaoTop.innerText = '💰 Nova Cotação';
-    }
-  }
-
-  const rotNomeLinkado = (orc && orc.orcRoteiroVinculado) ? orc.orcRoteiroVinculado : roteiroNome;
+  roteiroOriginalNome = '';
+  roteiroEmEdicao = { 
+    notionClienteId: clienteId,
+    cliente: {
+      nome: cliente.nome,
+      adultos: cliente.adultos || 2,
+      criancas: cliente.criancas || 0,
+      dataInicio: cliente.dataInicio || '',
+      dataFim: cliente.dataFim || '',
+      vooChegada: cliente.vooChegada || '',
+      vooPartida: cliente.vooPartida || '',
+      estadias: []
+    },
+    dias: []
+  };
   
-  const btnRoteiroTop = document.getElementById('btnShortcutRoteiroTop');
+  document.getElementById('roteirosEmptyState').style.display = 'none';
+  document.getElementById('roteirosDetailWrapper').style.display = 'block';
+  if (typeof abrirEditorRoteiro === 'function') abrirEditorRoteiro('Novo Roteiro');
+  
+  fetch(`/api/clientes/local/${clienteId}`).then(r => r.json()).then(d => {
+    roteiroEmEdicao.cliente.estadias = JSON.parse(JSON.stringify(d.estadias || []));
+    if (typeof renderRotEstadias === 'function') renderRotEstadias();
+  }).catch(e => console.error(e));
+};
 
-  if (rotNomeLinkado) {
-    btnRoteiro.innerText = 'Abrir Roteiro';
-    const handler = () => { 
-      closeClienteModal(); 
-      if (typeof window.editarRoteiroCard === 'function') {
-        window.editarRoteiroCard(rotNomeLinkado);
+function renderAbaCotacoes(cliente) {
+  const contentDiv = document.getElementById('clientTabContent');
+  if (!contentDiv) return;
+
+  const cotacoes = state.orcamentosDB.filter(o => {
+    return o.notionClienteId === cliente.id || (o.cliente && o.cliente.nome === cliente.nome);
+  });
+
+  if (cotacoes.length === 0) {
+    contentDiv.innerHTML = `
+      <div style="text-align:center; padding: 40px 20px;">
+        <p style="color:var(--ink-lt); font-size:14px; margin-bottom:16px;">Nenhuma cotação vinculada a este cliente.</p>
+        <button class="btn-primary" onclick="window.criarCotacaoParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:8px; padding: 10px 18px; border-radius: 8px;">
+          ➕ Criar Cotação
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  let cardsHTML = cotacoes.map(c => {
+    const tT  = (c.tours || []).reduce((s,t)=>s+calcTotalTour(t),0);
+    const tTr = (c.transportes || []).reduce((s,t)=>s+calcTotalTransporte(t),0);
+    const tEx = (c.experiencias || []).reduce((s,e)=>s+calcTotalExp(e),0);
+    const tItens = (c.itensAdicionais||[]).reduce((s,i)=>s+(i.valor||0),0);
+    const cons = (c.consultoria && c.consultoria.ativa) ? (c.consultoria.valor || 0) : 0;
+    const total = tT+tTr+tEx+tItens+cons;
+
+    const dataOrc = c.cliente && c.cliente.dataOrcamento ? fmtDataBR(c.cliente.dataOrcamento) : '—';
+    
+    return `
+      <div class="compact-card" data-cotacao-id="${c.id}" onclick="window.selectCotacaoCompact('${c.id}')">
+        <div class="compact-card-title">${c.nome || 'Sem título'}</div>
+        <div class="compact-card-meta">Data: ${dataOrc}</div>
+        <div class="compact-card-footer">
+          <span class="compact-card-price">¥ ${Math.round(total).toLocaleString('pt-BR')}</span>
+          <span class="compact-card-status" style="background:rgba(107,31,42,0.08); color:var(--crimson);">${c.status || 'Orçamento'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  contentDiv.innerHTML = `
+    <div class="compact-cards-grid">
+      ${cardsHTML}
+    </div>
+    <div id="cotacaoActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
+      <strong id="cotacaoActiveTitle" style="color:var(--crimson); font-size:15px;"></strong>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" id="btnAbrirCotacaoPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer;">💰 Abrir Editor</button>
+        <button class="btn-secondary" id="btnExcluirCotacaoPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer;">❌ Excluir</button>
+      </div>
+    </div>
+    <div id="cotacaoActivePreview" class="tab-preview-section" style="max-height: 600px; overflow-y: auto;"></div>
+  `;
+
+  // Selecionar a primeira cotação da lista por padrão
+  window.selectCotacaoCompact(cotacoes[0].id);
+}
+
+window.selectCotacaoCompact = function(cotacaoId) {
+  const cardsGrid = document.querySelector('.compact-cards-grid');
+  if (cardsGrid) {
+    cardsGrid.querySelectorAll('.compact-card').forEach(card => {
+      if (card.dataset.cotacaoId === String(cotacaoId)) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+  }
+
+  const orc = state.orcamentosDB.find(o => o.id === cotacaoId);
+  if (!orc) return;
+
+  const titleEl = document.getElementById('cotacaoActiveTitle');
+  if (titleEl) titleEl.innerText = orc.nome || 'Cotação';
+
+  const btnAbrir = document.getElementById('btnAbrirCotacaoPreview');
+  if (btnAbrir) {
+    btnAbrir.onclick = () => {
+      closeClienteModal();
+      if (typeof navToPage === 'function') navToPage('orcamento');
+      if (typeof abrirOrcamento === 'function') {
+        abrirOrcamento(cotacaoId, true);
       }
     };
-    btnRoteiro.onclick = handler;
-    if (btnRoteiroTop) {
-      btnRoteiroTop.onclick = handler;
-      btnRoteiroTop.innerText = '🗺️ Abrir Roteiro';
-    }
-  } else {
-    btnRoteiro.innerText = 'Criar Roteiro';
-    const handler = () => {
-      closeClienteModal(); 
-      if (typeof navToPage === 'function') navToPage('roteiros');
-      
-      roteiroOriginalNome = '';
-      roteiroEmEdicao = { 
-        notionClienteId: clienteId,
-        cliente: {
-          nome: cliente.nome,
-          adultos: cliente.adultos || 2,
-          criancas: cliente.criancas || 0,
-          dataInicio: cliente.dataInicio || '',
-          dataFim: cliente.dataFim || '',
-          vooChegada: cliente.vooChegada || '',
-          vooPartida: cliente.vooPartida || '',
-          estadias: []
-        },
-        dias: []
-      };
-      
-      document.getElementById('roteirosEmptyState').style.display = 'none';
-      document.getElementById('roteirosDetailWrapper').style.display = 'block';
-      if (typeof abrirEditorRoteiro === 'function') abrirEditorRoteiro('Novo Roteiro');
-      
-      fetch(`/api/clientes/local/${clienteId}`).then(r => r.json()).then(d => {
-        roteiroEmEdicao.cliente.estadias = JSON.parse(JSON.stringify(d.estadias || []));
-        if (typeof renderRotEstadias === 'function') renderRotEstadias();
-      }).catch(e => console.error(e));
-    };
-    btnRoteiro.onclick = handler;
-    if (btnRoteiroTop) {
-      btnRoteiroTop.onclick = handler;
-      btnRoteiroTop.innerText = '🗺️ Novo Roteiro';
-    }
   }
-}
+
+  const btnExcluir = document.getElementById('btnExcluirCotacaoPreview');
+  if (btnExcluir) {
+    btnExcluir.onclick = async () => {
+      if (!confirm('Tem certeza que deseja excluir esta cotação?')) return;
+      try {
+        await fetch(`/api/orcamentos/${cotacaoId}`, { method: 'DELETE' });
+        state.orcamentosDB = state.orcamentosDB.filter(x => x.id !== cotacaoId);
+        const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
+        renderAbaCotacoes(cli);
+      } catch(err) {
+        console.error(err);
+        alert('Erro ao excluir cotação.');
+      }
+    };
+  }
+
+  const previewDiv = document.getElementById('cotacaoActivePreview');
+  if (previewDiv) {
+    previewDiv.innerHTML = '<div style="color:var(--ink-lt); padding:20px;">Carregando cotação...</div>';
+    setTimeout(() => {
+      if (window.renderPreviewOrcamentoNoElemento) {
+        window.renderPreviewOrcamentoNoElemento(cotacaoId, previewDiv);
+      }
+    }, 50);
+  }
+};
+
+window.criarCotacaoParaCliente = function(clienteId) {
+  closeClienteModal(); 
+  if (typeof navToPage === 'function') navToPage('orcamento');
+  
+  const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : null;
+  if (!cliente) return;
+
+  novoOrcamento();
+  state.orcamento.notionClienteId = clienteId;
+  const nome = cliente.nome || '';
+  document.getElementById('orcNome').value = 'Cotação - ' + nome;
+  document.getElementById('clienteNome').value = nome;
+  document.getElementById('clienteAdultos').value = cliente.adultos || '2';
+  document.getElementById('clienteCriancas').value = cliente.criancas || '0';
+  state.orcamento.cliente.nome = nome;
+  state.orcamento.cliente.adultos = cliente.adultos || '2';
+  state.orcamento.cliente.criancas = cliente.criancas || '0';
+  state.orcamento.nome = 'Cotação - ' + nome;
+  
+  fetch(`/api/clientes/local/${clienteId}`).then(r=>r.json()).then(d => {
+    state.orcamento.estadias = JSON.parse(JSON.stringify(d.estadias || []));
+    if (typeof renderEstadiasReadOnlyForm === 'function') renderEstadiasReadOnlyForm();
+  }).catch(e => {
+    console.error(e);
+  }).finally(() => {
+    document.getElementById('orcamentosEmptyState').style.display = 'none';
+    document.getElementById('orcamentosPreviewWrapper').style.display = 'none';
+    document.getElementById('orcamentosEditorWrapper').style.display = 'block';
+    if (typeof updateResumo === 'function') updateResumo();
+  });
+};
+
+window.renderPreviewOrcamentoNoElemento = function(orcId, element) {
+  const orc = state.orcamentosDB.find(o => o.id === orcId);
+  if (!orc || !element) return;
+  
+  const originalOrcamento = state.orcamento;
+  state.orcamento = JSON.parse(JSON.stringify(orc));
+  
+  const tempInline = document.getElementById('previewContainerInline');
+  if (tempInline) {
+    tempInline.removeAttribute('id');
+  }
+  
+  element.setAttribute('id', 'previewContainerInline');
+  
+  try {
+    renderPreview();
+  } finally {
+    element.removeAttribute('id');
+    if (tempInline) {
+      tempInline.setAttribute('id', 'previewContainerInline');
+    }
+    state.orcamento = originalOrcamento;
+  }
+};
 
 // ── RICH TEXT FORMATTING HELPER ──────────────────────────────────────────
 window.formatText = function(textareaId, command, value = '') {

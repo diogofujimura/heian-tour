@@ -3,7 +3,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Heian Tour — Orçamentos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&amp;family=Jost:wght@300;400;500&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=premium_vis4">
 
 <script>
@@ -632,6 +632,24 @@ window.addEventListener('unhandledrejection', function(e) {
                         <option value="Finalizados">Finalizados</option>
                         <option value="Cancelado">Cancelado</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <!-- FOTO DE PERFIL -->
+                  <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk);">
+                    <span>👤 Foto de Perfil (Opcional)</span>
+                  </div>
+                  <div style="background: rgba(196, 163, 90, 0.04); border: 1px dashed rgba(196, 163, 90, 0.3); border-radius: 12px; padding: 16px; margin-top: 8px;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                      <div id="mcFotoPerfilPreview" style="width:64px; height:64px; border-radius:50%; background:#fdfaf6; color:#9c8248; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; border:2px dashed #c4a35a; overflow:hidden; flex-shrink:0;">
+                        <span>HT</span>
+                      </div>
+                      <div style="flex:1">
+                        <input type="file" id="mcFotoPerfilFile" accept="image/*" style="display:none;" onchange="previewEditFotoPerfil(this)">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('mcFotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
+                        <button type="button" id="mcBtnRemoverFoto" class="btn-secondary" onclick="removerEditFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
+                        <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem quadrada de até 250KB.</p>
+                      </div>
                     </div>
                   </div>
 

@@ -14,30 +14,30 @@
   --gold-soft-hover: rgba(196, 163, 90, 0.12);
   --cream:      #F5EDE0;
   --warm-white: #FCFAF7;
-  --ink:        #2C1A1D;
-  --ink-mid:    #4C3539;
-  --ink-lt:     #806A6D;
-  --border:     rgba(196, 163, 90, 0.15); /* Delineado mais fino */
-  --border-dk:  rgba(196, 163, 90, 0.25);
-  --shadow:     0 8px 30px rgba(107, 31, 42, 0.03);
+  --ink:        #1A1012;
+  --ink-mid:    #3A282B;
+  --ink-lt:     #7A6568;
+  --border:     rgba(107, 31, 42, 0.08); /* Borda mais limpa e corporativa */
+  --border-dk:  rgba(107, 31, 42, 0.15);
+  --shadow:     0 4px 18px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
   --sidebar-w:  240px;
-  --ff-display: 'Cormorant Garamond', Georgia, serif;
-  --ff-body:    'Jost', sans-serif;
-  --ff-num:     'Jost', system-ui, sans-serif;
+  --ff-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --ff-body:    'Inter', system-ui, -apple-system, sans-serif;
+  --ff-num:     'Inter', system-ui, -apple-system, sans-serif;
 
   /* Glassmorphism tokens */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.7);
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 10px;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
 }
 
 html, body { 
   height: 100%; 
   font-family: var(--ff-body); 
-  background: linear-gradient(135deg, #E6E9EC 0%, #DFE2E5 100%); 
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%); 
   background-attachment: fixed;
   color: var(--ink); 
   font-size: 14px; 
@@ -52,26 +52,26 @@ html, body {
   left: 0; 
   width: var(--sidebar-w); 
   height: 100vh; 
-  background: rgba(255, 255, 255, 0.45); 
+  background: rgba(255, 255, 255, 0.88); 
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   display: flex; 
   flex-direction: column; 
   padding: 0 0 24px; 
   z-index: 100; 
-  border-right: 1px solid rgba(196, 163, 90, 0.12); 
-  box-shadow: 2px 0 20px rgba(107, 31, 42, 0.02); 
+  border-right: 1px solid var(--border); 
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.01); 
 }
 .sidebar-logo { 
   padding: 28px 24px 24px; 
-  border-bottom: 1px solid rgba(196, 163, 90, 0.08); 
+  border-bottom: 1px solid var(--border); 
   text-align: center; 
 }
 .sidebar-logo img { 
   width: 130px; 
   display: block; 
   margin: 0 auto; 
-  filter: drop-shadow(0 2px 6px rgba(107, 31, 42, 0.08)); 
+  filter: drop-shadow(0 2px 6px rgba(107, 31, 42, 0.05)); 
 }
 .sidebar-nav { 
   flex: 1; 
@@ -91,18 +91,18 @@ html, body {
   font-weight: 500; 
   letter-spacing: 0.08em; 
   text-transform: uppercase; 
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+  transition: all 0.2s ease; 
   border-left: 3px solid transparent; 
   cursor: pointer; 
 }
 .nav-item:hover { 
   color: var(--crimson); 
-  background: rgba(196, 163, 90, 0.06); 
+  background: rgba(107, 31, 42, 0.03); 
 }
 .nav-item.active { 
   color: var(--crimson); 
-  background: linear-gradient(90deg, rgba(245, 200, 100, 0.22) 0%, rgba(255, 255, 255, 0) 100%); 
-  border-left-color: var(--gold); 
+  background: rgba(107, 31, 42, 0.05); 
+  border-left-color: var(--crimson); 
   font-weight: 600;
 }
 .sidebar-sync { 
@@ -1752,5 +1752,246 @@ html, body {
   }
   .pdf-resumo-valor {
     margin-left: auto;
+  }
+}
+
+/* --- ESTILOS PREMIUM DETALHES DO CLIENTE --- */
+.client-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.client-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.client-avatar-container {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+
+.client-avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.client-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ff-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.client-info-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.client-info-meta h2 {
+  font-family: var(--ff-display);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--crimson);
+  margin: 0;
+}
+
+.client-status-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+}
+
+.client-actions-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.client-actions-bar .btn-secondary, 
+.client-actions-bar .btn-primary {
+  padding: 8px 16px;
+  font-size: 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Abas estilo Dynamics 365 */
+.tabs-client-nav {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.tab-client-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-mid);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.tab-client-btn:hover {
+  color: var(--crimson);
+  background: rgba(107, 31, 42, 0.02);
+}
+
+.tab-client-btn.active {
+  color: var(--crimson);
+  font-weight: 600;
+}
+
+.tab-client-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--crimson);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Seção de Conteúdo das Abas */
+.tab-client-content {
+  animation: fadeInTab 0.3s ease;
+}
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards compactos de roteiro/cotação */
+.compact-cards-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 4px 12px 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+}
+
+.compact-card {
+  flex: 0 0 240px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+  position: relative;
+}
+
+.compact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.04);
+  border-color: rgba(196,163,90,0.4);
+}
+
+.compact-card.selected {
+  border-color: var(--crimson);
+  background: rgba(107,31,42,0.01);
+  box-shadow: 0 4px 10px rgba(107,31,42,0.04);
+}
+
+.compact-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-dk);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-card-meta {
+  font-size: 12px;
+  color: var(--ink-lt);
+  margin-bottom: 8px;
+}
+
+.compact-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compact-card-price {
+  font-weight: 600;
+  color: var(--crimson);
+  font-size: 13px;
+}
+
+.compact-card-status {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.tab-preview-section {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+}
+
+/* Responsividade Mobile para Detalhes do Cliente */
+@media screen and (max-width: 768px) {
+  .client-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .client-actions-bar {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .client-actions-bar button {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
   }
 }

@@ -79,6 +79,66 @@ app.post('/api/public/cadastro', async (req, res) => {
       return res.status(500).json({ error: 'Erro ao criar cliente no Notion', details: result });
     }
 
+    // Gravar no Supabase a estrutura local correspondente (incluindo fotoPerfil)
+    const cliId = result.id;
+    const currentEditingViajantes = [];
+    if (viajantes) {
+      viajantes.split('\n').filter(l => l.trim()).forEach(line => {
+        const text = line.trim();
+        const ageMatch = text.match(/\((\d+)\)$/);
+        let idade = '';
+        let namePart = text;
+        if (ageMatch) {
+          idade = ageMatch[1];
+          namePart = text.substring(0, ageMatch.index).trim();
+        }
+        const parts = namePart.split(/\s+/);
+        const sobrenome = parts.length > 1 ? parts.pop() : '';
+        currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: parts.join(' '), sobrenome, idade });
+      });
+    }
+
+    const currentEditingEstadias = [];
+    if (hotel) {
+      hotel.split('\n').filter(l => l.trim()).forEach(line => {
+        let cidade = ''; let hotelName = line.trim(); let dataInicioEst = ''; let dataFimEst = '';
+        const dateMatch = line.match(/\((\d{2}\/\d{2}\/\d{4})\s*(?:a|-|até)\s*(\d{2}\/\d{2}\/\d{4})\)/);
+        if (dateMatch) {
+          const parseDate = d => { const p = d.split('/'); return p[2]+'-'+p[1]+'-'+p[0]; };
+          dataInicioEst = parseDate(dateMatch[1]); dataFimEst = parseDate(dateMatch[2]);
+          hotelName = line.substring(0, dateMatch.index).trim();
+        }
+        const dashIndex = hotelName.indexOf(' - ');
+        if (dashIndex > -1) {
+          cidade = hotelName.substring(0, dashIndex).trim();
+          hotelName = hotelName.substring(dashIndex + 3).trim();
+        }
+        currentEditingEstadias.push({ id: Date.now() + Math.random(), cidade, dataInicio: dataInicioEst, dataFim: dataFimEst, hotel: hotelName });
+      });
+    }
+
+    const currentEditingEmails = [];
+    if (email) {
+      email.split('\n').filter(l => l.trim()).forEach(line => {
+        currentEditingEmails.push({ id: Date.now() + Math.random(), email: line.trim() });
+      });
+    }
+
+    try {
+      await supabase.from('clientes_locais').upsert({
+        id: String(cliId),
+        data: {
+          id: cliId,
+          estadias: currentEditingEstadias,
+          viajantes: currentEditingViajantes,
+          emails: currentEditingEmails,
+          fotoPerfil: req.body.fotoPerfil || ""
+        }
+      });
+    } catch (dbErr) {
+      console.error('Erro ao gravar dados locais do cliente no Supabase via cadastro:', dbErr);
+    }
+
     res.json({ success: true, client: result });
   } catch (error) {
     console.error('Erro na rota /api/public/cadastro:', error);
