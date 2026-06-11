@@ -1532,3 +1532,78 @@ html, body {
 .ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-stroke-miter {
   stroke: var(--crimson) !important;
 }
+
+/* ── RESPONSIVIDADE ADICIONAL (3-PANE E DASHBOARDS) ────────────────────── */
+@media screen and (max-width: 768px) {
+  /* Pane Layout (Clientes, Roteiros, Cotações) */
+  .pane-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+  }
+  .pane-list {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-height: 40vh; /* Permite ver a lista e os detalhes na mesma tela */
+    border-right: none;
+    border-bottom: 2px solid rgba(196, 163, 90, 0.2);
+    box-shadow: 0 4px 15px rgba(107, 31, 42, 0.05);
+  }
+  .pane-content {
+    height: auto !important;
+    overflow-y: visible !important;
+    padding: 16px !important;
+  }
+  .pane-content-inner {
+    padding: 20px !important;
+    min-height: auto !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* List Cards ajustados para mobile */
+  .list-card.selected {
+    margin-right: 0 !important;
+    border-right-color: rgba(196, 163, 90, 0.45) !important;
+    border-radius: 18px !important;
+  }
+  .list-card.selected::after {
+    display: none !important; /* Esconde a "seta" conector na vertical */
+  }
+
+  /* Botões Rápidos no Perfil do Cliente */
+  #clientQuickActions {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+    margin-top: 12px;
+  }
+  #clientQuickActions button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* Header do Cliente (Título e Botões) */
+  #clienteNomeHeader {
+    font-size: 24px !important;
+  }
+  .page-header h1, .pane-list-header h2 {
+    font-size: 24px !important;
+  }
+
+  /* Grids do Dashboard de Cliente */
+  .dashboard-resumo-grid, 
+  .pdf-estadias-grid,
+  .resumo-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Tabelas */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+    border-radius: var(--radius-md);
+  }
+}
