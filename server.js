@@ -192,7 +192,7 @@ app.get('/api/debug-logs', (req, res) => {
 });
 
 // ── API: Transportes ────────────────────────────────────────────────────────
-app.get('/api/orcamentos', async (req, res) => res.json(await readDB().orcamentosDB));
+app.get('/api/orcamentos', async (req, res) => res.json((await readDB()).orcamentosDB));
 app.post('/api/orcamentos', async (req, res) => {
   try {
     const db = await readDB();
