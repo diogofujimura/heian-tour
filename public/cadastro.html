@@ -17,7 +17,7 @@
     }
     .cadastro-container {
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -63,7 +63,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    input[type="text"], input[type="number"], input[type="date"] {
+    input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea {
       width: 100%;
       padding: 14px 16px;
       background: #ffffff;
@@ -76,26 +76,10 @@
       box-sizing: border-box;
     }
     textarea {
-      width: 100%;
-      padding: 14px 16px;
-      background: #ffffff;
-      border: 1px solid rgba(196, 163, 90, 0.3);
-      border-radius: 12px;
-      font-family: var(--ff-body);
-      font-size: 15px;
-      color: var(--ink);
-      transition: all 0.3s;
-      box-sizing: border-box;
       resize: vertical;
       min-height: 80px;
     }
-    textarea:focus {
-      outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.1);
-      background: #fff;
-    }
-    input:focus {
+    input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.1);
@@ -113,7 +97,7 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-top: 10px;
+      margin-top: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -141,6 +125,18 @@
       to { transform: rotate(360deg); }
     }
     
+    /* Dynamic List Styles */
+    .dynamic-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+    .dynamic-row { display: flex; gap: 12px; align-items: center; background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; border: 1px dashed rgba(196, 163, 90, 0.3); animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .dynamic-row .form-group { margin-bottom: 0; flex: 1; }
+    .btn-add { background: none; border: 1px dashed var(--gold); color: var(--gold-dk); padding: 12px; border-radius: 12px; cursor: pointer; font-family: var(--ff-body); font-size: 14px; font-weight: 500; transition: all 0.2s; width: 100%; text-align: center; }
+    .btn-add:hover { background: rgba(196, 163, 90, 0.05); }
+    .btn-remove { background: #fee; border: none; color: #c00; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
+    .btn-remove:hover { background: #fcc; }
+    
+    .section-divider { height: 1px; background: rgba(196, 163, 90, 0.2); margin: 30px 0; }
+
     /* Success State */
     .success-state {
       display: none;
@@ -173,17 +169,19 @@
     
     /* Decorative elements */
     .bg-circle {
-      position: absolute;
+      position: fixed;
       border-radius: 50%;
       background: radial-gradient(circle, rgba(196,163,90,0.1) 0%, rgba(196,163,90,0) 70%);
       z-index: -1;
     }
-    .circle-1 { top: -100px; right: -100px; width: 400px; height: 400px; }
-    .circle-2 { bottom: -150px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(107,31,42,0.05) 0%, rgba(107,31,42,0) 70%); }
+    .circle-1 { top: -100px; right: -100px; width: 500px; height: 500px; }
+    .circle-2 { bottom: -150px; left: -100px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(107,31,42,0.05) 0%, rgba(107,31,42,0) 70%); }
 
     @media (max-width: 600px) {
       .cadastro-container { padding: 30px 20px; }
       .form-row { flex-direction: column; gap: 0; }
+      .dynamic-row { flex-direction: column; align-items: stretch; position: relative; padding-right: 44px; }
+      .dynamic-row .btn-remove { position: absolute; right: 12px; top: 12px; width: 32px; height: 32px; font-size: 14px; }
     }
   </style>
 </head>
@@ -200,6 +198,7 @@
       </div>
       
       <form id="cadastroForm">
+        <!-- TITULAR -->
         <div class="form-row">
           <div class="form-group">
             <label>Nome do Titular da Reserva *</label>
@@ -211,22 +210,27 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Nomes dos Outros Viajantes (e Idades)</label>
-          <textarea id="viajantes" placeholder="Ex: Maria (30), Pedro (8)"></textarea>
-        </div>
-        
         <div class="form-row">
           <div class="form-group">
-            <label>Adultos</label>
+            <label>Adultos (Total)</label>
             <input type="number" id="adultos" value="2" min="1">
           </div>
           <div class="form-group">
-            <label>Crianças (até 11 anos)</label>
+            <label>Crianças (Até 11 anos)</label>
             <input type="number" id="criancas" value="0" min="0">
           </div>
         </div>
 
+        <!-- PASSAGEIROS -->
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Outros Viajantes do Grupo</label>
+          <div id="passageirosList" class="dynamic-list"></div>
+          <button type="button" class="btn-add" onclick="addPassageiro()">+ Adicionar Passageiro</button>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- DATAS E HOTEIS -->
         <div class="form-row">
           <div class="form-group">
             <label>Data Prevista de Início</label>
@@ -238,29 +242,31 @@
           </div>
         </div>
 
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Hospedagem / Cidades</label>
+          <div id="hoteisList" class="dynamic-list"></div>
+          <button type="button" class="btn-add" onclick="addHotel()">+ Adicionar Hospedagem</button>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- VOOS -->
         <div class="form-group">
-          <label>Opções de Hotéis / Bairros de Preferência (Opcional)</label>
-          <textarea id="hotel" placeholder="Ex: Preferimos ficar em Shinjuku em Tóquio, e próximo à estação em Kyoto."></textarea>
+          <label>Voos Confirmados ou Previstos</label>
+          <div id="voosList" class="dynamic-list"></div>
+          <button type="button" class="btn-add" onclick="addVoo()">+ Adicionar Voo</button>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Voo de Chegada (Opcional)</label>
-            <input type="text" id="vooChegada" placeholder="Ex: 15/04 às 14:00 (NRT)">
-          </div>
-          <div class="form-group">
-            <label>Voo de Partida (Opcional)</label>
-            <input type="text" id="vooPartida" placeholder="Ex: 25/04 às 09:30 (HND)">
-          </div>
-        </div>
+        <div class="section-divider"></div>
 
+        <!-- OBSERVAÇÕES -->
         <div class="form-group">
           <label>Observações / Outros Pedidos Especiais</label>
-          <textarea id="observacoes" placeholder="Restrições alimentares, passeios específicos que não quer perder, etc."></textarea>
+          <textarea id="observacoes" placeholder="Restrições alimentares, passeios específicos que não quer perder, alergias, etc."></textarea>
         </div>
 
         <button type="submit" class="btn-submit" id="btnSubmit">
-          <span>Enviar Dados</span>
+          <span>Enviar Informações</span>
           <div class="spinner" id="submitSpinner"></div>
         </button>
       </form>
@@ -274,24 +280,105 @@
   </div>
 
   <script>
+    // Dinâmico: Passageiros
+    function addPassageiro() {
+      const div = document.createElement('div');
+      div.className = 'dynamic-row';
+      div.innerHTML = `
+        <div class="form-group">
+          <input type="text" class="pass-nome" placeholder="Nome do passageiro">
+        </div>
+        <div class="form-group" style="max-width: 120px;">
+          <input type="number" class="pass-idade" placeholder="Idade">
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+      `;
+      document.getElementById('passageirosList').appendChild(div);
+      div.querySelector('.pass-nome').focus();
+    }
+
+    // Dinâmico: Hotéis
+    function addHotel() {
+      const div = document.createElement('div');
+      div.className = 'dynamic-row';
+      div.innerHTML = `
+        <div class="form-group" style="max-width: 200px;">
+          <input type="text" class="hotel-cidade" placeholder="Cidade (ex: Tóquio)">
+        </div>
+        <div class="form-group">
+          <input type="text" class="hotel-pref" placeholder="Hotel ou bairro de preferência">
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+      `;
+      document.getElementById('hoteisList').appendChild(div);
+      div.querySelector('.hotel-cidade').focus();
+    }
+
+    // Dinâmico: Voos
+    function addVoo() {
+      const div = document.createElement('div');
+      div.className = 'dynamic-row';
+      div.innerHTML = `
+        <div class="form-group" style="max-width: 150px;">
+          <select class="voo-tipo">
+            <option value="Chegada">Chegada</option>
+            <option value="Partida">Partida</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <input type="text" class="voo-detalhe" placeholder="Ex: 15/04 às 14:00 (NRT) - AA123">
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+      `;
+      document.getElementById('voosList').appendChild(div);
+      div.querySelector('.voo-detalhe').focus();
+    }
+
+    // Submit handler
     document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const btn = document.getElementById('btnSubmit');
       const spinner = document.getElementById('submitSpinner');
       
+      // Coletar listas dinâmicas
+      const viajantesArr = [];
+      document.querySelectorAll('#passageirosList .dynamic-row').forEach(node => {
+        const n = node.querySelector('.pass-nome').value.trim();
+        const i = node.querySelector('.pass-idade').value.trim();
+        if (n) viajantesArr.push(`${n}${i ? ` (${i} anos)` : ''}`);
+      });
+
+      const hoteisArr = [];
+      document.querySelectorAll('#hoteisList .dynamic-row').forEach(node => {
+        const c = node.querySelector('.hotel-cidade').value.trim();
+        const p = node.querySelector('.hotel-pref').value.trim();
+        if (c || p) hoteisArr.push(`- ${c ? c + ': ' : ''}${p}`);
+      });
+
+      const vooChegadaArr = [];
+      const vooPartidaArr = [];
+      document.querySelectorAll('#voosList .dynamic-row').forEach(node => {
+        const tipo = node.querySelector('.voo-tipo').value;
+        const det = node.querySelector('.voo-detalhe').value.trim();
+        if (det) {
+          if (tipo === 'Chegada') vooChegadaArr.push(`- ${det}`);
+          else vooPartidaArr.push(`- ${det}`);
+        }
+      });
+
       const payload = {
         nome: document.getElementById('nome').value,
         email: document.getElementById('email').value,
-        viajantes: document.getElementById('viajantes').value,
         adultos: document.getElementById('adultos').value,
         criancas: document.getElementById('criancas').value,
         dataInicio: document.getElementById('dataInicio').value,
         dataFim: document.getElementById('dataFim').value,
-        hotel: document.getElementById('hotel').value,
-        vooChegada: document.getElementById('vooChegada').value,
-        vooPartida: document.getElementById('vooPartida').value,
-        observacoes: document.getElementById('observacoes').value
+        observacoes: document.getElementById('observacoes').value,
+        viajantes: viajantesArr.join('\n'),
+        hotel: hoteisArr.join('\n'),
+        vooChegada: vooChegadaArr.join('\n'),
+        vooPartida: vooPartidaArr.join('\n')
       };
 
       try {
@@ -308,19 +395,19 @@
         const data = await res.json();
         
         if (res.ok && data.success) {
-          // Show success screen
           document.getElementById('formSection').style.display = 'none';
           document.getElementById('successSection').style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           alert('Houve um erro ao enviar seu cadastro. Por favor, tente novamente.\n' + (data.error || ''));
           btn.disabled = false;
-          btn.querySelector('span').textContent = 'Enviar Dados';
+          btn.querySelector('span').textContent = 'Enviar Informações';
           spinner.style.display = 'none';
         }
       } catch (err) {
         alert('Erro de conexão. Tente novamente mais tarde.');
         btn.disabled = false;
-        btn.querySelector('span').textContent = 'Enviar Dados';
+        btn.querySelector('span').textContent = 'Enviar Informações';
         spinner.style.display = 'none';
       }
     });
