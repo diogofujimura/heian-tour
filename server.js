@@ -33,7 +33,6 @@ app.post('/api/public/cadastro', async (req, res) => {
     
     if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
 
-    const fetch = require('node-fetch');
     // Prepare proper date object
     let dateObj = undefined;
     if (dataInicio && dataFim && dataInicio !== dataFim) {
