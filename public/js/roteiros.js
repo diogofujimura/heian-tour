@@ -344,7 +344,7 @@ function renderizarRoteiro(roteiroNome) {
         if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
         return
       } else if (el.tipo === 'texto') {
-        return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; white-space:pre-wrap; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
+        return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
       } else if (el.tipo === 'transporte') {
         const pText = formatarPessoas(el); const p = pText ? (el.horario ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
         const h = el.horario ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horario}</span>` : '';
@@ -605,7 +605,7 @@ window.novoRoteiro = function() {
             if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
             return '';
           } else if (el.tipo === 'texto') {
-            return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; white-space:pre-wrap; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
+            return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
           } else if (el.tipo === 'sequencia') {
             const tituloRota = el.nomeDaRota || 'Sequência';
             const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
@@ -1012,7 +1012,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
               ${controles}
             </div>
             <div class="field" style="margin:0">
-              <textarea rows="3" placeholder="Escreva uma mensagem ou anotação para o cliente..." oninput="updElementoEdit(${idx}, ${eIdx}, 'conteudo', this.value)">${el.conteudo || ''}</textarea>
+              <textarea id="txt_livre_${idx}_${eIdx}" rows="3" placeholder="Escreva uma mensagem ou anotação para o cliente..." oninput="updElementoEdit(${idx}, ${eIdx}, 'conteudo', this.value)">${el.conteudo || ''}</textarea>
             </div>
           </div>`;
       } else if (el.tipo === 'transporte') {
@@ -1181,6 +1181,9 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
     
     dia.elementos.forEach((el, eIdx) => {
       if(el.tipo === 'sequencia') atualizarDatalists(idx, eIdx);
+      if(el.tipo === 'texto' && typeof initRichText === 'function') {
+        setTimeout(() => initRichText(`txt_livre_${idx}_${eIdx}`, 'Escreva uma mensagem ou anotação para o cliente...'), 50);
+      }
     });
   });
 

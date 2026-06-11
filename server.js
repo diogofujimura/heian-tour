@@ -714,6 +714,9 @@ app.get('/api/notion/clientes', async (req, res) => {
       const getSelect = (prop) => prop?.select?.name || '';
       const getDateStart = (prop) => prop?.date?.start || '';
       const getDateEnd = (prop) => prop?.date?.end || '';
+      const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+      const getFormulaString = (prop) => prop?.formula?.string || '';
+      const getRollupNumber = (prop) => prop?.rollup?.number || 0;
 
       return {
         id: page.id,
@@ -723,10 +726,40 @@ app.get('/api/notion/clientes', async (req, res) => {
         criancas: getNumber(p['Qtd Crianças']),
         vooChegada: getRichText(p['Voo de Chegada']),
         vooPartida: getRichText(p['Voo de Partida']),
+        vooChegadaNum: '',
+        vooChegadaHora: '',
+        vooPartidaNum: '',
+        vooPartidaHora: '',
         dataInicio: getDateStart(p['Período da Viagem']),
         dataFim: getDateEnd(p['Período da Viagem']),
-        hotel: getRichText(p['Hotel'])
+        hotel: getRichText(p['Hotel']),
+        email: p['Email']?.email || '',
+        viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+        valorTotal: getNumber(p['Valor Total']),
+        totalPago: getRollupNumber(p['Total Pago']),
+        saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+        statusPagamento: getFormulaString(p['Status de pagamento'])
       };
+    });
+
+    // Parse voo fields into components
+    clientes.forEach(c => {
+      if (c.vooChegada && c.vooChegada.includes('|')) {
+        const parts = c.vooChegada.split('|').map(s => s.trim());
+        c.vooChegadaNum = parts[0] || '';
+        c.vooChegadaHora = parts[1] || '';
+      } else {
+        c.vooChegadaNum = c.vooChegada || '';
+        c.vooChegadaHora = '';
+      }
+      if (c.vooPartida && c.vooPartida.includes('|')) {
+        const parts = c.vooPartida.split('|').map(s => s.trim());
+        c.vooPartidaNum = parts[0] || '';
+        c.vooPartidaHora = parts[1] || '';
+      } else {
+        c.vooPartidaNum = c.vooPartida || '';
+        c.vooPartidaHora = '';
+      }
     });
 
     res.json(clientes);
@@ -739,7 +772,7 @@ app.get('/api/notion/clientes', async (req, res) => {
 // Criar cliente no Notion
 app.post('/api/notion/clientes', async (req, res) => {
   try {
-    const { nome, status, adultos, criancas, vooChegada, vooPartida, dataInicio, dataFim, hotel } = req.body;
+    const { nome, status, adultos, criancas, vooChegada, vooPartida, vooChegadaNum, vooChegadaHora, vooPartidaNum, vooPartidaHora, dataInicio, dataFim, hotel, email, viajantes } = req.body;
     
     const properties = {
       'Nome do Cliente': { title: [{ text: { content: nome || 'Novo Cliente' } }] }
@@ -747,9 +780,16 @@ app.post('/api/notion/clientes', async (req, res) => {
     if (status) properties['Status do Cliente'] = { select: { name: status } };
     if (adultos !== undefined) properties['Qtd Adultos'] = { number: parseInt(adultos) || 0 };
     if (criancas !== undefined) properties['Qtd Crianças'] = { number: parseInt(criancas) || 0 };
-    if (vooChegada) properties['Voo de Chegada'] = { rich_text: [{ text: { content: vooChegada } }] };
-    if (vooPartida) properties['Voo de Partida'] = { rich_text: [{ text: { content: vooPartida } }] };
+    const vooChegadaCombined = [vooChegadaNum, vooChegadaHora].filter(Boolean).join(' | ');
+    const vooPartidaCombined = [vooPartidaNum, vooPartidaHora].filter(Boolean).join(' | ');
+    if (vooChegadaCombined || vooChegada) properties['Voo de Chegada'] = { rich_text: [{ text: { content: vooChegadaCombined || vooChegada } }] };
+    if (vooPartidaCombined || vooPartida) properties['Voo de Partida'] = { rich_text: [{ text: { content: vooPartidaCombined || vooPartida } }] };
     if (hotel) properties['Hotel'] = { rich_text: [{ text: { content: hotel } }] };
+    if (email) {
+      const firstEmail = email.split('\n')[0].trim();
+      if (firstEmail) properties['Email'] = { email: firstEmail };
+    }
+    if (viajantes) properties['Nome dos Viajantes'] = { rich_text: [{ text: { content: viajantes } }] };
     
     if (dataInicio) {
       properties['Período da Viagem'] = { date: { start: dataInicio, end: dataFim || null } };
@@ -784,16 +824,32 @@ app.post('/api/notion/clientes', async (req, res) => {
 app.patch('/api/notion/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, status, adultos, criancas, vooChegada, vooPartida, dataInicio, dataFim, hotel } = req.body;
+    const { nome, status, adultos, criancas, vooChegada, vooPartida, vooChegadaNum, vooChegadaHora, vooPartidaNum, vooPartidaHora, dataInicio, dataFim, hotel, email, viajantes } = req.body;
     
     const properties = {};
     if (nome) properties['Nome do Cliente'] = { title: [{ text: { content: nome } }] };
     if (status) properties['Status do Cliente'] = { select: { name: status } };
     if (adultos !== undefined) properties['Qtd Adultos'] = { number: parseInt(adultos) || 0 };
     if (criancas !== undefined) properties['Qtd Crianças'] = { number: parseInt(criancas) || 0 };
-    if (vooChegada !== undefined) properties['Voo de Chegada'] = { rich_text: [{ text: { content: vooChegada } }] };
-    if (vooPartida !== undefined) properties['Voo de Partida'] = { rich_text: [{ text: { content: vooPartida } }] };
-    if (hotel !== undefined) properties['Hotel'] = { rich_text: [{ text: { content: hotel } }] };
+    if (email !== undefined) {
+      if (email) {
+        const firstEmail = email.split('\n')[0].trim();
+        properties['Email'] = { email: firstEmail || null };
+      } else {
+        properties['Email'] = { email: null };
+      }
+    }
+    if (viajantes !== undefined) properties['Nome dos Viajantes'] = { rich_text: viajantes ? [{ text: { content: viajantes } }] : [] };
+    const vooChegadaCombined = [vooChegadaNum, vooChegadaHora].filter(Boolean).join(' | ');
+    const vooPartidaCombined = [vooPartidaNum, vooPartidaHora].filter(Boolean).join(' | ');
+    
+    const finalVooChegada = vooChegadaCombined || vooChegada || '';
+    if (vooChegada !== undefined || vooChegadaCombined) properties['Voo de Chegada'] = { rich_text: finalVooChegada ? [{ text: { content: finalVooChegada } }] : [] };
+    
+    const finalVooPartida = vooPartidaCombined || vooPartida || '';
+    if (vooPartida !== undefined || vooPartidaCombined) properties['Voo de Partida'] = { rich_text: finalVooPartida ? [{ text: { content: finalVooPartida } }] : [] };
+    
+    if (hotel !== undefined) properties['Hotel'] = { rich_text: hotel ? [{ text: { content: hotel } }] : [] };
     
     if (dataInicio !== undefined) {
       if (dataInicio) {
@@ -822,6 +878,123 @@ app.patch('/api/notion/clientes/:id', async (req, res) => {
   } catch (error) {
     console.error('Erro ao atualizar no Notion:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ── API: Dashboard Consolidação Notion (Somente Leitura) ───────────────────
+app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+    const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+
+    if (!NOTION_TOKEN || !NOTION_TASKS_DB_ID || !NOTION_SAIDAS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
+      return res.status(400).json({ error: 'Configuração do Notion incompleta no arquivo .env.' });
+    }
+
+    // Função auxiliar para fazer query nas bases do Notion de forma estritamente somente-leitura
+    const queryNotionDB = async (dbId, filterProp) => {
+      const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filter: {
+            property: filterProp,
+            relation: {
+              contains: clientId
+            }
+          }
+        })
+      });
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Erro ao consultar base ${dbId}: ${errText}`);
+      }
+      return await response.json();
+    };
+
+    // Consultas paralelas em background
+    const [entradasData, saidasData, tasksData] = await Promise.all([
+      queryNotionDB(NOTION_ENTRADAS_DB_ID, 'Cliente (Relação)'),
+      queryNotionDB(NOTION_SAIDAS_DB_ID, '🎀 Clientes'),
+      queryNotionDB(NOTION_TASKS_DB_ID, '🎀 Clientes')
+    ]);
+
+    // Parse de Entradas
+    let totalRecebido = 0;
+    const entradas = (entradasData.results || []).map(item => {
+      const p = item.properties;
+      const valor = p['Valor (JPY)']?.number || 0;
+      totalRecebido += valor;
+      return {
+        id: item.id,
+        descricao: p['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada sem nome',
+        valor,
+        data: p['Data do pagamento']?.date?.start || '',
+        tipo: p['Tipo de pagamento']?.select?.name || ''
+      };
+    });
+
+    // Parse de Saídas
+    let totalDespesas = 0;
+    const saidas = (saidasData.results || []).map(item => {
+      const p = item.properties;
+      const valor = p['Valor (JPY)']?.number || 0;
+      totalDespesas += valor;
+      return {
+        id: item.id,
+        descricao: p['Descrição']?.title?.map(t => t.plain_text).join('') || 'Saída sem nome',
+        valor,
+        data: p['Data de pagamento']?.date?.start || '',
+        categoria: p['Categoria']?.select?.name || '',
+        tipoServico: p['Tipo de serviço']?.select?.name || ''
+      };
+    });
+
+    // Parse de Tasks
+    let totalLucroProjetado = 0;
+    let totalTaxas = 0;
+    const tasks = (tasksData.results || []).map(item => {
+      const p = item.properties;
+      const lucro = p['Lucro']?.formula?.number || 0;
+      const taxa = p['Taxa serviço']?.number || 0;
+      totalLucroProjetado += lucro;
+      totalTaxas += taxa;
+      return {
+        id: item.id,
+        nome: p['Task name']?.title?.map(t => t.plain_text).join('') || 'Task sem nome',
+        status: p['Status']?.status?.name || '',
+        lucro,
+        taxa,
+        totalCliente: p['Total Cliente']?.formula?.number || 0,
+        dataServico: p['Data do Serviço']?.date?.start || ''
+      };
+    });
+
+    res.json({
+      success: true,
+      summary: {
+        totalRecebido,
+        totalDespesas,
+        lucroReal: totalRecebido - totalDespesas,
+        totalTaxas,
+        totalLucroProjetado
+      },
+      details: {
+        entradas,
+        saidas,
+        tasks
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro na API de consolidação do Dashboard do Notion:', error);
+    res.status(500).json({ error: 'Erro ao consolidar dados do Notion', details: error.message });
   }
 });
 
