@@ -88,24 +88,32 @@ async function readDB() {
 async function writeDB(db) {
   try {
     // Para simplificar essa transição imediata 1:1, gravamos as tabelas chaves
-    await supabase.from('config').upsert({ id: 'app_config', data: db.config || {} });
-    await supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] });
-    await supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] });
-    await supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] });
+    const resCfg = await supabase.from('config').upsert({ id: 'app_config', data: db.config || {} });
+    if (resCfg.error) console.error('Error upsert app_config:', resCfg.error);
+    const resTransp = await supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] });
+    if (resTransp.error) console.error('Error upsert transportes:', resTransp.error);
+    const resExp = await supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] });
+    if (resExp.error) console.error('Error upsert experiencias:', resExp.error);
+    const resAtr = await supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] });
+    if (resAtr.error) console.error('Error upsert atracoes:', resAtr.error);
 
     for (let o of db.orcamentosDB || []) {
-      await supabase.from('orcamentos').upsert({ id: String(o.id), data: o });
+      const resOrc = await supabase.from('orcamentos').upsert({ id: String(o.id), data: o });
+      if (resOrc.error) console.error('Error upsert orcamento', o.id, ':', resOrc.error);
     }
     for (let c of db.clientesDB || []) {
-      await supabase.from('clientes_locais').upsert({ id: String(c.id), data: c });
+      const resCli = await supabase.from('clientes_locais').upsert({ id: String(c.id), data: c });
+      if (resCli.error) console.error('Error upsert cliente_local', c.id, ':', resCli.error);
     }
 
     // Deleta rotas velhas e insere novas
     for (let [nome, dados] of Object.entries(db.rotas || {})) {
       if (nome === '[PLANILHA] Base de Rotas') {
-        await supabase.from('rotas_base').upsert({ id: 'base', data: dados.dias });
+        const resBase = await supabase.from('rotas_base').upsert({ id: 'base', data: dados.dias });
+        if (resBase.error) console.error('Error upsert rotas_base:', resBase.error);
       } else {
-        await supabase.from('roteiros').upsert({ nome, data: dados });
+        const resRoteiro = await supabase.from('roteiros').upsert({ nome, data: dados });
+        if (resRoteiro.error) console.error('Error upsert roteiro', nome, ':', resRoteiro.error);
       }
     }
   } catch(e) {
