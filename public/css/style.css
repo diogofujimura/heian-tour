@@ -2333,3 +2333,13 @@ html, body {
   }
 }
 
+.btn-view-toggle.active {
+  background: rgba(107, 31, 42, 0.06) !important;
+  color: var(--crimson) !important;
+}
+
+.btn-view-toggle:hover:not(.active) {
+  background: rgba(107, 31, 42, 0.02) !important;
+  color: var(--crimson) !important;
+}
+

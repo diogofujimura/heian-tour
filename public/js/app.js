@@ -4115,18 +4115,43 @@ let calColaboradores = [];
 let calSelectedEvent = null;
 
 // Inicialização e navegação de meses do calendário
+let calViewMode = 'grid';
+
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('calendarPrevMonthBtn');
   const nextBtn = document.getElementById('calendarNextMonthBtn');
   const filterCliente = document.getElementById('calendarFilterCliente');
   const refreshBtn = document.getElementById('btnRefreshCalendario');
   const modalSaveBtn = document.getElementById('calEventModalSaveBtn');
+  const gridViewBtn = document.getElementById('btnCalViewGrid');
+  const listViewBtn = document.getElementById('btnCalViewList');
 
   if (prevBtn) prevBtn.addEventListener('click', () => navegarMesCalendario(-1));
   if (nextBtn) nextBtn.addEventListener('click', () => navegarMesCalendario(1));
   if (filterCliente) filterCliente.addEventListener('change', () => renderCalendario());
   if (refreshBtn) refreshBtn.addEventListener('click', () => renderCalendario());
   if (modalSaveBtn) modalSaveBtn.addEventListener('click', salvarAtribuicaoGuia);
+
+  if (gridViewBtn) {
+    gridViewBtn.addEventListener('click', () => {
+      calViewMode = 'grid';
+      gridViewBtn.classList.add('active');
+      if (listViewBtn) listViewBtn.classList.remove('active');
+      document.getElementById('calendarioGridWrapper').style.display = 'grid';
+      document.getElementById('calendarioListaWrapper').style.display = 'none';
+      renderCalendario();
+    });
+  }
+  if (listViewBtn) {
+    listViewBtn.addEventListener('click', () => {
+      calViewMode = 'list';
+      listViewBtn.classList.add('active');
+      if (gridViewBtn) gridViewBtn.classList.remove('active');
+      document.getElementById('calendarioGridWrapper').style.display = 'none';
+      document.getElementById('calendarioListaWrapper').style.display = 'flex';
+      renderCalendario();
+    });
+  }
 });
 
 async function navegarMesCalendario(direcao) {
@@ -4138,13 +4163,18 @@ window.renderCalendario = async function() {
   const titleEl = document.getElementById('calendarMonthYearTitle');
   const gridEl = document.getElementById('calendarioGrid');
   const filterCliente = document.getElementById('calendarFilterCliente');
+  const listEl = document.getElementById('calendarioListaWrapper');
   if (!titleEl || !gridEl) return;
 
   // 1. Atualizar Título do Mês/Ano
   const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   titleEl.innerText = `${meses[calCurrentDate.getMonth()]} ${calCurrentDate.getFullYear()}`;
 
-  gridEl.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 40px; color: var(--ink-lt);">Carregando calendário do Notion...</div>';
+  if (calViewMode === 'grid') {
+    gridEl.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 40px; color: var(--ink-lt);">Carregando calendário do Notion...</div>';
+  } else if (listEl) {
+    listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--ink-lt);">Carregando calendário do Notion...</div>';
+  }
 
   // 2. Carregar Colaboradores (Guias) se necessário
   if (calColaboradores.length === 0) {
@@ -4206,82 +4236,316 @@ window.renderCalendario = async function() {
     calEventos = await res.json();
   } catch (err) {
     console.error(err);
-    gridEl.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 40px; color: #c00;">Erro ao carregar eventos do Notion. Verifique as credenciais no .env.</div>';
+    const errHTML = '<div style="text-align: center; padding: 40px; color: #c00;">Erro ao carregar eventos do Notion. Verifique as credenciais no .env.</div>';
+    if (calViewMode === 'grid') gridEl.innerHTML = errHTML;
+    else if (listEl) listEl.innerHTML = errHTML;
     return;
   }
 
-  // 6. Desenhar Grade
-  gridEl.innerHTML = '';
+  // 6. Desenhar baseado no modo selecionado
+  if (calViewMode === 'grid') {
+    gridEl.innerHTML = '';
 
-  const primeiroDiaSemana = new Date(ano, mes, 1).getDay(); // 0 (Dom) a 6 (Sáb)
-  const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
-  const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
+    const primeiroDiaSemana = new Date(ano, mes, 1).getDay(); // 0 (Dom) a 6 (Sáb)
+    const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
+    const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
 
-  // Dias do Mês Anterior (células vazias/cinza)
-  for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
-    const diaNum = totalDiasMesAnterior - i;
-    gridEl.innerHTML += `
-      <div class="calendar-cell other-month">
-        <span class="calendar-cell-num">${diaNum}</span>
-        <div class="calendar-events-list"></div>
-      </div>
-    `;
-  }
-
-  // Dias do Mês Atual
-  const hoje = new Date();
-  for (let dia = 1; dia <= totalDiasMes; dia++) {
-    const dateKey = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    const isToday = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === dia;
-    
-    // Filtrar eventos do dia
-    const eventosDia = calEventos.filter(ev => ev.dataServico === dateKey);
-
-    let eventosHTML = eventosDia.map(ev => {
-      // Classe de tipo de serviço
-      let tipoClass = 'event-type-transfer';
-      const tLower = ev.tipoServico.toLowerCase();
-      if (tLower.includes('roteiro')) tipoClass = 'event-type-roteiro';
-      else if (tLower.includes('shinkansen')) tipoClass = 'event-type-shinkansen';
-      else if (tLower.includes('romancecar')) tipoClass = 'event-type-romancecar';
-      else if (tLower.includes('trem')) tipoClass = 'event-type-trem';
-      else if (tLower.includes('ônibus') || tLower.includes('onibus')) tipoClass = 'event-type-onibus';
-      else if (tLower.includes('experiência') || tLower.includes('experiencia')) tipoClass = 'event-type-experiencia';
-      
-      const guiaText = ev.assignee.length > 0 ? ` [👤 ${ev.assignee.map(a => a.name).join(', ')}]` : '';
-      return `
-        <div class="calendar-event-badge calendar-event-item ${tipoClass}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
-          ${ev.titulo}${guiaText}
+    // Dias do Mês Anterior (células vazias/cinza)
+    for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
+      const diaNum = totalDiasMesAnterior - i;
+      gridEl.innerHTML += `
+        <div class="calendar-cell other-month">
+          <span class="calendar-cell-num">${diaNum}</span>
+          <div class="calendar-events-list"></div>
         </div>
       `;
-    }).join('');
+    }
 
-    gridEl.innerHTML += `
-      <div class="calendar-cell ${isToday ? 'today' : ''}">
-        <span class="calendar-cell-num">${dia}</span>
-        <div class="calendar-events-list">
-          ${eventHTMLs(eventosHTML)}
+    // Dias do Mês Atual
+    const hoje = new Date();
+    for (let dia = 1; dia <= totalDiasMes; dia++) {
+      const dateKey = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+      const isToday = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === dia;
+      
+      // Filtrar eventos do dia
+      const eventosDia = calEventos.filter(ev => ev.dataServico === dateKey);
+
+      let eventosHTML = eventosDia.map(ev => {
+        let tipoClass = 'event-type-transfer';
+        const tLower = ev.tipoServico.toLowerCase();
+        if (tLower.includes('roteiro')) tipoClass = 'event-type-roteiro';
+        else if (tLower.includes('shinkansen')) tipoClass = 'event-type-shinkansen';
+        else if (tLower.includes('romancecar')) tipoClass = 'event-type-romancecar';
+        else if (tLower.includes('trem')) tipoClass = 'event-type-trem';
+        else if (tLower.includes('ônibus') || tLower.includes('onibus')) tipoClass = 'event-type-onibus';
+        else if (tLower.includes('experiência') || tLower.includes('experiencia')) tipoClass = 'event-type-experiencia';
+        
+        const guiaText = ev.assignee.length > 0 ? ` [👤 ${ev.assignee.map(a => a.name).join(', ')}]` : '';
+        return `
+          <div class="calendar-event-badge calendar-event-item ${tipoClass}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
+            ${ev.titulo}${guiaText}
+          </div>
+        `;
+      }).join('');
+
+      gridEl.innerHTML += `
+        <div class="calendar-cell ${isToday ? 'today' : ''}">
+          <span class="calendar-cell-num">${dia}</span>
+          <div class="calendar-events-list">
+            ${eventHTMLs(eventosHTML)}
+          </div>
         </div>
-      </div>
-    `;
-  }
+      `;
+    }
 
-  // Dias do Mês Seguinte
-  const totalCelulasAteAgora = primeiroDiaSemana + totalDiasMes;
-  const celulasRestantes = (7 - (totalCelulasAteAgora % 7)) % 7;
-  for (let dia = 1; dia <= celulasRestantes; dia++) {
-    gridEl.innerHTML += `
-      <div class="calendar-cell other-month">
-        <span class="calendar-cell-num">${dia}</span>
-        <div class="calendar-events-list"></div>
-      </div>
-    `;
+    // Dias do Mês Seguinte
+    const totalCelulasAteAgora = primeiroDiaSemana + totalDiasMes;
+    const celulasRestantes = (7 - (totalCelulasAteAgora % 7)) % 7;
+    for (let dia = 1; dia <= celulasRestantes; dia++) {
+      gridEl.innerHTML += `
+        <div class="calendar-cell other-month">
+          <span class="calendar-cell-num">${dia}</span>
+          <div class="calendar-events-list"></div>
+        </div>
+      `;
+    }
+  } else {
+    // VISUALIZAÇÃO EM LISTA
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const eventosValidos = calEventos.filter(ev => ev.dataServico).sort((a, b) => {
+      return new Date(a.dataServico) - new Date(b.dataServico);
+    });
+
+    if (eventosValidos.length === 0) {
+      listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--ink-lt); font-size:14px;">Nenhum serviço ou tour guiado agendado para este mês.</div>';
+      return;
+    }
+
+    const eventosPorData = {};
+    eventosValidos.forEach(ev => {
+      if (!eventosPorData[ev.dataServico]) eventosPorData[ev.dataServico] = [];
+      eventosPorData[ev.dataServico].push(ev);
+    });
+
+    const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    
+    Object.keys(eventosPorData).sort().forEach(dateKey => {
+      const evs = eventosPorData[dateKey];
+      const [y, m, d] = dateKey.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const diaSemana = diasSemana[dateObj.getDay()];
+      const dataFormatada = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+
+      let diaCardHTML = `
+        <div style="background:#ffffff; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.01); overflow:hidden; margin-bottom:16px;">
+          <div style="background:linear-gradient(to right, rgba(107,31,42,0.04), transparent); border-left:4px solid var(--crimson); padding:12px 20px; font-weight:700; color:var(--crimson); font-size:14px; display:flex; justify-content:space-between; align-items:center;">
+            <span>📅 ${dataFormatada} (${diaSemana})</span>
+            <span style="font-size:11px; background:rgba(107,31,42,0.08); padding:2px 8px; border-radius:12px; color:var(--crimson); font-weight:600;">${evs.length} serviço(s)</span>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+      `;
+
+      evs.forEach(ev => {
+        const clientNotionId = ev.clientes.length > 0 ? ev.clientes[0] : null;
+        let roteiroCliente = null;
+        if (clientNotionId && typeof dbRotas !== 'undefined') {
+          roteiroCliente = Object.values(dbRotas).find(rot => rot.notionClienteId === clientNotionId);
+        }
+
+        let specHTML = '';
+        let clienteNomeStr = 'Carregando...';
+
+        if (ev.clientes.length > 0) {
+          const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === ev.clientes[0]) : null;
+          clienteNomeStr = cli ? cli.nome : 'Cliente Vinculado';
+        } else {
+          clienteNomeStr = 'Nenhum cliente vinculado';
+        }
+
+        if (roteiroCliente && roteiroCliente.cliente?.dataInicio) {
+          const parseDateUTC = (dateStr) => {
+            const [yy, mm, dd] = dateStr.split('-').map(Number);
+            return new Date(Date.UTC(yy, mm - 1, dd));
+          };
+
+          const diffDays = Math.round((parseDateUTC(ev.dataServico) - parseDateUTC(roteiroCliente.cliente.dataInicio)) / (1000 * 60 * 60 * 24));
+
+          if (roteiroCliente.dias && roteiroCliente.dias[diffDays]) {
+            const diaRoteiro = roteiroCliente.dias[diffDays];
+            const typeLower = ev.tipoServico.toLowerCase();
+
+            if (typeLower.includes('roteiro')) {
+              const sequencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'sequencia');
+              const infos = (diaRoteiro.elementos || []).filter(el => el.tipo === 'info');
+              const textos = (diaRoteiro.elementos || []).filter(el => el.tipo === 'texto');
+
+              if (sequencias.length > 0 || infos.length > 0 || textos.length > 0) {
+                infos.forEach(inf => {
+                  const parts = [];
+                  if (inf.horarioEncontro) parts.push(`🕒 ${inf.horarioEncontro}`);
+                  if (inf.localEncontro) parts.push(`📍 Encontro: ${inf.localEncontro}`);
+                  if (inf.duracaoTour) parts.push(`⏳ ${inf.duracaoTour}`);
+                  if (parts.length > 0) {
+                    specHTML += `<div style="font-size:11px; background:#f5f7fa; padding:6px 10px; border-radius:6px; margin-bottom:8px; color:var(--ink-mid);">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
+                  }
+                });
+
+                sequencias.forEach(seq => {
+                  const cidadeName = seq.cidade ? `<strong style="color:var(--gold-dk);">${seq.cidade}:</strong> ` : '';
+                  const atrs = seq.atracoesDoDia && seq.atracoesDoDia.length > 0
+                    ? seq.atracoesDoDia.map(a => `<span style="background:rgba(196,163,90,0.1); color:#9c8248; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; display:inline-block; margin:2px 2px 2px 0;">⭐ ${a.nome}</span>`).join(' ')
+                    : '<span style="color:var(--ink-lt);">Nenhuma atração</span>';
+
+                  specHTML += `
+                    <div style="margin-bottom:8px; font-size:12px;">
+                      <div>${cidadeName}${seq.nomeDaRota || ''}</div>
+                      <div style="margin-top:4px;">${atrs}</div>
+                    </div>`;
+                });
+
+                textos.forEach(txt => {
+                  if (txt.conteudo) {
+                    specHTML += `<div style="font-size:11px; font-style:italic; border-left:2px solid var(--gold-lt); padding-left:8px; color:var(--ink-mid); margin-top:8px;">"${txt.conteudo}"</div>`;
+                  }
+                });
+              }
+            } else if (typeLower.includes('shinkansen') || typeLower.includes('romancecar') || typeLower.includes('trem') || typeLower.includes('ônibus') || typeLower.includes('onibus') || typeLower.includes('transfer')) {
+              const transportes = (diaRoteiro.elementos || []).filter(el => el.tipo === 'transporte');
+              if (transportes.length > 0) {
+                transportes.forEach(t => {
+                  const heianEmitido = t.compradoHeian !== false
+                    ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
+                    : `<span style="font-size:9px; background:#f3f3f3; color:#888; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido p/ Cliente</span>`;
+
+                  specHTML += `
+                    <div style="background:#fdfaf6; border:1px solid rgba(196,163,90,0.15); border-radius:8px; padding:10px; margin-bottom:8px; font-size:11px; line-height:1.5;">
+                      <div style="font-weight:bold; color:var(--ink); font-size:12px; margin-bottom:4px;">
+                        ${t.cidadeOrigem || 'Origem'} ➔ ${t.cidadeDestino || 'Destino'} ${heianEmitido}
+                      </div>
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; color:var(--ink-mid);">
+                        <div><strong>Meio:</strong> ${t.tipoTransporte || 'Deslocamento'}</div>
+                        <div><strong>Horário:</strong> ${t.horario || 'Definir'}</div>
+                        <div><strong>Linha:</strong> ${t.linha || '-'}</div>
+                        <div><strong>Categoria:</strong> ${t.categoria || '-'}</div>
+                        <div><strong>Duração:</strong> ${t.tempo || '-'}</div>
+                        <div><strong>Passageiros:</strong> ${t.adultos ? t.adultos + ' Adultos' : ''}</div>
+                      </div>
+                      ${t.observacoes ? `<div style="margin-top:6px; font-style:italic; border-top:1px dashed rgba(196,163,90,0.15); padding-top:4px; color:var(--ink-lt);">Obs: ${t.observacoes}</div>` : ''}
+                    </div>`;
+                });
+              }
+            } else if (typeLower.includes('experiência') || typeLower.includes('experiencia')) {
+              const experiencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'experiencia');
+              if (experiencias.length > 0) {
+                experiencias.forEach(e => {
+                  const heianEmitido = e.compradoHeian !== false
+                    ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
+                    : `<span style="font-size:9px; background:#f3f3f3; color:#888; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido p/ Cliente</span>`;
+
+                  specHTML += `
+                    <div style="background:#faf8f5; border:1px solid rgba(163,82,43,0.1); border-radius:8px; padding:10px; margin-bottom:8px; font-size:11px; line-height:1.5;">
+                      <div style="font-weight:bold; color:var(--ink); font-size:12px; margin-bottom:4px;">
+                        ${e.nomeExp || 'Experiência'} ${heianEmitido}
+                      </div>
+                      <div style="color:var(--ink-mid);">
+                        <div><strong>Horário:</strong> ${e.horaPartida || 'Definir'}</div>
+                        <div><strong>Passageiros:</strong> ${e.adultos ? e.adultos + ' Adultos' : ''}</div>
+                      </div>
+                      ${e.observacoes ? `<div style="margin-top:6px; font-style:italic; border-top:1px dashed rgba(163,82,43,0.1); padding-top:4px; color:var(--ink-lt);">Obs: ${e.observacoes}</div>` : ''}
+                    </div>`;
+                });
+              }
+            }
+          }
+        }
+
+        const guiaIdAtual = ev.assignee.length > 0 ? ev.assignee[0].id : '';
+        const optionsColaboradores = calColaboradores.map(col => {
+          return `<option value="${col.id}" ${col.id === guiaIdAtual ? 'selected' : ''}>👤 ${col.name}</option>`;
+        }).join('');
+
+        let badgeBg = 'rgba(107,31,42,0.06)'; let badgeColor = 'var(--crimson)';
+        const tLower = ev.tipoServico.toLowerCase();
+        if (tLower.includes('shinkansen')) { badgeBg = 'rgba(196,163,90,0.08)'; badgeColor = 'var(--gold-dk)'; }
+        else if (tLower.includes('experiência') || tLower.includes('experiencia')) { badgeBg = 'rgba(135,75,45,0.06)'; badgeColor = '#7a3e20'; }
+
+        diaCardHTML += `
+          <div style="border:1px solid var(--border); border-radius:10px; background:#fff; padding:16px; display:flex; flex-direction:column; gap:12px; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0 0 4px 0; font-family:var(--ff-display); font-size:15px; font-weight:700; color:var(--ink-dk);">${ev.titulo}</h4>
+                <div style="font-size:11px; color:var(--ink-lt);">👥 Cliente: <strong style="color:var(--ink-mid);">${clienteNomeStr}</strong></div>
+              </div>
+              <span class="compact-card-status" style="background:${badgeBg}; color:${badgeColor}; font-size:10px; text-transform:uppercase; padding:2px 8px; border-radius:4px; font-weight:600;">${ev.tipoServico}</span>
+            </div>
+
+            ${specHTML ? `<div style="border-top:1px dashed var(--border); padding-top:10px; margin-top:4px;">${specHTML}</div>` : ''}
+
+            <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:11px; font-weight:600; color:var(--ink-mid);">Guia Responsável:</span>
+                <select onchange="atualizarGuiaRapidoLista('${ev.id}', this)" class="calendar-filter-select" style="min-width:160px; padding:4px 8px; font-size:11px; height:auto; margin:0;">
+                  <option value="">Nenhum guia designado</option>
+                  ${optionsColaboradores}
+                </select>
+              </div>
+              <button class="btn-secondary" onclick="abrirCalendarioEventModal('${ev.id}')" style="margin-top:0; padding:6px 12px; font-size:11px; height:auto;">✏️ Detalhes Completo</button>
+            </div>
+          </div>
+        `;
+      });
+
+      diaCardHTML += `
+          </div>
+        </div>
+      `;
+
+      listEl.innerHTML += diaCardHTML;
+    });
   }
 };
 
 function eventHTMLs(html) {
   return html || '<div style="color:#eee; font-size:10px; font-style:italic; padding:4px 0;">Sem eventos</div>';
 }
+
+window.atualizarGuiaRapidoLista = async function(eventoId, selectEl) {
+  const userId = selectEl.value;
+  selectEl.disabled = true;
+
+  try {
+    const res = await fetch(`/api/calendario/eventos/${eventoId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        assigneeIds: userId ? [userId] : []
+      })
+    });
+
+    if (!res.ok) throw new Error('Erro ao salvar guia no Notion');
+    
+    // Atualizar no array local
+    const ev = calEventos.find(x => x.id === eventoId);
+    if (ev) {
+      if (userId) {
+        const col = calColaboradores.find(x => x.id === userId);
+        ev.assignee = col ? [{ id: col.id, name: col.name, avatar: col.avatar }] : [];
+      } else {
+        ev.assignee = [];
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao atualizar guia no Notion. Tente novamente.');
+    renderCalendario();
+  } finally {
+    selectEl.disabled = false;
+  }
+};
 
 window.abrirCalendarioEventModal = function(eventoId) {
   const ev = calEventos.find(x => x.id === eventoId);

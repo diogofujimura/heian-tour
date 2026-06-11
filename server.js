@@ -1504,11 +1504,13 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
         tituloRoteiro += ` (Atrações: ${nomesAtracoes.join(', ')})`;
       }
 
-      novasTarefas.push({
-        titulo: tituloRoteiro.substring(0, 200),
-        dataServico,
-        tipoServico: 'Roteiro'
-      });
+      if (dia.tourGuiado === true) {
+        novasTarefas.push({
+          titulo: tituloRoteiro.substring(0, 200),
+          dataServico,
+          tipoServico: 'Roteiro'
+        });
+      }
 
       // B) Transportes
       const transportes = (dia.elementos || []).filter(el => el.tipo === 'transporte');
