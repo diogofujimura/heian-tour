@@ -59,6 +59,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <a class="nav-item" data-page="clientes">👥 &nbsp;Clientes</a>
     <a class="nav-item" data-page="roteiros">🗺️ &nbsp;Roteiros de Viagem</a>
     <a class="nav-item" data-page="meus">💰 &nbsp;Cotações</a>
+    <a class="nav-item" data-page="calendario">📅 &nbsp;Calendário</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
     <a class="nav-item" data-page="orcamento">◈ &nbsp;Criar Cotação Rápida</a>
@@ -815,6 +816,45 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
+  <!-- ── CALENDÁRIO ───────────────────────────────────────────────────────── -->
+  <div id="page-calendario" class="page">
+    <div class="page-header">
+      <h1>Calendário de Tours & Serviços</h1>
+    </div>
+    
+    <div class="calendar-wrapper">
+      <div class="calendar-top-bar">
+        <div class="calendar-title-nav">
+          <button class="calendar-nav-btn" id="calendarPrevMonthBtn">◀</button>
+          <span class="calendar-month-title" id="calendarMonthYearTitle">Janeiro 2026</span>
+          <button class="calendar-nav-btn" id="calendarNextMonthBtn">▶</button>
+        </div>
+        
+        <div class="calendar-filters">
+          <select id="calendarFilterCliente" class="calendar-filter-select">
+            <option value="">👥 Todos os Clientes</option>
+          </select>
+          <button class="btn-primary" id="btnRefreshCalendario" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px">
+            ↻ Atualizar
+          </button>
+        </div>
+      </div>
+      
+      <div class="calendar-grid-container">
+        <div class="calendar-weekday-header">Dom</div>
+        <div class="calendar-weekday-header">Seg</div>
+        <div class="calendar-weekday-header">Ter</div>
+        <div class="calendar-weekday-header">Qua</div>
+        <div class="calendar-weekday-header">Qui</div>
+        <div class="calendar-weekday-header">Sex</div>
+        <div class="calendar-weekday-header">Sáb</div>
+        
+        <!-- Células do Calendário serão injetadas via JS -->
+        <div id="calendarioGrid" style="display: contents;"></div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- ── MODAL ──────────────────────────────────────────────────────────────── -->
@@ -837,6 +877,42 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
   <div id="previewContainer" class="preview-container"></div>
+</div>
+
+<!-- ── MODAL DE DETALHES DO EVENTO DO CALENDÁRIO ─────────────────────────── -->
+<div id="calendarioEventModal" class="event-modal-backdrop">
+  <div class="event-modal-card">
+    <div class="event-modal-header">
+      <div>
+        <h3 class="event-modal-title" id="calEventModalTitle">Disney Sea</h3>
+        <span class="compact-card-status" id="calEventModalTypeBadge" style="font-size:10px;">Experiência</span>
+      </div>
+      <button class="event-modal-close" onclick="fecharCalendarioEventModal()">✕</button>
+    </div>
+    
+    <div style="margin-bottom:20px;">
+      <div class="event-detail-row">
+        <strong>📅 Data:</strong>
+        <span id="calEventModalData">17/06/2026</span>
+      </div>
+      <div class="event-detail-row">
+        <strong>👥 Cliente:</strong>
+        <span id="calEventModalCliente">Carregando...</span>
+      </div>
+    </div>
+    
+    <div style="border-top:1px solid var(--border); padding-top:20px;">
+      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:8px; color:var(--ink-mid);">👤 DESIGNAR GUIA / COLABORADOR:</label>
+      <select id="calEventModalAssigneeSelect" class="calendar-filter-select" style="width:100%; box-sizing:border-box;">
+        <option value="">Nenhum guia designado</option>
+      </select>
+    </div>
+    
+    <div style="margin-top:24px; display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn-secondary" onclick="fecharCalendarioEventModal()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
+      <button class="btn-primary" id="calEventModalSaveBtn" style="margin-top:0; padding:8px 16px; font-size:12px;">Salvar Alteração</button>
+    </div>
+  </div>
 </div>
 
 <script src="js/roteiros.js?v=20260611"></script>

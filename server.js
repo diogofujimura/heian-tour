@@ -1275,6 +1275,315 @@ app.patch('/api/notion/clientes/:id', async (req, res) => {
   }
 });
 
+// ── APIs DO CALENDÁRIO & COLABORADORES NOTION ────────────────────────────────
+app.get('/api/notion/colaboradores', async (req, res) => {
+  try {
+    const response = await fetch('https://api.notion.com/v1/users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+    const data = await response.json();
+    const colaboradores = data.results
+      .filter(u => u.type === 'person')
+      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar_url }));
+    res.json(colaboradores);
+  } catch (error) {
+    console.error('Erro ao buscar colaboradores no Notion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/calendario/eventos', async (req, res) => {
+  try {
+    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+    const { data_inicio, data_fim, cliente_id } = req.query;
+    const filterAnd = [];
+
+    if (data_inicio) {
+      filterAnd.push({
+        property: 'Data do Serviço',
+        date: { on_or_after: data_inicio }
+      });
+    }
+    if (data_fim) {
+      filterAnd.push({
+        property: 'Data do Serviço',
+        date: { on_or_before: data_fim }
+      });
+    }
+
+    if (cliente_id) {
+      filterAnd.push({
+        property: '🎀 Clientes',
+        relation: { contains: cliente_id }
+      });
+    } else {
+      filterAnd.push({
+        property: 'Data do Serviço',
+        date: { is_not_empty: true }
+      });
+    }
+
+    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: filterAnd.length > 0 ? { and: filterAnd } : undefined,
+        page_size: 100
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+
+    const data = await response.json();
+    const eventos = data.results.map(page => {
+      const props = page.properties;
+      return {
+        id: page.id,
+        titulo: props['Task name']?.title[0]?.plain_text || 'Sem nome',
+        dataServico: props['Data do Serviço']?.date?.start || null,
+        tipoServico: props['Tipo de Serviço']?.select?.name || 'Roteiro',
+        assignee: props['Assignee']?.people?.map(p => ({ id: p.id, name: p.name, avatar: p.avatar_url })) || [],
+        clientes: props['🎀 Clientes']?.relation?.map(r => r.id) || []
+      };
+    });
+
+    res.json(eventos);
+  } catch (error) {
+    console.error('Erro ao buscar eventos do calendário:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/calendario/eventos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { assigneeIds, dataServico } = req.body;
+    const properties = {};
+
+    if (assigneeIds !== undefined) {
+      properties['Assignee'] = {
+        people: assigneeIds.map(userId => ({ id: userId }))
+      };
+    }
+    if (dataServico !== undefined) {
+      properties['Data do Serviço'] = dataServico ? { date: { start: dataServico } } : null;
+    }
+
+    const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ properties })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+
+    const data = await response.json();
+    res.json({ success: true, id: data.id });
+  } catch (error) {
+    console.error('Erro ao atualizar evento do calendário:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
+  try {
+    const { roteiroNome } = req.body;
+    if (!roteiroNome) return res.status(400).json({ error: 'Parâmetro roteiroNome é obrigatório' });
+
+    // Buscar roteiro no Supabase
+    const { data: rotData, error: rotErr } = await supabase.from('roteiros').select('data').eq('nome', roteiroNome).single();
+    if (rotErr || !rotData) {
+      return res.status(404).json({ error: `Roteiro "${roteiroNome}" não encontrado no banco local.` });
+    }
+
+    const roteiro = rotData.data;
+    const clienteId = roteiro.notionClienteId;
+    if (!clienteId) {
+      return res.status(400).json({ error: 'Este roteiro não está associado a nenhum cliente do Notion.' });
+    }
+
+    const dataInicio = roteiro.cliente?.dataInicio;
+    if (!dataInicio) {
+      return res.status(400).json({ error: 'Defina uma data de início no roteiro antes de sincronizar com o calendário.' });
+    }
+
+    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+
+    // 1. Buscar tarefas ativas vinculadas a esse cliente no Tasks Tracker
+    const queryResponse = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: {
+          property: '🎀 Clientes',
+          relation: { contains: clienteId }
+        }
+      })
+    });
+
+    if (!queryResponse.ok) {
+      const err = await queryResponse.json();
+      throw new Error('Erro ao consultar tarefas antigas: ' + JSON.stringify(err));
+    }
+
+    const queryData = await queryResponse.json();
+    const tasksToArchive = queryData.results;
+
+    // 2. Arquivar tarefas antigas no Notion
+    for (const task of tasksToArchive) {
+      await fetch(`https://api.notion.com/v1/pages/${task.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ archived: true })
+      });
+    }
+
+    // Função auxiliar para somar dias a data string YYYY-MM-DD
+    const somarDias = (dataStr, diasParaSomar) => {
+      const [year, month, day] = dataStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      date.setDate(date.getDate() + diasParaSomar);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // 3. Mapear e gerar a lista de novas tarefas
+    const novasTarefas = [];
+    
+    (roteiro.dias || []).forEach((dia, index) => {
+      const dataServico = somarDias(dataInicio, index);
+
+      // A) Roteiro (Passeios/Atrações do Dia)
+      const sequencias = (dia.elementos || []).filter(el => el.tipo === 'sequencia');
+      let cidade = '';
+      const nomesAtracoes = [];
+      sequencias.forEach(seq => {
+        if (seq.cidade) cidade = seq.cidade;
+        if (seq.atracoesDoDia) {
+          seq.atracoesDoDia.forEach(atr => {
+            if (atr.nome) nomesAtracoes.push(atr.nome);
+          });
+        }
+      });
+
+      let tituloRoteiro = `Dia ${index + 1} - Tour`;
+      if (cidade) tituloRoteiro += ` em ${cidade}`;
+      if (nomesAtracoes.length > 0) {
+        tituloRoteiro += ` (Atrações: ${nomesAtracoes.join(', ')})`;
+      }
+
+      novasTarefas.push({
+        titulo: tituloRoteiro.substring(0, 200),
+        dataServico,
+        tipoServico: 'Roteiro'
+      });
+
+      // B) Transportes
+      const transportes = (dia.elementos || []).filter(el => el.tipo === 'transporte');
+      transportes.forEach(t => {
+        const orig = t.cidadeOrigem || 'Origem';
+        const dest = t.cidadeDestino || 'Destino';
+        const hora = t.horario ? t.horario + ' - ' : '';
+        const nomeTr = t.tipoTransporte || 'Deslocamento';
+        const tituloTr = `${hora}Transporte: ${orig} ➔ ${dest} (${nomeTr})`;
+
+        let tipoNotion = 'Transfer';
+        const tLower = nomeTr.toLowerCase();
+        if (tLower.includes('shinkansen')) tipoNotion = 'Shinkansen';
+        else if (tLower.includes('romancecar')) tipoNotion = 'Romancecar';
+        else if (tLower.includes('trem') || tLower.includes('trêm') || tLower.includes('metrô') || tLower.includes('metro')) tipoNotion = 'Trem';
+        else if (tLower.includes('ônibus') || tLower.includes('onibus') || tLower.includes('bus')) tipoNotion = 'ônibus';
+
+        novasTarefas.push({
+          titulo: tituloTr.substring(0, 200),
+          dataServico,
+          tipoServico: tipoNotion
+        });
+      });
+
+      // C) Experiências / Tickets
+      const experiencias = (dia.elementos || []).filter(el => el.tipo === 'experiencia');
+      experiencias.forEach(e => {
+        const hora = e.horaPartida ? e.horaPartida + ' - ' : '';
+        const nome = e.nomeExp || 'Experiência';
+        const tituloExp = `${hora}${nome}`;
+
+        novasTarefas.push({
+          titulo: tituloExp.substring(0, 200),
+          dataServico,
+          tipoServico: 'Experiência'
+        });
+      });
+    });
+
+    // 4. Cadastrar novas tarefas no Notion Tasks Tracker
+    for (const tf of novasTarefas) {
+      await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          parent: { database_id: NOTION_TASKS_DB_ID },
+          properties: {
+            'Task name': {
+              title: [{ text: { content: tf.titulo } }]
+            },
+            'Data do Serviço': {
+              date: { start: tf.dataServico }
+            },
+            'Tipo de Serviço': {
+              select: { name: tf.tipoServico }
+            },
+            '🎀 Clientes': {
+              relation: [{ id: clienteId }]
+            }
+          }
+        })
+      });
+    }
+
+    res.json({ success: true, count: novasTarefas.length });
+  } catch (error) {
+    console.error('Erro ao sincronizar roteiro com calendário:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── API: Dashboard Consolidação Notion (Somente Leitura) ───────────────────
 app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
   try {

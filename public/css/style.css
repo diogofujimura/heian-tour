@@ -1995,3 +1995,341 @@ html, body {
     justify-content: center;
   }
 }
+
+/* --- ESTILOS PREMIUM DO CALENDÁRIO --- */
+.calendar-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.calendar-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.calendar-title-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.calendar-month-title {
+  font-family: var(--ff-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--crimson);
+  min-width: 180px;
+}
+
+.calendar-nav-btn {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--ink-mid);
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(107, 31, 42, 0.04);
+  border-color: var(--crimson);
+  color: var(--crimson);
+}
+
+.calendar-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.calendar-filter-select {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: var(--ff-body);
+  font-size: 13px;
+  color: var(--ink-mid);
+  background-color: #ffffff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  min-width: 200px;
+}
+
+.calendar-filter-select:focus {
+  border-color: var(--crimson);
+}
+
+.calendar-grid-container {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.calendar-weekday-header {
+  background: rgba(107, 31, 42, 0.02);
+  text-align: center;
+  padding: 12px 6px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.calendar-weekday-header:last-child {
+  border-right: none;
+}
+
+.calendar-cell {
+  min-height: 120px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.calendar-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.calendar-cell.other-month {
+  background: #fbfbfc;
+}
+
+.calendar-cell.other-month .calendar-cell-num {
+  color: var(--ink-lt);
+  opacity: 0.5;
+}
+
+.calendar-cell.today {
+  background: rgba(196, 163, 90, 0.03);
+}
+
+.calendar-cell.today .calendar-cell-num {
+  background: var(--gold);
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.calendar-cell-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  margin-bottom: 6px;
+  align-self: flex-start;
+}
+
+.calendar-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 90px;
+}
+
+.calendar-event-item {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 3px solid transparent;
+}
+
+.calendar-event-item:hover {
+  transform: translateX(1px);
+  filter: brightness(0.95);
+}
+
+/* Cores harmônicas para tipos de serviços do Notion */
+.event-type-roteiro {
+  background: rgba(107, 31, 42, 0.06);
+  color: var(--crimson);
+  border-left-color: var(--crimson);
+}
+
+.event-type-shinkansen {
+  background: rgba(196, 163, 90, 0.08);
+  color: #9c8248;
+  border-left-color: #c4a35a;
+}
+
+.event-type-romancecar {
+  background: rgba(120, 120, 120, 0.06);
+  color: #555555;
+  border-left-color: #777777;
+}
+
+.event-type-trem {
+  background: rgba(0, 114, 206, 0.06);
+  color: #00569e;
+  border-left-color: #0072ce;
+}
+
+.event-type-onibus {
+  background: rgba(230, 80, 140, 0.06);
+  color: #b82563;
+  border-left-color: #e6508c;
+}
+
+.event-type-experiencia {
+  background: rgba(135, 75, 45, 0.06);
+  color: #7a3e20;
+  border-left-color: #a3522b;
+}
+
+.event-type-transfer {
+  background: rgba(235, 120, 0, 0.06);
+  color: #a85200;
+  border-left-color: #eb7800;
+}
+
+/* Modal e Popover de Evento */
+.event-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.event-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.event-modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  padding: 24px;
+  transform: scale(0.95);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.event-modal-backdrop.active .event-modal-card {
+  transform: scale(1);
+}
+
+.event-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.event-modal-title {
+  font-family: var(--ff-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--crimson);
+  margin: 0 0 4px 0;
+}
+
+.event-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--ink-lt);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.event-modal-close:hover {
+  color: var(--crimson);
+}
+
+.event-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--ink-mid);
+}
+
+.event-detail-row strong {
+  min-width: 100px;
+  color: var(--ink);
+}
+
+/* Responsividade do Calendário */
+@media screen and (max-width: 1024px) {
+  .calendar-cell {
+    min-height: 90px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .calendar-grid-container {
+    grid-template-columns: 1fr;
+  }
+  .calendar-weekday-header {
+    display: none;
+  }
+  .calendar-cell {
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+  }
+  .calendar-cell-num {
+    margin-bottom: 0;
+  }
+  .calendar-events-list {
+    flex: 1;
+    margin-left: 16px;
+    max-height: none;
+  }
+}
+

@@ -477,6 +477,7 @@ function navToPage(pg) {
   
   if (targetPg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
   if (targetPg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
+  if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
 }
 
 function setupMenuCambio() {
@@ -3791,6 +3792,7 @@ function renderAbaRoteiros(cliente) {
     <div id="roteiroActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
       <strong id="roteiroActiveTitle" style="color:var(--crimson); font-size:15px;"></strong>
       <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" id="btnSincronizarCalendarioPreview" style="padding: 6px 12px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson); cursor:pointer;">📅 Sincronizar Calendário</button>
         <button class="btn-secondary" id="btnAbrirRoteiroPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer;">🗺️ Abrir Editor</button>
         <button class="btn-secondary" id="btnExcluirRoteiroPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer;">❌ Excluir</button>
       </div>
@@ -3816,6 +3818,15 @@ window.selectRoteiroCompact = function(roteiroNome) {
 
   const titleEl = document.getElementById('roteiroActiveTitle');
   if (titleEl) titleEl.innerText = roteiroNome;
+
+  const btnSinc = document.getElementById('btnSincronizarCalendarioPreview');
+  if (btnSinc) {
+    btnSinc.onclick = () => {
+      if (typeof window.sincronizarRoteiroCalendario === 'function') {
+        window.sincronizarRoteiroCalendario(roteiroNome);
+      }
+    };
+  }
 
   const btnAbrir = document.getElementById('btnAbrirRoteiroPreview');
   if (btnAbrir) {
@@ -4096,4 +4107,318 @@ window.formatText = function(textareaId, command, value = '') {
   // Trigger input event to update state and auto-save timers
   textarea.dispatchEvent(new Event('input'));
 };
+
+// ── SISTEMA DE CALENDÁRIO COM INTEGRAÇÃO DE GUIAS ────────────────────────────
+let calCurrentDate = new Date();
+let calEventos = [];
+let calColaboradores = [];
+let calSelectedEvent = null;
+
+// Inicialização e navegação de meses do calendário
+document.addEventListener('DOMContentLoaded', () => {
+  const prevBtn = document.getElementById('calendarPrevMonthBtn');
+  const nextBtn = document.getElementById('calendarNextMonthBtn');
+  const filterCliente = document.getElementById('calendarFilterCliente');
+  const refreshBtn = document.getElementById('btnRefreshCalendario');
+  const modalSaveBtn = document.getElementById('calEventModalSaveBtn');
+
+  if (prevBtn) prevBtn.addEventListener('click', () => navegarMesCalendario(-1));
+  if (nextBtn) nextBtn.addEventListener('click', () => navegarMesCalendario(1));
+  if (filterCliente) filterCliente.addEventListener('change', () => renderCalendario());
+  if (refreshBtn) refreshBtn.addEventListener('click', () => renderCalendario());
+  if (modalSaveBtn) modalSaveBtn.addEventListener('click', salvarAtribuicaoGuia);
+});
+
+async function navegarMesCalendario(direcao) {
+  calCurrentDate.setMonth(calCurrentDate.getMonth() + direcao);
+  await renderCalendario();
+}
+
+window.renderCalendario = async function() {
+  const titleEl = document.getElementById('calendarMonthYearTitle');
+  const gridEl = document.getElementById('calendarioGrid');
+  const filterCliente = document.getElementById('calendarFilterCliente');
+  if (!titleEl || !gridEl) return;
+
+  // 1. Atualizar Título do Mês/Ano
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  titleEl.innerText = `${meses[calCurrentDate.getMonth()]} ${calCurrentDate.getFullYear()}`;
+
+  gridEl.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 40px; color: var(--ink-lt);">Carregando calendário do Notion...</div>';
+
+  // 2. Carregar Colaboradores (Guias) se necessário
+  if (calColaboradores.length === 0) {
+    try {
+      const res = await fetch('/api/notion/colaboradores');
+      if (res.ok) {
+        calColaboradores = await res.json();
+        // Popular dropdown no modal de edição
+        const select = document.getElementById('calEventModalAssigneeSelect');
+        if (select) {
+          select.innerHTML = '<option value="">Nenhum guia designado</option>';
+          calColaboradores.forEach(col => {
+            select.innerHTML += `<option value="${col.id}">👤 ${col.name}</option>`;
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao carregar colaboradores:', e);
+    }
+  }
+
+  // 3. Carregar Clientes se necessário para o Dropdown de filtro
+  if (filterCliente && filterCliente.options.length <= 1) {
+    let clis = [];
+    if (typeof notionClients !== 'undefined' && notionClients.length > 0) {
+      clis = notionClients;
+    } else {
+      try {
+        const res = await fetch('/api/notion/clientes');
+        if (res.ok) clis = await res.json();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    clis.forEach(c => {
+      filterCliente.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+    });
+  }
+
+  // 4. Determinar datas de início e fim do mês
+  const ano = calCurrentDate.getFullYear();
+  const mes = calCurrentDate.getMonth();
+  
+  // Data de início (YYYY-MM-DD): primeiro dia do mês
+  const dataInicioStr = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+  
+  // Data de fim (YYYY-MM-DD): último dia do mês
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+  const dataFimStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+
+  // 5. Carregar Eventos da API
+  const clienteFiltroId = filterCliente ? filterCliente.value : '';
+  let url = `/api/calendario/eventos?data_inicio=${dataInicioStr}&data_fim=${dataFimStr}`;
+  if (clienteFiltroId) url += `&cliente_id=${clienteFiltroId}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Falha ao buscar eventos');
+    calEventos = await res.json();
+  } catch (err) {
+    console.error(err);
+    gridEl.innerHTML = '<div style="grid-column: span 7; text-align: center; padding: 40px; color: #c00;">Erro ao carregar eventos do Notion. Verifique as credenciais no .env.</div>';
+    return;
+  }
+
+  // 6. Desenhar Grade
+  gridEl.innerHTML = '';
+
+  const primeiroDiaSemana = new Date(ano, mes, 1).getDay(); // 0 (Dom) a 6 (Sáb)
+  const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
+  const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
+
+  // Dias do Mês Anterior (células vazias/cinza)
+  for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
+    const diaNum = totalDiasMesAnterior - i;
+    gridEl.innerHTML += `
+      <div class="calendar-cell other-month">
+        <span class="calendar-cell-num">${diaNum}</span>
+        <div class="calendar-events-list"></div>
+      </div>
+    `;
+  }
+
+  // Dias do Mês Atual
+  const hoje = new Date();
+  for (let dia = 1; dia <= totalDiasMes; dia++) {
+    const dateKey = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    const isToday = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === dia;
+    
+    // Filtrar eventos do dia
+    const eventosDia = calEventos.filter(ev => ev.dataServico === dateKey);
+
+    let eventosHTML = eventosDia.map(ev => {
+      // Classe de tipo de serviço
+      let tipoClass = 'event-type-transfer';
+      const tLower = ev.tipoServico.toLowerCase();
+      if (tLower.includes('roteiro')) tipoClass = 'event-type-roteiro';
+      else if (tLower.includes('shinkansen')) tipoClass = 'event-type-shinkansen';
+      else if (tLower.includes('romancecar')) tipoClass = 'event-type-romancecar';
+      else if (tLower.includes('trem')) tipoClass = 'event-type-trem';
+      else if (tLower.includes('ônibus') || tLower.includes('onibus')) tipoClass = 'event-type-onibus';
+      else if (tLower.includes('experiência') || tLower.includes('experiencia')) tipoClass = 'event-type-experiencia';
+      
+      const guiaText = ev.assignee.length > 0 ? ` [👤 ${ev.assignee.map(a => a.name).join(', ')}]` : '';
+      return `
+        <div class="calendar-event-badge calendar-event-item ${tipoClass}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
+          ${ev.titulo}${guiaText}
+        </div>
+      `;
+    }).join('');
+
+    gridEl.innerHTML += `
+      <div class="calendar-cell ${isToday ? 'today' : ''}">
+        <span class="calendar-cell-num">${dia}</span>
+        <div class="calendar-events-list">
+          ${eventHTMLs(eventosHTML)}
+        </div>
+      </div>
+    `;
+  }
+
+  // Dias do Mês Seguinte
+  const totalCelulasAteAgora = primeiroDiaSemana + totalDiasMes;
+  const celulasRestantes = (7 - (totalCelulasAteAgora % 7)) % 7;
+  for (let dia = 1; dia <= celulasRestantes; dia++) {
+    gridEl.innerHTML += `
+      <div class="calendar-cell other-month">
+        <span class="calendar-cell-num">${dia}</span>
+        <div class="calendar-events-list"></div>
+      </div>
+    `;
+  }
+};
+
+function eventHTMLs(html) {
+  return html || '<div style="color:#eee; font-size:10px; font-style:italic; padding:4px 0;">Sem eventos</div>';
+}
+
+window.abrirCalendarioEventModal = function(eventoId) {
+  const ev = calEventos.find(x => x.id === eventoId);
+  if (!ev) return;
+
+  calSelectedEvent = ev;
+
+  document.getElementById('calEventModalTitle').innerText = ev.titulo;
+  
+  // Badge de tipo
+  const badge = document.getElementById('calEventModalTypeBadge');
+  if (badge) {
+    badge.innerText = ev.tipoServico;
+    badge.className = 'compact-card-status';
+    let bg = 'rgba(107,31,42,0.06)'; let color = 'var(--crimson)';
+    const tLower = ev.tipoServico.toLowerCase();
+    if (tLower.includes('shinkansen')) { bg = 'rgba(196,163,90,0.08)'; color = 'var(--gold-dk)'; }
+    else if (tLower.includes('experiência') || tLower.includes('experiencia')) { bg = 'rgba(135,75,45,0.06)'; color = '#7a3e20'; }
+    badge.style.background = bg;
+    badge.style.color = color;
+  }
+
+  // Data formatada
+  const dateParts = ev.dataServico.split('-');
+  document.getElementById('calEventModalData').innerText = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+  // Nome do cliente
+  const cliNameEl = document.getElementById('calEventModalCliente');
+  if (cliNameEl) {
+    if (ev.clientes.length > 0) {
+      const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === ev.clientes[0]) : null;
+      cliNameEl.innerText = cli ? cli.nome : 'Cliente Vinculado (Notion)';
+    } else {
+      cliNameEl.innerText = 'Nenhum cliente vinculado';
+    }
+  }
+
+  // Selecionar Guia atual
+  const select = document.getElementById('calEventModalAssigneeSelect');
+  if (select) {
+    select.value = ev.assignee.length > 0 ? ev.assignee[0].id : '';
+  }
+
+  const backdrop = document.getElementById('calendarioEventModal');
+  if (backdrop) backdrop.classList.add('active');
+};
+
+window.fecharCalendarioEventModal = function() {
+  const backdrop = document.getElementById('calendarioEventModal');
+  if (backdrop) backdrop.classList.remove('active');
+  calSelectedEvent = null;
+};
+
+async function salvarAtribuicaoGuia() {
+  if (!calSelectedEvent) return;
+  
+  const select = document.getElementById('calEventModalAssigneeSelect');
+  const userId = select ? select.value : '';
+
+  const btn = document.getElementById('calEventModalSaveBtn');
+  const originalText = btn.innerText;
+  btn.innerText = 'Salvando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/calendario/eventos/${calSelectedEvent.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        assigneeIds: userId ? [userId] : []
+      })
+    });
+
+    if (!res.ok) throw new Error('Erro ao salvar guia no Notion');
+    
+    fecharCalendarioEventModal();
+    renderCalendario(); // Recarregar
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao atualizar guia no Notion. Tente novamente.');
+  } finally {
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
+}
+
+// Inserir lógica de sincronização na UI do roteiro (Aba Roteiros)
+window.sincronizarRoteiroCalendario = async function(roteiroNome) {
+  if (!confirm(`Deseja sincronizar o roteiro "${roteiroNome}" com o calendário do Notion? Isso irá limpar eventos anteriores deste cliente e registrar os novos.`)) {
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.background = 'rgba(255,255,255,0.7)';
+  overlay.style.backdropFilter = 'blur(2px)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '9999';
+  overlay.innerHTML = `
+    <div style="background:#fff; padding:24px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); border:1px solid var(--border); text-align:center;">
+      <div style="font-size:32px; margin-bottom:12px; animation:spin 2s linear infinite">⏳</div>
+      <strong style="color:var(--crimson); font-size:14px; display:block; margin-bottom:4px;">Sincronizando com o Notion...</strong>
+      <span style="font-size:12px; color:var(--ink-lt);">Isso pode demorar alguns segundos</span>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  try {
+    const res = await fetch('/api/calendario/sincronizar-roteiro', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ roteiroNome })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao sincronizar');
+    }
+
+    const data = await res.json();
+    alert(`Roteiro sincronizado com sucesso! ${data.count} eventos criados no calendário.`);
+  } catch (err) {
+    console.error(err);
+    alert(`Erro ao sincronizar com o calendário: ${err.message}`);
+  } finally {
+    overlay.remove();
+  }
+};
+
 
