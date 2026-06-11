@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadConfig();
   await loadDB();
   setupNotion();
-  loadOrcamentos();
+  await loadOrcamentos();
   setupNav();
   setupClientesTab();
   setupOrcamento();
@@ -149,12 +149,38 @@ async function loadDB() {
 }
 
 // ── ORÇAMENTOS SALVOS ─────────────────────────────────────────────────────────
-function loadOrcamentos() {
-  try { state.orcamentosDB = JSON.parse(localStorage.getItem('heian_orcamentos') || '[]'); }
-  catch { state.orcamentosDB = []; }
+async function loadOrcamentos() {
+  try {
+    // Migração transparente de localStorage para o servidor
+    const local = localStorage.getItem('heian_orcamentos');
+    if (local && local !== '[]') {
+      const dbLocal = JSON.parse(local);
+      for (const o of dbLocal) {
+        await fetch('/api/orcamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) });
+      }
+      localStorage.removeItem('heian_orcamentos');
+      console.log('Migração de cotações locais concluída.');
+    }
+    
+    const res = await fetch('/api/orcamentos');
+    const data = await res.json();
+    state.orcamentosDB = Array.isArray(data) ? data : [];
+  } catch(e) {
+    console.error('Erro ao carregar orçamentos:', e);
+    state.orcamentosDB = [];
+  }
   renderListaOrcamentos();
 }
-function saveOrcamentos() { localStorage.setItem('heian_orcamentos', JSON.stringify(state.orcamentosDB)); }
+
+function saveOrcamentos() { 
+  // Função legada mantida vazia para compatibilidade caso seja chamada em outro lugar
+}
+
+async function saveOrcamentoToCloud(orc) {
+  try {
+    await fetch('/api/orcamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orc) });
+  } catch(e) { console.error('Erro salvar orçamento na nuvem', e); }
+}
 
 function salvarOrcamentoAtual() {
   const nome = document.getElementById('orcNome').value.trim() || ('Cotação ' + fmtDate(nowISO()));
@@ -172,7 +198,9 @@ function salvarOrcamentoAtual() {
   if (idx > -1) state.orcamentosDB[idx] = orc;
   else state.orcamentosDB.unshift(orc);
   state.orcamento = orc;
-  saveOrcamentos();
+  
+  saveOrcamentoToCloud(orc);
+  
   renderListaOrcamentos();
   document.getElementById('orcTitulo').textContent = nome;
   showToast('Cotação salva!');
@@ -216,7 +244,7 @@ function autoSave() {
     if (idx > -1) state.orcamentosDB[idx] = orc;
     else state.orcamentosDB.unshift(orc);
     state.orcamento = orc;
-    saveOrcamentos();
+    saveOrcamentoToCloud(orc);
     renderListaOrcamentos();
     const ind = document.getElementById('autoSaveIndicator');
     if (ind) { ind.textContent = 'Salvo automaticamente'; ind.style.opacity = '1'; setTimeout(()=>{ind.style.opacity='0.4';}, 1500); }
@@ -417,7 +445,8 @@ function renderListaOrcamentos(filterQuery = '') {
 function excluirOrcamento(id) {
   if (!confirm('Excluir este orçamento?')) return;
   state.orcamentosDB = state.orcamentosDB.filter(o => o.id !== id);
-  saveOrcamentos(); renderListaOrcamentos();
+  renderListaOrcamentos();
+  fetch(`/api/orcamentos/${id}`, { method: 'DELETE' }).catch(e => console.error('Erro excluir na nuvem', e));
 }
 
 // ── NAV & HISTORY API ──────────────────────────────────────────────────────────
