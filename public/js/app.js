@@ -4115,8 +4115,8 @@ let calEventos = [];
 let calColaboradores = [];
 let calSelectedEvent = null;
 
-// Inicialização e navegação de meses do calendário
-let calViewMode = 'grid';
+// Inicialização e navegação de meses do calendário (Lista padrão no Mobile)
+let calViewMode = window.innerWidth <= 768 ? 'list' : 'grid';
 
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('calendarPrevMonthBtn');
@@ -4132,6 +4132,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filterCliente) filterCliente.addEventListener('change', () => renderCalendario());
   if (refreshBtn) refreshBtn.addEventListener('click', () => renderCalendario());
   if (modalSaveBtn) modalSaveBtn.addEventListener('click', salvarAtribuicaoGuia);
+
+  // Configurar display inicial ativo de acordo com o modo calViewMode
+  if (calViewMode === 'list') {
+    if (listViewBtn) listViewBtn.classList.add('active');
+    if (gridViewBtn) gridViewBtn.classList.remove('active');
+    const gw = document.getElementById('calendarioGridWrapper');
+    const lw = document.getElementById('calendarioListaWrapper');
+    if (gw) gw.style.display = 'none';
+    if (lw) lw.style.display = 'flex';
+  } else {
+    if (gridViewBtn) gridViewBtn.classList.add('active');
+    if (listViewBtn) listViewBtn.classList.remove('active');
+    const gw = document.getElementById('calendarioGridWrapper');
+    const lw = document.getElementById('calendarioListaWrapper');
+    if (gw) gw.style.display = 'grid';
+    if (lw) lw.style.display = 'none';
+  }
 
   if (gridViewBtn) {
     gridViewBtn.addEventListener('click', () => {
