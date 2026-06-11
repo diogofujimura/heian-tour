@@ -178,8 +178,15 @@ function saveOrcamentos() {
 
 async function saveOrcamentoToCloud(orc) {
   try {
-    await fetch('/api/orcamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orc) });
-  } catch(e) { console.error('Erro salvar orçamento na nuvem', e); }
+    const res = await fetch('/api/orcamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orc) });
+    if (!res.ok) {
+      alert('Erro ao salvar a cotação na nuvem! Verifique sua conexão ou tente novamente.');
+      console.error('Falha no POST:', await res.text());
+    }
+  } catch(e) { 
+    console.error('Erro salvar orçamento na nuvem', e); 
+    alert('Erro de conexão ao salvar a cotação!');
+  }
 }
 
 function salvarOrcamentoAtual() {
