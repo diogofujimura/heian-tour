@@ -111,40 +111,33 @@ async function readDB() {
   try {
     const defaultData = { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
     
-    // Traz config
-    const { data: cfg } = await supabase.from('config').select('data').eq('id', 'app_config').single();
-    if (cfg && cfg.data) defaultData.config = cfg.data;
+    const [cfgRes, transpRes, expRes, atrRes, orcsRes, clisRes, rotsRes, baseRes] = await Promise.all([
+      supabase.from('config').select('data').eq('id', 'app_config').single(),
+      supabase.from('config').select('data').eq('id', 'transportes').single(),
+      supabase.from('config').select('data').eq('id', 'experiencias').single(),
+      supabase.from('config').select('data').eq('id', 'atracoes').single(),
+      supabase.from('orcamentos').select('data'),
+      supabase.from('clientes_locais').select('data'),
+      supabase.from('roteiros').select('*'),
+      supabase.from('rotas_base').select('data').eq('id', 'base').single()
+    ]);
+
+    if (cfgRes.data && cfgRes.data.data) defaultData.config = cfgRes.data.data;
+    if (transpRes.data && transpRes.data.data) defaultData.transportes = transpRes.data.data;
+    if (expRes.data && expRes.data.data) defaultData.experiencias = expRes.data.data;
+    if (atrRes.data && atrRes.data.data) defaultData.atracoes = atrRes.data.data;
     
-    // Traz transportes, experiencias, atracoes da config
-    const { data: transp } = await supabase.from('config').select('data').eq('id', 'transportes').single();
-    if (transp && transp.data) defaultData.transportes = transp.data;
-
-    const { data: exp } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
-    if (exp && exp.data) defaultData.experiencias = exp.data;
-
-    const { data: atr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
-    if (atr && atr.data) defaultData.atracoes = atr.data;
-
-    // Traz orcamentos
-    const { data: orcs } = await supabase.from('orcamentos').select('data');
-    if (orcs) defaultData.orcamentosDB = orcs.map(r => r.data);
-
-    // Traz clientes_locais
-    const { data: clis } = await supabase.from('clientes_locais').select('data');
-    if (clis) defaultData.clientesDB = clis.map(r => r.data);
-
-    // Traz roteiros
-    const { data: rots } = await supabase.from('roteiros').select('*');
-    if (rots) {
-      rots.forEach(r => {
+    if (orcsRes.data) defaultData.orcamentosDB = orcsRes.data.map(r => r.data);
+    if (clisRes.data) defaultData.clientesDB = clisRes.data.map(r => r.data);
+    
+    if (rotsRes.data) {
+      rotsRes.data.forEach(r => {
         defaultData.rotas[r.nome] = r.data;
       });
     }
-
-    // Traz rotas_base
-    const { data: base } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
-    if (base && base.data) {
-      defaultData.rotas['[PLANILHA] Base de Rotas'] = { dias: base.data };
+    
+    if (baseRes.data && baseRes.data.data) {
+      defaultData.rotas['[PLANILHA] Base de Rotas'] = { dias: baseRes.data.data };
     }
 
     return defaultData;
@@ -231,15 +224,29 @@ async function syncToGoogleSheets(type, action, data, oldData = null) {
 
 // ── API: Config / Câmbio ────────────────────────────────────────────────────
 app.get('/api/config', async (req, res) => {
-  const db = await readDB();
-  res.json(db.config);
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : {});
+  } catch(e) {
+    console.error('Error getting config:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/config', async (req, res) => {
-  const db = await readDB();
-  db.config = { ...db.config, ...req.body };
-  await writeDB(db);
-  res.json({ ok: true });
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const existing = data && data.data ? data.data : {};
+    const updated = { ...existing, ...req.body };
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'app_config', data: updated });
+    if (upsertErr) throw upsertErr;
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error saving config:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.get('/api/debug', async (req, res) => {
@@ -261,14 +268,20 @@ app.get('/api/debug-logs', (req, res) => {
 });
 
 // ── API: Transportes ────────────────────────────────────────────────────────
-app.get('/api/orcamentos', async (req, res) => res.json((await readDB()).orcamentosDB));
+app.get('/api/orcamentos', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('orcamentos').select('data');
+    if (error) throw error;
+    res.json(data ? data.map(r => r.data) : []);
+  } catch(e) {
+    console.error('Error getting orcamentos:', e);
+    res.status(500).json({error: e.message});
+  }
+});
 app.post('/api/orcamentos', async (req, res) => {
   try {
-    const db = await readDB();
-    const index = db.orcamentosDB.findIndex(o => o.id === req.body.id);
-    if(index > -1) db.orcamentosDB[index] = req.body;
-    else db.orcamentosDB.push(req.body);
-    await writeDB(db);
+    const { error } = await supabase.from('orcamentos').upsert({ id: String(req.body.id), data: req.body });
+    if (error) throw error;
     res.json({success:true});
   } catch(e) {
     res.status(500).json({error: e.message});
@@ -276,13 +289,8 @@ app.post('/api/orcamentos', async (req, res) => {
 });
 app.delete('/api/orcamentos/:id', async (req, res) => {
   try {
-    const db = await readDB();
-    db.orcamentosDB = db.orcamentosDB.filter(o => String(o.id) !== String(req.params.id));
-    
-    // Explicitly delete from Supabase table
-    await supabase.from('orcamentos').delete().eq('id', String(req.params.id));
-    
-    await writeDB(db);
+    const { error } = await supabase.from('orcamentos').delete().eq('id', String(req.params.id));
+    if (error) throw error;
     res.json({success:true});
   } catch(e) {
     console.error('Error deleting orcamento:', e);
@@ -292,243 +300,424 @@ app.delete('/api/orcamentos/:id', async (req, res) => {
 
 // Clientes Local (Dados estruturados atrelados ao Notion)
 app.get('/api/clientes/local/:id', async (req, res) => {
-  const db = await readDB();
-  const cliente = db.clientesDB.find(c => c.id === req.params.id);
-  res.json(cliente || { id: req.params.id, estadias: [] });
+  try {
+    const { data, error } = await supabase.from('clientes_locais').select('data').eq('id', String(req.params.id)).single();
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    res.json(data && data.data ? data.data : { id: req.params.id, estadias: [] });
+  } catch(e) {
+    console.error('Error getting local client:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 app.post('/api/clientes/local', async (req, res) => {
-  const db = await readDB();
-  const index = db.clientesDB.findIndex(c => c.id === req.body.id);
-  if(index > -1) db.clientesDB[index] = req.body;
-  else db.clientesDB.push(req.body);
-  await writeDB(db);
-  res.json({success:true});
+  try {
+    const { error } = await supabase.from('clientes_locais').upsert({ id: String(req.body.id), data: req.body });
+    if (error) throw error;
+    res.json({success:true});
+  } catch(e) {
+    console.error('Error saving local client:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.get('/api/transportes', async (req, res) => {
-  const db = await readDB();
-  res.json(db.transportes);
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : []);
+  } catch(e) {
+    console.error('Error getting transportes:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/transportes', async (req, res) => {
-  const db = await readDB();
-  const novo = { ...req.body, id: Date.now() };
-  db.transportes.push(novo);
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('transportes', 'insert', novo);
-  
-  res.json(novo);
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const novo = { ...req.body, id: Date.now() };
+    list.push(novo);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('transportes', 'insert', novo);
+    
+    res.json(novo);
+  } catch(e) {
+    console.error('Error saving transporte:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.put('/api/transportes/:id', async (req, res) => {
-  const db = await readDB();
-  const idx = db.transportes.findIndex(t => t.id == req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  const oldItem = db.transportes[idx];
-  db.transportes[idx] = { ...db.transportes[idx], ...req.body };
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('transportes', 'update', db.transportes[idx], oldItem);
-  
-  res.json(db.transportes[idx]);
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const idx = list.findIndex(t => t.id == req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+    const oldItem = list[idx];
+    list[idx] = { ...list[idx], ...req.body };
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('transportes', 'update', list[idx], oldItem);
+    
+    res.json(list[idx]);
+  } catch(e) {
+    console.error('Error updating transporte:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.delete('/api/transportes/:id', async (req, res) => {
-  const db = await readDB();
-  // EXCLUSÃO DO GOOGLE SHEETS DESATIVADA A PEDIDO DO USUÁRIO
-  db.transportes = db.transportes.filter(t => t.id != req.params.id);
-  await writeDB(db);
-  res.json({ ok: true });
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    let list = data && data.data ? data.data : [];
+    list = list.filter(t => t.id != req.params.id);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
+    if (upsertErr) throw upsertErr;
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting transporte:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 // ── API: Experiências ───────────────────────────────────────────────────────
 app.get('/api/experiencias', async (req, res) => {
-  const db = await readDB();
-  res.json(db.experiencias);
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : []);
+  } catch(e) {
+    console.error('Error getting experiencias:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/experiencias', async (req, res) => {
-  const db = await readDB();
-  const novo = { ...req.body, id: Date.now() };
-  db.experiencias.push(novo);
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('experiencias', 'insert', novo);
-  
-  res.json(novo);
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const novo = { ...req.body, id: Date.now() };
+    list.push(novo);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('experiencias', 'insert', novo);
+    
+    res.json(novo);
+  } catch(e) {
+    console.error('Error saving experiencia:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.put('/api/experiencias/:id', async (req, res) => {
-  const db = await readDB();
-  const idx = db.experiencias.findIndex(e => e.id == req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  const oldItem = db.experiencias[idx];
-  db.experiencias[idx] = { ...db.experiencias[idx], ...req.body };
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('experiencias', 'update', db.experiencias[idx], oldItem);
-  
-  res.json(db.experiencias[idx]);
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const idx = list.findIndex(e => e.id == req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+    const oldItem = list[idx];
+    list[idx] = { ...list[idx], ...req.body };
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('experiencias', 'update', list[idx], oldItem);
+    
+    res.json(list[idx]);
+  } catch(e) {
+    console.error('Error updating experiencia:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.delete('/api/experiencias/:id', async (req, res) => {
-  const db = await readDB();
-  // EXCLUSÃO DO GOOGLE SHEETS DESATIVADA A PEDIDO DO USUÁRIO
-  db.experiencias = db.experiencias.filter(e => e.id != req.params.id);
-  await writeDB(db);
-  res.json({ ok: true });
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    let list = data && data.data ? data.data : [];
+    list = list.filter(e => e.id != req.params.id);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
+    if (upsertErr) throw upsertErr;
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting experiencia:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 // ── API: Roteiros & Atrações ────────────────────────────────────────────────
 app.get('/api/atracoes', async (req, res) => {
-  const db = await readDB();
-  res.json(db.atracoes || []);
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : []);
+  } catch(e) {
+    console.error('Error getting atracoes:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/atracoes', async (req, res) => {
-  const db = await readDB();
-  if (!db.atracoes) db.atracoes = [];
-  
-  // Strip any HTML codes from the description
-  if (req.body && req.body['Descrição Detalhada']) {
-    req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    
+    // Strip any HTML codes from the description
+    if (req.body && req.body['Descrição Detalhada']) {
+      req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+    }
+    
+    const novo = { ...req.body, id: Date.now() };
+    list.push(novo);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('atracoes', 'insert', novo);
+    
+    res.json(novo);
+  } catch(e) {
+    console.error('Error saving atracao:', e);
+    res.status(500).json({error: e.message});
   }
-  
-  const novo = { ...req.body, id: Date.now() };
-  db.atracoes.push(novo);
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('atracoes', 'insert', novo);
-  
-  res.json(novo);
 });
 
 app.put('/api/atracoes/:id', async (req, res) => {
-  const db = await readDB();
-  const idx = db.atracoes.findIndex(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  
-  // Strip any HTML codes from the description
-  if (req.body && req.body['Descrição Detalhada']) {
-    req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const idx = list.findIndex(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+    
+    // Strip any HTML codes from the description
+    if (req.body && req.body['Descrição Detalhada']) {
+      req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+    }
+    
+    const oldItem = list[idx];
+    list[idx] = { ...list[idx], ...req.body };
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    // Sincroniza em background
+    await syncToGoogleSheets('atracoes', 'update', list[idx], oldItem);
+    
+    res.json(list[idx]);
+  } catch(e) {
+    console.error('Error updating atracao:', e);
+    res.status(500).json({error: e.message});
   }
-  
-  const oldItem = db.atracoes[idx];
-  db.atracoes[idx] = { ...db.atracoes[idx], ...req.body };
-  await writeDB(db);
-  
-  // Sincroniza em background
-  await syncToGoogleSheets('atracoes', 'update', db.atracoes[idx], oldItem);
-  
-  res.json(db.atracoes[idx]);
 });
 
 app.delete('/api/atracoes/:id', async (req, res) => {
-  const db = await readDB();
-  const oldItem = db.atracoes.find(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
-  db.atracoes = db.atracoes.filter(a => a.id != req.params.id && a['Nome da Atração'] !== req.params.id);
-  await writeDB(db);
-  if (oldItem) await syncToGoogleSheets('atracoes', 'delete', oldItem);
-  res.json({ ok: true });
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    const oldItem = list.find(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
+    const filteredList = list.filter(a => a.id != req.params.id && a['Nome da Atração'] !== req.params.id);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: filteredList });
+    if (upsertErr) throw upsertErr;
+    
+    if (oldItem) await syncToGoogleSheets('atracoes', 'delete', oldItem);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting atracao:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.get('/api/roteiros', async (req, res) => {
-  const db = await readDB();
-  res.json(db.rotas || {});
+  try {
+    const [rotsRes, baseRes] = await Promise.all([
+      supabase.from('roteiros').select('*'),
+      supabase.from('rotas_base').select('data').eq('id', 'base').single()
+    ]);
+    if (rotsRes.error) throw rotsRes.error;
+    
+    const rotasMap = {};
+    for (const r of rotsRes.data || []) {
+      rotasMap[r.nome] = r.data;
+    }
+    if (baseRes.data && baseRes.data.data) {
+      rotasMap['[PLANILHA] Base de Rotas'] = { dias: baseRes.data.data };
+    }
+    res.json(rotasMap);
+  } catch(e) {
+    console.error('Error getting roteiros:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/roteiros/:name', async (req, res) => {
-  const db = await readDB();
-  if (!db.rotas) db.rotas = {};
-  const name = req.params.name;
-  db.rotas[name] = req.body; // Expects an array of days
-  await writeDB(db);
-  res.json({ ok: true, name, roteiro: db.rotas[name] });
+  try {
+    const name = req.params.name;
+    const dias = req.body; // Expects an array of days
+    
+    if (name === '[PLANILHA] Base de Rotas') {
+      const { error } = await supabase.from('rotas_base').upsert({
+        id: 'base',
+        data: dias.dias || dias
+      });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('roteiros').upsert({
+        nome: name,
+        data: dias
+      }, { onConflict: 'nome' });
+      if (error) throw error;
+    }
+    
+    res.json({ ok: true, name, roteiro: dias });
+  } catch(e) {
+    console.error('Error saving roteiro:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.delete('/api/roteiros/:name', async (req, res) => {
-  const db = await readDB();
-  const name = req.params.name;
-  if (db.rotas && db.rotas[name]) {
-    delete db.rotas[name];
-    
-    // Explicitly delete from Supabase table
-    await supabase.from('roteiros').delete().eq('nome', name);
-    
-    await writeDB(db);
+  try {
+    const name = req.params.name;
+    if (name === '[PLANILHA] Base de Rotas') {
+      const { error } = await supabase.from('rotas_base').delete().eq('id', 'base');
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('roteiros').delete().eq('nome', name);
+      if (error) throw error;
+    }
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting roteiro:', e);
+    res.status(500).json({error: e.message});
   }
-  res.json({ ok: true });
 });
 
 // ── API: Gestão de Sequências (Aba Rotas) ───────────────────────────────────
 app.get('/api/rotas-base', async (req, res) => {
-  const db = await readDB();
-  const base = db.rotas && db.rotas['[PLANILHA] Base de Rotas'] ? db.rotas['[PLANILHA] Base de Rotas'].dias : [];
-  res.json(base);
+  try {
+    const { data, error } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    const base = data && data.data ? data.data : [];
+    res.json(base);
+  } catch(e) {
+    console.error('Error getting rotas-base:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.post('/api/rotas-base', async (req, res) => {
-  const db = await readDB();
-  if (!db.rotas) db.rotas = {};
-  if (!db.rotas['[PLANILHA] Base de Rotas']) db.rotas['[PLANILHA] Base de Rotas'] = { dias: [] };
-  
-  const novo = { id: Date.now(), ...req.body };
-  db.rotas['[PLANILHA] Base de Rotas'].dias.push(novo);
-  await writeDB(db);
-  
-  await syncToGoogleSheets('rotas', 'insert', novo);
-  res.json(novo);
+  try {
+    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    
+    const list = data && data.data ? data.data : [];
+    const novo = { id: Date.now(), ...req.body };
+    list.push(novo);
+    
+    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
+      id: 'base',
+      data: list
+    });
+    if (upsertErr) throw upsertErr;
+    
+    await syncToGoogleSheets('rotas', 'insert', novo);
+    res.json(novo);
+  } catch(e) {
+    console.error('Error saving rotas-base:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.put('/api/rotas-base/:id', async (req, res) => {
-  const db = await readDB();
-  if (!db.rotas || !db.rotas['[PLANILHA] Base de Rotas']) return res.status(404).json({ error: 'Base vazia' });
-  
-  const dias = db.rotas['[PLANILHA] Base de Rotas'].dias;
-  const idx = dias.findIndex(d => d.id == req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  
-  const oldItem = dias[idx];
-  dias[idx] = { ...dias[idx], ...req.body };
-  await writeDB(db);
-  
-  await syncToGoogleSheets('rotas', 'update', dias[idx], oldItem);
-  res.json(dias[idx]);
+  try {
+    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    
+    const list = data && data.data ? data.data : [];
+    const idx = list.findIndex(d => d.id == req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+    
+    const oldItem = list[idx];
+    list[idx] = { ...list[idx], ...req.body };
+    
+    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
+      id: 'base',
+      data: list
+    });
+    if (upsertErr) throw upsertErr;
+    
+    await syncToGoogleSheets('rotas', 'update', list[idx], oldItem);
+    res.json(list[idx]);
+  } catch(e) {
+    console.error('Error updating rotas-base:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 app.delete('/api/rotas-base/:id', async (req, res) => {
-  const db = await readDB();
-  if (!db.rotas || !db.rotas['[PLANILHA] Base de Rotas']) return res.status(404).json({ error: 'Base vazia' });
-  
-  const dias = db.rotas['[PLANILHA] Base de Rotas'].dias;
-  const oldItem = dias.find(d => d.id == req.params.id);
-  db.rotas['[PLANILHA] Base de Rotas'].dias = dias.filter(d => d.id != req.params.id);
-  await writeDB(db);
-  
-  if (oldItem) await syncToGoogleSheets('rotas', 'delete', oldItem);
-  res.json({ ok: true });
+  try {
+    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    
+    const list = data && data.data ? data.data : [];
+    const oldItem = list.find(d => d.id == req.params.id);
+    const filteredList = list.filter(d => d.id != req.params.id);
+    
+    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
+      id: 'base',
+      data: filteredList
+    });
+    if (upsertErr) throw upsertErr;
+    
+    if (oldItem) await syncToGoogleSheets('rotas', 'delete', oldItem);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting rotas-base:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 
 // ── API: Sync Google Sheets ─────────────────────────────────────────────────
 app.post('/api/sync', async (req, res) => {
-  const db = await readDB();
-  const { sheets_id, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas } = db.config;
+  try {
+    const { data: cfgData, error: cfgErr } = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    if (cfgErr) throw cfgErr;
+    const config = cfgData?.data || {};
+    const { sheets_id, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas } = config;
 
-  if (!sheets_id) {
-    return res.status(400).json({ error: 'ID do Google Sheets não configurado nas Configurações.' });
-  }
+    if (!sheets_id) {
+      return res.status(400).json({ error: 'ID do Google Sheets não configurado nas Configurações.' });
+    }
 
-  const abaT = sheets_aba_transportes || 'Base';
-  const abaE = sheets_aba_experiencias || 'BaseEX';
-  const abaA = sheets_aba_atracoes || 'Atracoes';
-  const abaRotas = sheets_aba_rotas || 'Rotas';
+    const abaT = sheets_aba_transportes || 'Base';
+    const abaE = sheets_aba_experiencias || 'BaseEX';
+    const abaA = sheets_aba_atracoes || 'Atracoes';
+    const abaRotas = sheets_aba_rotas || 'Rotas';
+
+    const db = {
+      config,
+      transportes: [],
+      experiencias: [],
+      atracoes: [],
+      rotas: {}
+    };
 
   // Busca uma aba via gviz usando o range completo (inclui linhas em branco)
   async function fetchAba(nomeAba) {
@@ -556,8 +745,7 @@ app.post('/api/sync', async (req, res) => {
     return parsePreco(cellVal(cell));
   }
 
-  try {
-    let nTransp = 0, nExp = 0, nAtracoes = 0;
+  let nTransp = 0, nExp = 0, nAtracoes = 0;
 
     // ── TRANSPORTES (aba "Base") ─────────────────────────────────────
     // Estrutura: cabeçalho aparece numa linha que começa com "Trecho".
@@ -748,7 +936,23 @@ app.post('/api/sync', async (req, res) => {
 
 
     db.config.ultima_sincronizacao = new Date().toISOString();
-    await writeDB(db);
+    
+    // Grava apenas as tabelas alteradas em paralelo
+    const syncPromises = [
+      supabase.from('config').upsert({ id: 'app_config', data: db.config || {} }).then(r => { if (r.error) throw r.error; }),
+      supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] }).then(r => { if (r.error) throw r.error; }),
+      supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] }).then(r => { if (r.error) throw r.error; }),
+      supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] }).then(r => { if (r.error) throw r.error; })
+    ];
+    
+    if (db.rotas?.['[PLANILHA] Base de Rotas']?.dias) {
+      syncPromises.push(
+        supabase.from('rotas_base').upsert({ id: 'base', data: db.rotas['[PLANILHA] Base de Rotas'].dias }).then(r => { if (r.error) throw r.error; })
+      );
+    }
+    
+    await Promise.all(syncPromises);
+
     res.json({ ok: true, ultima_sincronizacao: db.config.ultima_sincronizacao, nTransp, nExp, nAtracoes });
 
   } catch (err) {
