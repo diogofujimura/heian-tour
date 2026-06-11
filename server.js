@@ -277,7 +277,7 @@ app.post('/api/orcamentos', async (req, res) => {
 app.delete('/api/orcamentos/:id', async (req, res) => {
   try {
     const db = await readDB();
-    db.orcamentosDB = db.orcamentosDB.filter(o => o.id !== req.params.id);
+    db.orcamentosDB = db.orcamentosDB.filter(o => String(o.id) !== String(req.params.id));
     
     // Explicitly delete from Supabase table
     await supabase.from('orcamentos').delete().eq('id', String(req.params.id));
