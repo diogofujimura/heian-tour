@@ -1278,21 +1278,39 @@ app.patch('/api/notion/clientes/:id', async (req, res) => {
 // ── APIs DO CALENDÁRIO & COLABORADORES NOTION ────────────────────────────────
 app.get('/api/notion/colaboradores', async (req, res) => {
   try {
-    const response = await fetch('https://api.notion.com/v1/users', {
-      method: 'GET',
+    const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+    const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28'
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
       }
     });
     if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json(err);
+      const errText = await response.text();
+      throw new Error(`Erro ao consultar banco de colaboradores: ${errText}`);
     }
     const data = await response.json();
-    const colaboradores = data.results
-      .filter(u => u.type === 'person')
-      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar_url }));
+    const colaboradores = (data.results || []).map(item => {
+      const nameProp = item.properties.Name || item.properties.Nome;
+      const name = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+      const email = item.properties.Email?.email || '';
+      const whatsapp = item.properties.Whatsapp?.phone_number || '';
+      const rate = item.properties.Rate?.number || 35000;
+      const locais = (item.properties.Locais?.multi_select || []).map(x => x.name);
+      const residencia = (item.properties.Residência?.multi_select || []).map(x => x.name);
+      return {
+        id: item.id,
+        name: name,
+        email: email,
+        whatsapp: whatsapp,
+        rate: rate,
+        locais: locais,
+        residencia: residencia,
+        avatar: null
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
     res.json(colaboradores);
   } catch (error) {
     console.error('Erro ao buscar colaboradores no Notion:', error);
@@ -1302,69 +1320,28 @@ app.get('/api/notion/colaboradores', async (req, res) => {
 
 app.get('/api/calendario/eventos', async (req, res) => {
   try {
-    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
     const { data_inicio, data_fim, cliente_id } = req.query;
-    const filterAnd = [];
+    
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
 
+    // Aplicar filtros se fornecidos
     if (data_inicio) {
-      filterAnd.push({
-        property: 'Data do Serviço',
-        date: { on_or_after: data_inicio }
-      });
+      eventos = eventos.filter(ev => ev.dataServico >= data_inicio);
     }
     if (data_fim) {
-      filterAnd.push({
-        property: 'Data do Serviço',
-        date: { on_or_before: data_fim }
-      });
+      eventos = eventos.filter(ev => ev.dataServico <= data_fim);
     }
-
     if (cliente_id) {
-      filterAnd.push({
-        property: '🎀 Clientes',
-        relation: { contains: cliente_id }
-      });
-    } else {
-      filterAnd.push({
-        property: 'Data do Serviço',
-        date: { is_not_empty: true }
-      });
+      eventos = eventos.filter(ev => ev.clienteId === cliente_id || (ev.clientes && ev.clientes.includes(cliente_id)));
     }
-
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: filterAnd.length > 0 ? { and: filterAnd } : undefined,
-        page_size: 100
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json(err);
-    }
-
-    const data = await response.json();
-    const eventos = data.results.map(page => {
-      const props = page.properties;
-      return {
-        id: page.id,
-        titulo: props['Task name']?.title[0]?.plain_text || 'Sem nome',
-        dataServico: props['Data do Serviço']?.date?.start || null,
-        tipoServico: props['Tipo de Serviço']?.select?.name || 'Roteiro',
-        assignee: props['Assignee']?.people?.map(p => ({ id: p.id, name: p.name, avatar: p.avatar_url })) || [],
-        clientes: props['🎀 Clientes']?.relation?.map(r => r.id) || []
-      };
-    });
 
     res.json(eventos);
   } catch (error) {
-    console.error('Erro ao buscar eventos do calendário:', error);
+    console.error('Erro ao buscar eventos do calendário local:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1372,37 +1349,255 @@ app.get('/api/calendario/eventos', async (req, res) => {
 app.patch('/api/calendario/eventos/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { assigneeIds, dataServico } = req.body;
-    const properties = {};
+    const { assigneeIds, dataServico, valorDiaria, pago, colaboradorId, valorDiariaColab, pagoColab } = req.body;
 
-    if (assigneeIds !== undefined) {
-      properties['Assignee'] = {
-        people: assigneeIds.map(userId => ({ id: userId }))
-      };
-    }
-    if (dataServico !== undefined) {
-      properties['Data do Serviço'] = dataServico ? { date: { start: dataServico } } : null;
+    // Buscar colaboradores do Notion (somente leitura) para preencher nome/avatar
+    let collaborators = [];
+    if (NOTION_TOKEN) {
+      try {
+        const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+        const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          collaborators = (data.results || []).map(item => {
+            const nameProp = item.properties.Name || item.properties.Nome;
+            const rateProp = item.properties.Rate;
+            return {
+              id: item.id,
+              name: nameProp?.title?.[0]?.plain_text || 'Sem Nome',
+              avatar: null,
+              rate: rateProp && typeof rateProp.number === 'number' ? rateProp.number : 35000
+            };
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao buscar colaboradores no Notion para o PATCH:', e);
+      }
     }
 
-    const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ properties })
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    let updated = false;
+    eventos = eventos.map(ev => {
+      if (ev.id === id) {
+        updated = true;
+        const newEv = { ...ev };
+
+        // Inicializar objetos individuais caso não existam
+        if (!newEv.valorDiariaColab) newEv.valorDiariaColab = {};
+        if (!newEv.pagoColab) newEv.pagoColab = {};
+
+        // Caso 1: Atualização individualizada de faturamento vinda do dashboard
+        if (colaboradorId) {
+          if (valorDiariaColab !== undefined) {
+            newEv.valorDiariaColab[colaboradorId] = valorDiariaColab === null ? null : Number(valorDiariaColab);
+          }
+          if (pagoColab !== undefined) {
+            newEv.pagoColab[colaboradorId] = !!pagoColab;
+          }
+
+          // Compatibilidade global: Se for o colaborador principal (primeiro da lista), atualiza o campo global
+          const primaryId = newEv.assignee && newEv.assignee.length > 0 ? newEv.assignee[0].id : null;
+          if (colaboradorId === primaryId || !primaryId) {
+            if (valorDiariaColab !== undefined) {
+              newEv.valorDiaria = valorDiariaColab === null ? null : Number(valorDiariaColab);
+            }
+            if (pagoColab !== undefined) {
+              newEv.pago = !!pagoColab;
+            }
+          }
+        }
+
+        // Caso 2: Atualização de atribuição (designação de guias) vinda do modal ou do card
+        if (assigneeIds !== undefined) {
+          newEv.assignee = assigneeIds.map(userId => {
+            const found = collaborators.find(c => c.id === userId);
+            return found ? { id: found.id, name: found.name, avatar: found.avatar } : { id: userId, name: userId };
+          });
+
+          // Limpar diárias de colaboradores desmarcados
+          Object.keys(newEv.valorDiariaColab).forEach(uid => {
+            if (!assigneeIds.includes(uid)) {
+              delete newEv.valorDiariaColab[uid];
+              delete newEv.pagoColab[uid];
+            }
+          });
+
+          // Inicializar diárias de novos colaboradores marcados
+          assigneeIds.forEach(uid => {
+            if (newEv.valorDiariaColab[uid] === undefined || newEv.valorDiariaColab[uid] === null) {
+              const isRoteiro = newEv.tipoServico && newEv.tipoServico.toLowerCase() === 'roteiro';
+              const colFound = collaborators.find(c => c.id === uid);
+              const defaultRate = colFound ? colFound.rate : 35000;
+              
+              // Se já houver um valorDiaria global definido no evento e for maior que zero, usa ele; senão, usa a taxa do guia
+              if (typeof valorDiaria === 'number' && valorDiaria > 0) {
+                newEv.valorDiariaColab[uid] = valorDiaria;
+              } else if (typeof newEv.valorDiaria === 'number' && newEv.valorDiaria > 0) {
+                newEv.valorDiariaColab[uid] = newEv.valorDiaria;
+              } else {
+                newEv.valorDiariaColab[uid] = isRoteiro ? defaultRate : 0;
+              }
+            }
+            if (newEv.pagoColab[uid] === undefined) {
+              newEv.pagoColab[uid] = pago !== undefined ? !!pago : (newEv.pago || false);
+            }
+          });
+
+          // Compatibilidade global: Sincroniza campos globais com o primeiro colaborador
+          if (assigneeIds.length > 0) {
+            const primaryId = assigneeIds[0];
+            newEv.valorDiaria = newEv.valorDiariaColab[primaryId];
+            newEv.pago = newEv.pagoColab[primaryId];
+          } else {
+            newEv.valorDiaria = null;
+            newEv.pago = false;
+          }
+        }
+
+        // Outros campos globais
+        if (dataServico !== undefined) {
+          newEv.dataServico = dataServico;
+        }
+        if (valorDiaria !== undefined && assigneeIds === undefined && !colaboradorId) {
+          newEv.valorDiaria = valorDiaria === null ? null : Number(valorDiaria);
+          // Atualiza também para o primeiro colaborador se houver
+          if (newEv.assignee && newEv.assignee.length > 0) {
+            newEv.valorDiariaColab[newEv.assignee[0].id] = newEv.valorDiaria;
+          }
+        }
+        if (pago !== undefined && assigneeIds === undefined && !colaboradorId) {
+          newEv.pago = !!pago;
+          // Atualiza também para o primeiro colaborador se houver
+          if (newEv.assignee && newEv.assignee.length > 0) {
+            newEv.pagoColab[newEv.assignee[0].id] = newEv.pago;
+          }
+        }
+
+        return newEv;
+      }
+      return ev;
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json(err);
+    if (updated) {
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: eventos });
+      if (upsertErr) throw upsertErr;
+
+      // Espelhar alteração na Agenda do Notion (se for um ID válido e o Token/DB existirem)
+      const NOTION_AGENDA_DB_ID = process.env.NOTION_AGENDA_DB_ID;
+      if (NOTION_TOKEN && NOTION_AGENDA_DB_ID && id && !id.startsWith('cal_')) {
+        try {
+          const properties = {};
+          const evUpdated = eventos.find(e => e.id === id);
+          if (evUpdated) {
+            if (assigneeIds !== undefined) {
+              properties['Responsável'] = {
+                relation: assigneeIds.map(uid => ({ id: uid }))
+              };
+            }
+            if (dataServico !== undefined) {
+              properties['Data do Tour'] = dataServico ? { date: { start: dataServico } } : null;
+            }
+            
+            // Gravar diária global no Notion (que representa o guia principal do card)
+            if (evUpdated.valorDiaria !== undefined) {
+              properties['Valor diária do Guia'] = evUpdated.valorDiaria === null ? null : { number: Number(evUpdated.valorDiaria) };
+            }
+            if (evUpdated.pago !== undefined) {
+              properties['Pagamento concluído '] = {
+                status: { name: evUpdated.pago ? "Concluído" : "Não iniciado" }
+              };
+            }
+            
+            console.log(`Espelhando alteração do evento ${id} na Agenda do Notion...`);
+            const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${NOTION_TOKEN}`,
+                'Notion-Version': '2022-06-28',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ properties })
+            });
+            if (!response.ok) {
+              const errText = await response.text();
+              console.error('Erro na resposta do PATCH no Notion:', errText);
+            }
+          }
+        } catch (notionErr) {
+          console.error('Erro ao espelhar alteração na Agenda do Notion:', notionErr);
+        }
+      }
+
+      res.json({ success: true, id });
+    } else {
+      res.status(404).json({ error: 'Evento não encontrado' });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar evento do calendário local:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/calendario/eventos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
     }
 
-    const data = await response.json();
-    res.json({ success: true, id: data.id });
+    const eventIndex = eventos.findIndex(ev => ev.id === id);
+    if (eventIndex !== -1) {
+      // 1. Arquivar card correspondente na Agenda do Notion (se for um ID real do Notion e as chaves existirem)
+      const NOTION_AGENDA_DB_ID = process.env.NOTION_AGENDA_DB_ID;
+      if (NOTION_TOKEN && NOTION_AGENDA_DB_ID && id && !id.startsWith('cal_')) {
+        try {
+          console.log(`Arquivando evento ${id} na Agenda do Notion via DELETE...`);
+          const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${NOTION_TOKEN}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ archived: true })
+          });
+          if (!response.ok) {
+            const errText = await response.text();
+            console.error('Erro ao arquivar card no Notion:', errText);
+          }
+        } catch (notionErr) {
+          console.error('Erro ao arquivar card na Agenda do Notion no DELETE:', notionErr);
+        }
+      }
+
+      // 2. Remover do array local
+      eventos.splice(eventIndex, 1);
+
+      // 3. Gravar a lista atualizada de volta no Supabase
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: eventos });
+      if (upsertErr) throw upsertErr;
+
+      res.json({ success: true, id });
+    } else {
+      res.status(404).json({ error: 'Evento não encontrado no banco local.' });
+    }
   } catch (error) {
-    console.error('Erro ao atualizar evento do calendário:', error);
+    console.error('Erro ao excluir evento do calendário local:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1419,53 +1614,14 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
     }
 
     const roteiro = rotData.data;
-    const clienteId = roteiro.notionClienteId || roteiro.cliente?.notionClienteId;
-    if (!clienteId) {
-      return res.status(400).json({ error: 'Este roteiro não está associado a nenhum cliente do Notion.' });
-    }
+    
+    // Obter clienteId (relaxado: sem obrigação de estar no Notion)
+    const clienteId = roteiro.notionClienteId || roteiro.cliente?.notionClienteId || roteiro.cliente?.nome || roteiro.nome || 'cliente_desconhecido';
+    const clienteNome = roteiro.cliente?.nome || roteiro.nome || 'Cliente';
 
     const dataInicio = roteiro.cliente?.dataInicio;
     if (!dataInicio) {
       return res.status(400).json({ error: 'Defina uma data de início no roteiro antes de sincronizar com o calendário.' });
-    }
-
-    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
-
-    // 1. Buscar tarefas ativas vinculadas a esse cliente no Tasks Tracker
-    const queryResponse = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: {
-          property: '🎀 Clientes',
-          relation: { contains: clienteId }
-        }
-      })
-    });
-
-    if (!queryResponse.ok) {
-      const err = await queryResponse.json();
-      throw new Error('Erro ao consultar tarefas antigas: ' + JSON.stringify(err));
-    }
-
-    const queryData = await queryResponse.json();
-    const tasksToArchive = queryData.results;
-
-    // 2. Arquivar tarefas antigas no Notion
-    for (const task of tasksToArchive) {
-      await fetch(`https://api.notion.com/v1/pages/${task.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ archived: true })
-      });
     }
 
     // Função auxiliar para somar dias a data string YYYY-MM-DD
@@ -1479,18 +1635,22 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
       return `${y}-${m}-${d}`;
     };
 
-    // 3. Mapear e gerar a lista de novas tarefas
     const novasTarefas = [];
-    
+
     (roteiro.dias || []).forEach((dia, index) => {
       const dataServico = somarDias(dataInicio, index);
 
-      // A) Roteiro (Passeios/Atrações do Dia)
+      // A) Roteiro (Passeios/Atrações do Dia) - Apenas se dia.tourGuiado === true
       const sequencias = (dia.elementos || []).filter(el => el.tipo === 'sequencia');
+      const infos = (dia.elementos || []).filter(el => el.tipo === 'info');
+      const textos = (dia.elementos || []).filter(el => el.tipo === 'texto');
+
       let cidade = '';
       const nomesAtracoes = [];
+      const rotasNomes = [];
       sequencias.forEach(seq => {
         if (seq.cidade) cidade = seq.cidade;
+        if (seq.nomeDaRota) rotasNomes.push(seq.nomeDaRota);
         if (seq.atracoesDoDia) {
           seq.atracoesDoDia.forEach(atr => {
             if (atr.nome) nomesAtracoes.push(atr.nome);
@@ -1498,90 +1658,288 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
         }
       });
 
-      let tituloRoteiro = `Dia ${index + 1} - Tour`;
-      if (cidade) tituloRoteiro += ` em ${cidade}`;
-      if (nomesAtracoes.length > 0) {
-        tituloRoteiro += ` (Atrações: ${nomesAtracoes.join(', ')})`;
-      }
-
       if (dia.tourGuiado === true) {
+        let tituloRoteiro = `Dia ${index + 1} - Tour`;
+        if (cidade) tituloRoteiro += ` em ${cidade}`;
+
+        let horaEncontro = '';
+        let localEncontro = '';
+        let duracaoTour = '';
+        if (infos.length > 0) {
+          horaEncontro = infos[0].horarioEncontro || '';
+          localEncontro = infos[0].localEncontro || '';
+          duracaoTour = infos[0].duracaoTour || '';
+        }
+
         novasTarefas.push({
-          titulo: tituloRoteiro.substring(0, 200),
+          id: `cal_rot_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`,
+          titulo: tituloRoteiro,
           dataServico,
-          tipoServico: 'Roteiro'
+          tipoServico: 'Roteiro',
+          clienteId,
+          clientes: [clienteId],
+          clienteNome,
+          cidade: cidade || 'Japão',
+          horaEncontro,
+          localEncontro,
+          duracaoTour,
+          atracoes: nomesAtracoes,
+          rotas: rotasNomes,
+          textos: textos.map(t => t.conteudo).filter(Boolean),
+          assignee: []
         });
       }
 
-      // B) Transportes
+      // B) Transportes - Adiciona sempre que existirem no dia
       const transportes = (dia.elementos || []).filter(el => el.tipo === 'transporte');
-      transportes.forEach(t => {
+      transportes.forEach((t, tIdx) => {
         const orig = t.cidadeOrigem || 'Origem';
         const dest = t.cidadeDestino || 'Destino';
-        const hora = t.horario ? t.horario + ' - ' : '';
+        const hora = t.horario || '';
         const nomeTr = t.tipoTransporte || 'Deslocamento';
-        const tituloTr = `${hora}Transporte: ${orig} ➔ ${dest} (${nomeTr})`;
-
-        let tipoNotion = 'Transfer';
-        const tLower = nomeTr.toLowerCase();
-        if (tLower.includes('shinkansen')) tipoNotion = 'Shinkansen';
-        else if (tLower.includes('romancecar')) tipoNotion = 'Romancecar';
-        else if (tLower.includes('trem') || tLower.includes('trêm') || tLower.includes('metrô') || tLower.includes('metro')) tipoNotion = 'Trem';
-        else if (tLower.includes('ônibus') || tLower.includes('onibus') || tLower.includes('bus')) tipoNotion = 'ônibus';
+        const tituloTr = `Transporte: ${orig} ➔ ${dest} (${nomeTr})`;
 
         novasTarefas.push({
-          titulo: tituloTr.substring(0, 200),
+          id: `cal_tr_${Date.now()}_${index}_${tIdx}_${Math.random().toString(36).substr(2, 9)}`,
+          titulo: tituloTr,
           dataServico,
-          tipoServico: tipoNotion
+          tipoServico: nomeTr,
+          clienteId,
+          clientes: [clienteId],
+          clienteNome,
+          cidade: `${orig} ➔ ${dest}`,
+          horaEncontro: hora,
+          localEncontro: t.cidadeOrigem ? `Estação/Aeroporto de ${t.cidadeOrigem}` : '',
+          transportInfo: {
+            origem: orig,
+            destino: dest,
+            tipoTransporte: nomeTr,
+            horario: hora,
+            linha: t.linha || '',
+            categoria: t.categoria || '',
+            tempo: t.tempo || '',
+            adultos: t.adultos || '',
+            compradoHeian: t.compradoHeian !== false,
+            observacoes: t.observacoes || ''
+          },
+          assignee: []
         });
       });
 
-      // C) Experiências / Tickets
+      // C) Experiências / Tickets - Adiciona sempre que existirem no dia
       const experiencias = (dia.elementos || []).filter(el => el.tipo === 'experiencia');
-      experiencias.forEach(e => {
-        const hora = e.horaPartida ? e.horaPartida + ' - ' : '';
+      experiencias.forEach((e, eIdx) => {
+        const hora = e.horaPartida || '';
         const nome = e.nomeExp || 'Experiência';
-        const tituloExp = `${hora}${nome}`;
+        const tituloExp = `${nome}`;
 
         novasTarefas.push({
-          titulo: tituloExp.substring(0, 200),
+          id: `cal_exp_${Date.now()}_${index}_${eIdx}_${Math.random().toString(36).substr(2, 9)}`,
+          titulo: tituloExp,
           dataServico,
-          tipoServico: 'Experiência'
+          tipoServico: 'Experiência',
+          clienteId,
+          clientes: [clienteId],
+          clienteNome,
+          cidade: cidade || 'Japão',
+          horaEncontro: hora,
+          localEncontro: e.localEncontro || e.observacoes || '',
+          expInfo: {
+            nomeExp: nome,
+            horaPartida: hora,
+            adultos: e.adultos || '',
+            compradoHeian: e.compradoHeian !== false,
+            observacoes: e.observacoes || ''
+          },
+          assignee: []
         });
       });
     });
 
-    // 4. Cadastrar novas tarefas no Notion Tasks Tracker
+    // Buscar eventos existentes para outras cotações/clientes
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventosExistentes = [];
+    if (calCfg && calCfg.data) {
+      eventosExistentes = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    // Filtrar eventos antigos deste roteiro para removê-los
+    const eventosFiltrados = eventosExistentes.filter(ev => {
+      const matchCliente = ev.clienteId && ev.clienteId === clienteId;
+      const matchRoteiro = ev.roteiroNome && ev.roteiroNome === roteiroNome;
+      return !matchCliente && !matchRoteiro;
+    });
+
+    // Mapear guias que já estavam atribuídos para preservá-los
+    const encontrarGuiaExistente = (tipo, data) => {
+      const match = eventosExistentes.find(ev => 
+        ev.dataServico === data && 
+        (ev.clienteId === clienteId || ev.roteiroNome === roteiroNome) &&
+        (ev.tipoServico === tipo || (tipo !== 'Roteiro' && tipo !== 'Experiência' && ev.tipoServico !== 'Roteiro' && ev.tipoServico !== 'Experiência'))
+      );
+      return match ? match.assignee : [];
+    };
+
+    // Aplicar a busca de guias e roteiroNome nos novos eventos
+    novasTarefas.forEach(ev => {
+      ev.assignee = encontrarGuiaExistente(ev.tipoServico, ev.dataServico);
+      ev.roteiroNome = roteiroNome;
+    });
+
+    // ── CONFIGURAÇÃO DE SINCRONIZAÇÃO COM A AGENDA DO NOTION ──
+    const NOTION_AGENDA_DB_ID = process.env.NOTION_AGENDA_DB_ID;
+    
+    if (NOTION_TOKEN && NOTION_AGENDA_DB_ID && clienteId && clienteId !== 'cliente_desconhecido') {
+      try {
+        console.log(`Buscando eventos antigos na Agenda do Notion para o cliente ${clienteId}...`);
+        const queryResponse = await fetch(`https://api.notion.com/v1/databases/${NOTION_AGENDA_DB_ID}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            filter: {
+              property: '🎀 Clientes',
+              relation: { contains: clienteId }
+            }
+          })
+        });
+
+        if (queryResponse.ok) {
+          const queryData = await queryResponse.json();
+          const oldEvents = queryData.results || [];
+          console.log(`Arquivando ${oldEvents.length} eventos antigos na Agenda do Notion...`);
+          
+          for (const evPage of oldEvents) {
+            try {
+              await fetch(`https://api.notion.com/v1/pages/${evPage.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${NOTION_TOKEN}`,
+                  'Notion-Version': '2022-06-28',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ archived: true })
+              });
+            } catch (err) {
+              console.error(`Erro ao arquivar card ${evPage.id} na Agenda do Notion:`, err);
+            }
+          }
+        }
+      } catch (notionQueryErr) {
+        console.error('Erro ao limpar eventos na Agenda do Notion:', notionQueryErr);
+      }
+    }
+
+    // Criar as novas tarefas na Agenda do Notion e associar os IDs retornados
     for (const tf of novasTarefas) {
-      await fetch('https://api.notion.com/v1/pages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          parent: { database_id: NOTION_TASKS_DB_ID },
-          properties: {
-            'Task name': {
+      if (NOTION_TOKEN && NOTION_AGENDA_DB_ID && clienteId && clienteId !== 'cliente_desconhecido') {
+        try {
+          let valorDiariaPadrao = 0;
+          const isRoteiro = tf.tipoServico && tf.tipoServico.toLowerCase() === 'roteiro';
+          
+          if (isRoteiro) {
+            valorDiariaPadrao = 35000; // Valor de fallback padrão
+          }
+
+          // Montar o descritivo rico e estruturado para a coluna de Observações
+          let obsTexto = '';
+          const parts = [];
+          
+          if (isRoteiro) {
+            if (tf.horaEncontro) parts.push(`🕒 Horário de Encontro: ${tf.horaEncontro}`);
+            if (tf.localEncontro) parts.push(`📍 Local de Encontro: ${tf.localEncontro}`);
+            if (tf.duracaoTour) parts.push(`⏳ Duração: Tour de ${tf.duracaoTour}`);
+            if (tf.rotas && tf.rotas.length > 0) parts.push(`🗺️ Rota:\n${tf.rotas.join(' ➔ ')}`);
+            if (tf.atracoes && tf.atracoes.length > 0) parts.push(`⭐ Atrações:\n${tf.atracoes.join(', ')}`);
+            if (tf.textos && tf.textos.length > 0) parts.push(`📝 Detalhes:\n${tf.textos.join('\n')}`);
+          } else if (tf.transportInfo) {
+            if (tf.transportInfo.tipoTransporte) parts.push(`Transporte: ${tf.transportInfo.tipoTransporte}`);
+            if (tf.transportInfo.origem && tf.transportInfo.destino) parts.push(`Trajeto: ${tf.transportInfo.origem} ➔ ${tf.transportInfo.destino}`);
+            if (tf.transportInfo.horario) parts.push(`Horário Encontro: ${tf.transportInfo.horario}`);
+            if (tf.transportInfo.observacoes) parts.push(`Detalhes: ${tf.transportInfo.observacoes}`);
+          } else if (tf.expInfo) {
+            if (tf.expInfo.nomeExp) parts.push(`Experiência: ${tf.expInfo.nomeExp}`);
+            if (tf.expInfo.horaPartida) parts.push(`Horário Encontro: ${tf.expInfo.horaPartida}`);
+            if (tf.expInfo.observacoes) parts.push(`Detalhes: ${tf.expInfo.observacoes}`);
+          }
+          
+          obsTexto = parts.join('\n\n').trim();
+
+          const properties = {
+            'Nome': {
               title: [{ text: { content: tf.titulo } }]
             },
-            'Data do Serviço': {
+            'Data do Tour': {
               date: { start: tf.dataServico }
-            },
-            'Tipo de Serviço': {
-              select: { name: tf.tipoServico }
             },
             '🎀 Clientes': {
               relation: [{ id: clienteId }]
             }
+          };
+
+          if (tf.cidade) {
+            const cidadeClean = tf.cidade.substring(0, 50).trim();
+            properties['Cidade'] = {
+              select: { name: cidadeClean }
+            };
           }
-        })
-      });
+
+          if (tf.assignee && tf.assignee.length > 0) {
+            properties['Responsável'] = {
+              relation: tf.assignee.map(a => ({ id: a.id }))
+            };
+          }
+
+          properties['Valor diária do Guia'] = {
+            number: isRoteiro ? valorDiariaPadrao : 0
+          };
+
+          if (obsTexto) {
+            properties['Observações'] = {
+              rich_text: [{ text: { content: obsTexto.substring(0, 2000) } }]
+            };
+          }
+
+          const response = await fetch('https://api.notion.com/v1/pages', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${NOTION_TOKEN}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              parent: { database_id: NOTION_AGENDA_DB_ID },
+              properties
+            })
+          });
+
+          if (response.ok) {
+            const pageData = await response.json();
+            tf.id = pageData.id; // Substitui o ID pseudo-aleatório pelo ID real do Notion!
+            tf.valorDiaria = isRoteiro ? valorDiariaPadrao : 0;
+            tf.pago = false;
+          } else {
+            const errText = await response.text();
+            console.error('Erro ao cadastrar evento na Agenda do Notion:', errText);
+          }
+        } catch (err) {
+          console.error('Erro ao cadastrar card na Agenda do Notion:', err);
+        }
+      }
     }
+
+    const todosEventos = [...eventosFiltrados, ...novasTarefas];
+
+    // Gravar localmente no Supabase
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: todosEventos });
+    if (upsertErr) throw upsertErr;
 
     res.json({ success: true, count: novasTarefas.length });
   } catch (error) {
-    console.error('Erro ao sincronizar roteiro com calendário:', error);
+    console.error('Erro ao sincronizar roteiro com calendário local:', error);
     res.status(500).json({ error: error.message });
   }
 });

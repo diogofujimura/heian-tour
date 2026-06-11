@@ -60,6 +60,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <a class="nav-item" data-page="roteiros">🗺️ &nbsp;Roteiros de Viagem</a>
     <a class="nav-item" data-page="meus">💰 &nbsp;Cotações</a>
     <a class="nav-item" data-page="calendario">📅 &nbsp;Calendário</a>
+    <a class="nav-item" data-page="colaboradores">👤 &nbsp;Colaboradores</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
     <a class="nav-item" data-page="orcamento">◈ &nbsp;Criar Cotação Rápida</a>
@@ -865,6 +866,150 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
+  <!-- ── COLABORADORES ────────────────────────────────────────────────────── -->
+  <div id="page-colaboradores" class="page pane-layout">
+    <!-- Painel Esquerdo: Lista de Colaboradores -->
+    <div class="pane-sidebar" style="flex: 0 0 300px; max-width: 300px;">
+      <div class="pane-sidebar-header" style="padding: 24px 24px 16px 24px; border-bottom: 1px solid var(--border);">
+        <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 400; color: var(--crimson); margin: 0;">Colaboradores</h2>
+      </div>
+      <div class="pane-sidebar-search" style="padding: 16px 24px; border-bottom: 1px solid var(--border);">
+        <input type="text" id="pesquisaColaboradoresList" class="search-input-modern" style="width: 100%; box-sizing: border-box;" placeholder="Pesquisar colaborador..." onkeyup="renderColaboradoresTabela()">
+      </div>
+      <div class="pane-list-content" id="tabelaColaboradoresList" style="flex: 1; overflow-y: auto;">
+        <!-- Injetado via JS -->
+      </div>
+    </div>
+    
+    <!-- Painel Direito: Dashboard do Colaborador -->
+    <div class="pane-content" id="colaboradoresPaneContent">
+      <div class="pane-content-inner" id="colaboradoresContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
+        <!-- Empty State -->
+        <div id="colaboradoresEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
+          <span style="font-size: 48px; display:block; margin-bottom: 16px;">👤</span>
+          <h3>Selecione um Colaborador</h3>
+          <p class="hint">Escolha um guia na barra lateral para ver o seu dashboard de tours e pagamentos.</p>
+        </div>
+        
+        <!-- Wrapper de Detalhes / Dashboard -->
+        <div id="colaboradoresDetailWrapper" style="display:none; width: 100%; padding: 40px; box-sizing: border-box;">
+          <!-- Header do Colaborador - Estilo Perfil Premium -->
+          <div class="colab-dashboard-profile-card" style="background: linear-gradient(135deg, #fdfbf7 0%, #f7f3eb 100%); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px;">
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+              <div id="colabDashAvatar" style="width: 64px; height: 64px; border-radius: 50%; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; font-family: var(--ff-display); box-shadow: 0 4px 10px rgba(139, 0, 0, 0.15);">
+                T
+              </div>
+              <div>
+                <h1 id="colabDashNome" style="margin: 0; font-family: var(--ff-display); font-size: 26px; color: var(--crimson); line-height: 1.2;">Nome do Colaborador</h1>
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 13px;">
+                  <a id="colabDashEmailLink" href="#" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='var(--crimson)'" onmouseout="this.style.color='var(--ink-mid)'">
+                    <span>📧</span> <span id="colabDashEmail">Email: -</span>
+                  </a>
+                  <a id="colabDashWhatsappLink" href="#" target="_blank" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='#25D366'" onmouseout="this.style.color='var(--ink-mid)'">
+                    <span>📱</span> <span id="colabDashWhatsapp">WhatsApp: -</span>
+                  </a>
+                  <span style="color: var(--ink-lt);">|</span>
+                  <span style="color: var(--ink-mid); display: flex; align-items: center; gap: 6px;">
+                    <span>💰</span> <span id="colabDashRate">Taxa Padrão: ¥ -</span>
+                  </span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 6px; font-size: 12px; color: var(--ink-mid);">
+                  <span style="display: flex; align-items: center; gap: 6px;">
+                    <span>🏠</span> <span id="colabDashResidencia">Residência: -</span>
+                  </span>
+                  <span style="display: flex; align-items: center; gap: 6px;">
+                    <span>📍</span> <span id="colabDashLocais">Atuação: -</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-lt); font-weight: 600;">Período de Análise</span>
+              <!-- Filtro de Mês/Ano -->
+              <select id="colabDashFiltroPeriodo" class="search-input-modern" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; min-width: 180px;" onchange="filtrarDashColaborador()">
+                <option value="all">📅 Todo o período</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tabs de Sub-Abas do Dashboard -->
+          <div style="display:flex; gap:8px; border-bottom:1px solid var(--border); margin-bottom:24px; padding-bottom:0;">
+            <button id="btnColabTabEscala" class="btn-view-toggle active" style="padding: 8px 16px; font-weight:600; cursor:pointer;" onclick="mudarSubAbaColab('escala')">📋 Escala de Trabalho</button>
+            <button id="btnColabTabFinanceiro" class="btn-view-toggle" style="padding: 8px 16px; font-weight:600; cursor:pointer;" onclick="mudarSubAbaColab('financeiro')">💰 Controle Financeiro (Diárias)</button>
+          </div>
+
+          <!-- SUB-ABA 1: ESCALA DE TRABALHO -->
+          <div id="colabSubWrapperEscala">
+            <h3 style="font-family:var(--ff-display); font-size:18px; color:var(--ink-dk); margin-bottom:16px;">Agenda & Serviços Designados (Consulta)</h3>
+            <div style="background:#ffffff; border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
+              <table class="modern-table" id="colabEscalaTable" style="width:100%; border-collapse:collapse; min-width:800px;">
+                <thead>
+                  <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Data</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Encontro</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Local</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); text-align:right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="colabEscalaTableBody">
+                  <!-- Injetado via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUB-ABA 2: CONTROLE FINANCEIRO (DIÁRIAS DE TOURS APENAS) -->
+          <div id="colabSubWrapperFinanceiro" style="display:none;">
+            <!-- Grid de KPIs / Cards de Resumo -->
+            <div class="kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:32px;">
+              <!-- Tours Realizados -->
+              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
+                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Serviços no Período</div>
+                <div id="kpiColabToursCount" style="font-size:28px; font-weight:700; color:var(--ink-dk); margin-top:6px;">0</div>
+              </div>
+              <!-- Total a Receber -->
+              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
+                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Total Devido (JPY)</div>
+                <div id="kpiColabTotalDevido" style="font-size:28px; font-weight:700; color:var(--crimson); margin-top:6px;">¥ 0</div>
+              </div>
+              <!-- Pago -->
+              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
+                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Total Pago (JPY)</div>
+                <div id="kpiColabTotalPago" style="font-size:28px; font-weight:700; color:#2f855a; margin-top:6px;">¥ 0</div>
+              </div>
+              <!-- Saldo Pendente -->
+              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
+                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Pendente (JPY)</div>
+                <div id="kpiColabTotalPendente" style="font-size:28px; font-weight:700; color:#c05621; margin-top:6px;">¥ 0</div>
+              </div>
+            </div>
+
+            <h3 style="font-family:var(--ff-display); font-size:18px; color:var(--ink-dk); margin-bottom:16px;">Serviços & Diárias a Pagar</h3>
+            <div style="background:#ffffff; border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
+              <table class="modern-table" id="colabToursTable" style="width:100%; border-collapse:collapse; min-width:600px;">
+                <thead>
+                  <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Data</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Valor Diária (JPY)</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Status Pagamento</th>
+                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); text-align:right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="colabToursTableBody">
+                  <!-- Injetado via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- ── MODAL ──────────────────────────────────────────────────────────────── -->
@@ -916,15 +1061,30 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     
     <div style="border-top:1px solid var(--border); padding-top:20px;">
-      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:8px; color:var(--ink-mid);">👤 DESIGNAR GUIA / COLABORADOR:</label>
-      <select id="calEventModalAssigneeSelect" class="calendar-filter-select" style="width:100%; box-sizing:border-box;">
-        <option value="">Nenhum guia designado</option>
-      </select>
+      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:12px; color:var(--ink-mid);">👤 DESIGNAR GUIAS / COLABORADORES:</label>
+      <div id="calEventModalAssigneesContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:10px; max-height:120px; overflow-y:auto; padding:8px; border:1px solid var(--border); border-radius:6px; background:#fafafa;">
+        <!-- Injetado via JS -->
+      </div>
     </div>
     
-    <div style="margin-top:24px; display:flex; justify-content:flex-end; gap:8px;">
-      <button class="btn-secondary" onclick="fecharCalendarioEventModal()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="calEventModalSaveBtn" style="margin-top:0; padding:8px 16px; font-size:12px;">Salvar Alteração</button>
+    <!-- Controles de Finanças / Diária Customizada -->
+    <div id="calEventModalFinancasContainer" style="border-top:1px dashed var(--border); padding-top:16px; margin-top:16px; display:none;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:12px; color:var(--ink-mid); cursor:pointer; margin-bottom: 8px;">
+        <input type="checkbox" id="calEventModalGeraPagamento" onchange="toggleCalEventModalValorDiaria()" style="width:16px; height:16px; margin:0;">
+        <span>💰 Este serviço gera diária para o guia</span>
+      </label>
+      <div id="calEventModalValorDiariaWrapper" style="margin-top:12px; display:none; align-items:center; gap:8px;">
+        <span style="font-size:12px; color:var(--ink-mid);">Valor da Diária (¥):</span>
+        <input type="number" id="calEventModalValorDiaria" class="search-input-modern" style="width:130px; padding:4px 8px; font-size:12px; margin:0;" placeholder="35000">
+      </div>
+    </div>
+    
+    <div style="margin-top:24px; display:flex; justify-content:space-between; gap:8px;">
+      <button class="btn-secondary" id="calEventModalDeleteBtn" style="margin-top:0; padding:8px 16px; font-size:12px; border-color:#e53e3e; color:#e53e3e; background:#fff5f5;" onclick="deletarEventoCalendario()">Excluir Evento</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-secondary" onclick="fecharCalendarioEventModal()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
+        <button class="btn-primary" id="calEventModalSaveBtn" style="margin-top:0; padding:8px 16px; font-size:12px;">Salvar Alteração</button>
+      </div>
     </div>
   </div>
 </div>

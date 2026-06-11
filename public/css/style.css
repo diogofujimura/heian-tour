@@ -2074,6 +2074,37 @@ html, body {
   border-color: var(--crimson);
 }
 
+.calendar-card-select {
+  width: 100%;
+  padding: 2px 4px;
+  font-size: 9px;
+  height: 20px;
+  margin: 0;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: #ffffff;
+  color: var(--ink-mid);
+  outline: none;
+  cursor: pointer;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+
+.calendar-card-select:focus {
+  border-color: var(--crimson);
+}
+
+.colab-card-chip {
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.colab-card-chip:hover {
+  background: rgba(107, 31, 42, 0.1) !important;
+  border-color: var(--crimson) !important;
+  transform: translateY(-1px);
+}
+
 .calendar-grid-container {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -2340,6 +2371,143 @@ html, body {
 
 .btn-view-toggle:hover:not(.active) {
   background: rgba(107, 31, 42, 0.02) !important;
+  color: var(--crimson) !important;
+}
+
+/* Novo Layout de Lista do Calendário */
+.calendar-list-day-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.calendar-list-day-header {
+  flex: 0 0 105px;
+  max-width: 105px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(107, 31, 42, 0.04) 0%, rgba(107, 31, 42, 0.01) 100%);
+  border-left: 3px solid var(--crimson);
+  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.01);
+}
+
+.calendar-list-day-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--crimson);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendar-list-day-weekday {
+  font-size: 10px;
+  color: var(--ink-mid);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.calendar-list-day-count {
+  margin-top: 6px;
+  font-size: 8px;
+  color: var(--ink-lt);
+  font-weight: 500;
+}
+
+.calendar-list-cards-row {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.calendar-list-event-card {
+  flex: 0 0 180px;
+  max-width: 210px;
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.01);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.calendar-list-event-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Cores e Bordas dos Cards na Lista do Calendário */
+.calendar-list-event-card.card-type-tour {
+  border-left: 4px solid #e53e3e !important;
+  background: #fff5f5;
+  border-color: #feb8b8;
+}
+.calendar-list-event-card.card-type-tour:hover {
+  border-color: #e53e3e;
+  box-shadow: 0 3px 8px rgba(229, 62, 62, 0.12);
+}
+
+.calendar-list-event-card.card-type-transporte {
+  border-left: 4px solid #3182ce !important;
+  background: #ebf8ff;
+  border-color: #bee3f8;
+}
+.calendar-list-event-card.card-type-transporte:hover {
+  border-color: #3182ce;
+  box-shadow: 0 3px 8px rgba(49, 130, 206, 0.12);
+}
+
+.calendar-list-event-card.card-type-experiencia {
+  border-left: 4px solid #d69e2e !important;
+  background: #fffdf0;
+  border-color: #fef08a;
+}
+.calendar-list-event-card.card-type-experiencia:hover {
+  border-color: #ca8a04;
+  box-shadow: 0 3px 8px rgba(202, 138, 4, 0.12);
+}
+
+@media screen and (max-width: 768px) {
+  .calendar-list-day-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .calendar-list-day-header {
+    flex: none;
+    max-width: none;
+    padding: 6px 10px;
+  }
+  .calendar-list-event-card {
+    max-width: none;
+  }
+}
+
+/* Aba e Dashboard de Colaboradores */
+.colab-list-item:hover {
+  background: rgba(107, 31, 42, 0.02) !important;
+}
+.colab-list-item.active {
+  background: rgba(107, 31, 42, 0.05) !important;
+  border-left: 4px solid var(--crimson);
+}
+.colab-list-item.active div {
   color: var(--crimson) !important;
 }
 
