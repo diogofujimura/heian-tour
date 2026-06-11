@@ -32,7 +32,6 @@
       border: 1px solid rgba(255, 255, 255, 0.8);
       padding: 40px;
       position: relative;
-      overflow: hidden;
     }
     .cadastro-header {
       text-align: center;
@@ -136,12 +135,14 @@
     .dynamic-row { display: flex; gap: 12px; align-items: center; background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; border: 1px dashed rgba(196, 163, 90, 0.3); animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .dynamic-row .form-group { margin-bottom: 0; flex: 1; }
-    .btn-add { background: none; border: 1px dashed var(--gold); color: var(--gold-dk); padding: 12px; border-radius: 12px; cursor: pointer; font-family: var(--ff-body); font-size: 14px; font-weight: 500; transition: all 0.2s; width: 100%; text-align: center; }
-    .btn-add:hover { background: rgba(196, 163, 90, 0.05); }
-    .btn-remove { background: #fee; border: none; color: #c00; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
-    .btn-remove:hover { background: #fcc; }
+    .dynamic-row .fg-small { max-width: 100px; flex: 0 0 100px; }
+    .btn-add-row { background: none; border: 1px dashed var(--gold); color: var(--gold-dk); padding: 12px; border-radius: 12px; cursor: pointer; font-family: var(--ff-body); font-size: 14px; font-weight: 500; transition: all 0.2s; width: 100%; text-align: center; }
+    .btn-add-row:hover { background: rgba(196, 163, 90, 0.05); }
+    .btn-rm { background: #fee; border: none; color: #c00; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
+    .btn-rm:hover { background: #fcc; }
     
     .section-divider { height: 1px; background: rgba(196, 163, 90, 0.2); margin: 30px 0; }
+    .section-label { font-family: var(--ff-display); font-size: 18px; color: var(--crimson); font-weight: 500; margin-bottom: 16px; }
 
     /* Success State */
     .success-state {
@@ -186,8 +187,9 @@
     @media (max-width: 600px) {
       .cadastro-container { padding: 30px 20px; }
       .form-row { flex-direction: column; gap: 0; }
-      .dynamic-row { flex-direction: column; align-items: stretch; position: relative; padding-right: 44px; }
-      .dynamic-row .btn-remove { position: absolute; right: 12px; top: 12px; width: 32px; height: 32px; font-size: 14px; }
+      .dynamic-row { flex-wrap: wrap; position: relative; padding-right: 50px; }
+      .dynamic-row .btn-rm { position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; font-size: 14px; }
+      .dynamic-row .fg-small { max-width: none; flex: 1 1 auto; }
     }
   </style>
 </head>
@@ -204,39 +206,29 @@
       </div>
       
       <form id="cadastroForm">
-        <!-- TITULAR -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nome do Titular da Reserva *</label>
-            <input type="text" id="nome" required placeholder="Ex: João da Silva">
-          </div>
-          <div class="form-group">
-            <label>Email de Contato *</label>
-            <input type="email" id="email" required placeholder="Ex: joao@email.com">
-          </div>
+        <!-- NOME DO GRUPO -->
+        <div class="form-group">
+          <label>Nome do Grupo / Família *</label>
+          <input type="text" id="nomeGrupo" required placeholder="Ex: Família Sampaio, Grupo Sakuras, Amigas de São Paulo...">
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Adultos (Total)</label>
-            <input type="number" id="adultos" value="2" min="1">
-          </div>
-          <div class="form-group">
-            <label>Crianças (Até 11 anos)</label>
-            <input type="number" id="criancas" value="0" min="0">
-          </div>
-        </div>
-
-        <!-- PASSAGEIROS -->
-        <div class="form-group" style="margin-top: 10px;">
-          <label>Outros Viajantes do Grupo</label>
-          <div id="passageirosList" class="dynamic-list"></div>
-          <button type="button" class="btn-add" onclick="addPassageiro()">+ Adicionar Passageiro</button>
+        <div class="form-group">
+          <label>Email de Contato *</label>
+          <input type="email" id="email" required placeholder="Ex: joao@email.com">
         </div>
 
         <div class="section-divider"></div>
 
-        <!-- DATAS E HOTEIS -->
+        <!-- VIAJANTES -->
+        <div class="section-label">👥 Viajantes</div>
+        <p style="font-size: 13px; color: var(--ink-lt); margin-bottom: 16px;">Adicione todos os viajantes do grupo, incluindo o titular.</p>
+        <div id="viajantesList" class="dynamic-list"></div>
+        <button type="button" class="btn-add-row" onclick="addViajante()">+ Adicionar Viajante</button>
+
+        <div class="section-divider"></div>
+
+        <!-- DATAS -->
+        <div class="section-label">📅 Datas da Viagem</div>
         <div class="form-row">
           <div class="form-group">
             <label>Data Prevista de Início</label>
@@ -248,20 +240,19 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <label>Hospedagem / Cidades</label>
-          <div id="hoteisList" class="dynamic-list"></div>
-          <button type="button" class="btn-add" onclick="addHotel()">+ Adicionar Hospedagem</button>
-        </div>
+        <div class="section-divider"></div>
+
+        <!-- HOSPEDAGEM -->
+        <div class="section-label">🏨 Hospedagem</div>
+        <div id="hoteisList" class="dynamic-list"></div>
+        <button type="button" class="btn-add-row" onclick="addHotel()">+ Adicionar Hospedagem</button>
 
         <div class="section-divider"></div>
 
         <!-- VOOS -->
-        <div class="form-group">
-          <label>Voos Confirmados ou Previstos</label>
-          <div id="voosList" class="dynamic-list"></div>
-          <button type="button" class="btn-add" onclick="addVoo()">+ Adicionar Voo</button>
-        </div>
+        <div class="section-label">✈️ Voos</div>
+        <div id="voosList" class="dynamic-list"></div>
+        <button type="button" class="btn-add-row" onclick="addVoo()">+ Adicionar Voo</button>
 
         <div class="section-divider"></div>
 
@@ -286,24 +277,27 @@
   </div>
 
   <script>
-    // Dinâmico: Passageiros
-    function addPassageiro() {
+    // ── VIAJANTES (Nome + Sobrenome + Idade) ────────────────────────────────
+    function addViajante() {
       const div = document.createElement('div');
       div.className = 'dynamic-row';
       div.innerHTML = `
         <div class="form-group">
-          <input type="text" class="pass-nome" placeholder="Nome do passageiro">
+          <input type="text" class="vj-nome" placeholder="Nome">
         </div>
-        <div class="form-group" style="max-width: 120px;">
-          <input type="number" class="pass-idade" placeholder="Idade">
+        <div class="form-group">
+          <input type="text" class="vj-sobrenome" placeholder="Sobrenome">
         </div>
-        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+        <div class="form-group fg-small">
+          <input type="number" class="vj-idade" placeholder="Idade" min="0">
+        </div>
+        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover">✕</button>
       `;
-      document.getElementById('passageirosList').appendChild(div);
-      div.querySelector('.pass-nome').focus();
+      document.getElementById('viajantesList').appendChild(div);
+      div.querySelector('.vj-nome').focus();
     }
 
-    // Dinâmico: Hotéis
+    // ── HOTÉIS ──────────────────────────────────────────────────────────────
     function addHotel() {
       const div = document.createElement('div');
       div.className = 'dynamic-row';
@@ -314,13 +308,13 @@
         <div class="form-group">
           <input type="text" class="hotel-pref" placeholder="Hotel ou bairro de preferência">
         </div>
-        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover">✕</button>
       `;
       document.getElementById('hoteisList').appendChild(div);
       div.querySelector('.hotel-cidade').focus();
     }
 
-    // Dinâmico: Voos
+    // ── VOOS ────────────────────────────────────────────────────────────────
     function addVoo() {
       const div = document.createElement('div');
       div.className = 'dynamic-row';
@@ -334,53 +328,74 @@
         <div class="form-group">
           <input type="text" class="voo-detalhe" placeholder="Ex: 15/04 às 14:00 (NRT) - AA123">
         </div>
-        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Remover">✕</button>
+        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover">✕</button>
       `;
       document.getElementById('voosList').appendChild(div);
       div.querySelector('.voo-detalhe').focus();
     }
 
-    // Submit handler
+    // ── SUBMIT ──────────────────────────────────────────────────────────────
     document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const btn = document.getElementById('btnSubmit');
       const spinner = document.getElementById('submitSpinner');
       
-      // Coletar listas dinâmicas
+      // Coletar viajantes no formato "Nome Sobrenome (Idade)" — exato do app
       const viajantesArr = [];
-      document.querySelectorAll('#passageirosList .dynamic-row').forEach(node => {
-        const n = node.querySelector('.pass-nome').value.trim();
-        const i = node.querySelector('.pass-idade').value.trim();
-        if (n) viajantesArr.push(`${n}${i ? ` (${i} anos)` : ''}`);
+      let adultos = 0;
+      let criancas = 0;
+      document.querySelectorAll('#viajantesList .dynamic-row').forEach(node => {
+        const nome = (node.querySelector('.vj-nome').value || '').trim();
+        const sobrenome = (node.querySelector('.vj-sobrenome').value || '').trim();
+        const idade = (node.querySelector('.vj-idade').value || '').trim();
+        if (nome || sobrenome) {
+          let txt = nome;
+          if (sobrenome) txt += ' ' + sobrenome;
+          if (idade) txt += ` (${idade})`;
+          viajantesArr.push(txt);
+
+          // Contar adultos/crianças
+          const idadeNum = parseInt(idade);
+          if (!isNaN(idadeNum) && idadeNum < 12) {
+            criancas++;
+          } else {
+            adultos++;
+          }
+        }
       });
 
+      // Se não preencheu nenhum viajante, default
+      if (adultos === 0 && criancas === 0) adultos = 1;
+
+      // Coletar hotéis
       const hoteisArr = [];
       document.querySelectorAll('#hoteisList .dynamic-row').forEach(node => {
-        const c = node.querySelector('.hotel-cidade').value.trim();
-        const p = node.querySelector('.hotel-pref').value.trim();
-        if (c || p) hoteisArr.push(`- ${c ? c + ': ' : ''}${p}`);
+        const c = (node.querySelector('.hotel-cidade').value || '').trim();
+        const p = (node.querySelector('.hotel-pref').value || '').trim();
+        if (c || p) hoteisArr.push(`${c ? c + ': ' : ''}${p}`);
       });
 
+      // Coletar voos
       const vooChegadaArr = [];
       const vooPartidaArr = [];
       document.querySelectorAll('#voosList .dynamic-row').forEach(node => {
         const tipo = node.querySelector('.voo-tipo').value;
-        const det = node.querySelector('.voo-detalhe').value.trim();
+        const det = (node.querySelector('.voo-detalhe').value || '').trim();
         if (det) {
-          if (tipo === 'Chegada') vooChegadaArr.push(`- ${det}`);
-          else vooPartidaArr.push(`- ${det}`);
+          if (tipo === 'Chegada') vooChegadaArr.push(det);
+          else vooPartidaArr.push(det);
         }
       });
 
       const payload = {
-        nome: document.getElementById('nome').value,
-        email: document.getElementById('email').value,
-        adultos: document.getElementById('adultos').value,
-        criancas: document.getElementById('criancas').value,
+        nome: document.getElementById('nomeGrupo').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        adultos: adultos,
+        criancas: criancas,
         dataInicio: document.getElementById('dataInicio').value,
         dataFim: document.getElementById('dataFim').value,
-        observacoes: document.getElementById('observacoes').value,
+        observacoes: (document.getElementById('observacoes').value || '').trim(),
         viajantes: viajantesArr.join('\n'),
         hotel: hoteisArr.join('\n'),
         vooChegada: vooChegadaArr.join('\n'),
