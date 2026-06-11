@@ -466,11 +466,15 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
         <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
           <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Evolução de Vendas (Fechadas)</h3>
-          <canvas id="chartEvolucaoVendas" height="250"></canvas>
+          <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="chartEvolucaoVendas"></canvas>
+          </div>
         </div>
         <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
           <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Top Destinos (Em Alta)</h3>
-          <canvas id="chartTopDestinos" height="250"></canvas>
+          <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="chartTopDestinos"></canvas>
+          </div>
         </div>
       </div>
     </div>
