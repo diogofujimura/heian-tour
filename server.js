@@ -275,10 +275,19 @@ app.post('/api/orcamentos', async (req, res) => {
   }
 });
 app.delete('/api/orcamentos/:id', async (req, res) => {
-  const db = await readDB();
-  db.orcamentosDB = db.orcamentosDB.filter(o => o.id !== req.params.id);
-  await writeDB(db);
-  res.json({success:true});
+  try {
+    const db = await readDB();
+    db.orcamentosDB = db.orcamentosDB.filter(o => o.id !== req.params.id);
+    
+    // Explicitly delete from Supabase table
+    await supabase.from('orcamentos').delete().eq('id', String(req.params.id));
+    
+    await writeDB(db);
+    res.json({success:true});
+  } catch(e) {
+    console.error('Error deleting orcamento:', e);
+    res.status(500).json({error: e.message});
+  }
 });
 
 // Clientes Local (Dados estruturados atrelados ao Notion)
@@ -436,6 +445,10 @@ app.delete('/api/roteiros/:name', async (req, res) => {
   const name = req.params.name;
   if (db.rotas && db.rotas[name]) {
     delete db.rotas[name];
+    
+    // Explicitly delete from Supabase table
+    await supabase.from('roteiros').delete().eq('nome', name);
+    
     await writeDB(db);
   }
   res.json({ ok: true });
