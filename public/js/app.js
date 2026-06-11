@@ -4325,6 +4325,126 @@ window.abrirCalendarioEventModal = function(eventoId) {
     select.value = ev.assignee.length > 0 ? ev.assignee[0].id : '';
   }
 
+  // Especificações adicionais do roteiro (atrações/transportes)
+  const specContainer = document.getElementById('calEventModalEspecificacoesContainer');
+  if (specContainer) {
+    specContainer.style.display = 'none';
+    specContainer.innerHTML = '';
+
+    const clientNotionId = ev.clientes.length > 0 ? ev.clientes[0] : null;
+    let roteiroCliente = null;
+    if (clientNotionId && typeof dbRotas !== 'undefined') {
+      roteiroCliente = Object.values(dbRotas).find(rot => rot.notionClienteId === clientNotionId);
+    }
+
+    if (roteiroCliente && roteiroCliente.cliente?.dataInicio) {
+      const parseDateUTC = (dateStr) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d));
+      };
+
+      const diffDays = Math.round((parseDateUTC(ev.dataServico) - parseDateUTC(roteiroCliente.cliente.dataInicio)) / (1000 * 60 * 60 * 24));
+
+      if (roteiroCliente.dias && roteiroCliente.dias[diffDays]) {
+        const diaRoteiro = roteiroCliente.dias[diffDays];
+        let specHTML = '';
+        const typeLower = ev.tipoServico.toLowerCase();
+
+        if (typeLower.includes('roteiro')) {
+          const sequencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'sequencia');
+          const infos = (diaRoteiro.elementos || []).filter(el => el.tipo === 'info');
+          const textos = (diaRoteiro.elementos || []).filter(el => el.tipo === 'texto');
+
+          if (sequencias.length > 0 || infos.length > 0 || textos.length > 0) {
+            specHTML += `<div style="font-weight:700; color:var(--crimson); font-size:12px; margin-bottom:8px; text-transform:uppercase;">🗺️ Roteiro do Dia:</div>`;
+
+            infos.forEach(inf => {
+              const parts = [];
+              if (inf.horarioEncontro) parts.push(`🕒 ${inf.horarioEncontro}`);
+              if (inf.localEncontro) parts.push(`📍 Encontro: ${inf.localEncontro}`);
+              if (inf.duracaoTour) parts.push(`⏳ ${inf.duracaoTour}`);
+              if (parts.length > 0) {
+                specHTML += `<div style="font-size:11px; background:#f5f7fa; padding:6px 10px; border-radius:6px; margin-bottom:8px; color:var(--ink-mid);">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
+              }
+            });
+
+            sequencias.forEach(seq => {
+              const cidadeName = seq.cidade ? `<strong style="color:var(--gold-dk);">${seq.cidade}:</strong> ` : '';
+              const atrs = seq.atracoesDoDia && seq.atracoesDoDia.length > 0
+                ? seq.atracoesDoDia.map(a => `<span style="background:rgba(196,163,90,0.1); color:#9c8248; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; display:inline-block; margin:2px 2px 2px 0;">⭐ ${a.nome}</span>`).join(' ')
+                : '<span style="color:var(--ink-lt);">Nenhuma atração</span>';
+
+              specHTML += `
+                <div style="margin-bottom:8px; font-size:12px;">
+                  <div>${cidadeName}${seq.nomeDaRota || ''}</div>
+                  <div style="margin-top:4px;">${atrs}</div>
+                </div>`;
+            });
+
+            textos.forEach(txt => {
+              if (txt.conteudo) {
+                specHTML += `<div style="font-size:11px; font-style:italic; border-left:2px solid var(--gold-lt); padding-left:8px; color:var(--ink-mid); margin-top:8px;">"${txt.conteudo}"</div>`;
+              }
+            });
+          }
+        } else if (typeLower.includes('shinkansen') || typeLower.includes('romancecar') || typeLower.includes('trem') || typeLower.includes('ônibus') || typeLower.includes('onibus') || typeLower.includes('transfer')) {
+          const transportes = (diaRoteiro.elementos || []).filter(el => el.tipo === 'transporte');
+          if (transportes.length > 0) {
+            specHTML += `<div style="font-weight:700; color:#9c8248; font-size:12px; margin-bottom:8px; text-transform:uppercase;">🚆 Detalhes do Transporte:</div>`;
+            transportes.forEach(t => {
+              const heianEmitido = t.compradoHeian !== false
+                ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
+                : `<span style="font-size:9px; background:#f3f3f3; color:#888; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido p/ Cliente</span>`;
+
+              specHTML += `
+                <div style="background:#fdfaf6; border:1px solid rgba(196,163,90,0.2); border-radius:8px; padding:10px; margin-bottom:8px; font-size:11px; line-height:1.5;">
+                  <div style="font-weight:bold; color:var(--ink); font-size:12px; margin-bottom:4px;">
+                    ${t.cidadeOrigem || 'Origem'} ➔ ${t.cidadeDestino || 'Destino'} ${heianEmitido}
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; color:var(--ink-mid);">
+                    <div><strong>Meio:</strong> ${t.tipoTransporte || 'Deslocamento'}</div>
+                    <div><strong>Horário:</strong> ${t.horario || 'Definir'}</div>
+                    <div><strong>Linha:</strong> ${t.linha || '-'}</div>
+                    <div><strong>Categoria:</strong> ${t.categoria || '-'}</div>
+                    <div><strong>Duração:</strong> ${t.tempo || '-'}</div>
+                    <div><strong>Passageiros:</strong> ${t.adultos ? t.adultos + ' Adultos' : ''}</div>
+                  </div>
+                  ${t.observacoes ? `<div style="margin-top:6px; font-style:italic; border-top:1px dashed rgba(196,163,90,0.2); padding-top:4px; color:var(--ink-lt);">Obs: ${t.observacoes}</div>` : ''}
+                </div>`;
+            });
+          }
+        } else if (typeLower.includes('experiência') || typeLower.includes('experiencia')) {
+          const experiencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'experiencia');
+          if (experiencias.length > 0) {
+            specHTML += `<div style="font-weight:700; color:#a3522b; font-size:12px; margin-bottom:8px; text-transform:uppercase;">🎫 Tickets & Experiências:</div>`;
+            experiencias.forEach(e => {
+              const heianEmitido = e.compradoHeian !== false
+                ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
+                : `<span style="font-size:9px; background:#f3f3f3; color:#888; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido p/ Cliente</span>`;
+
+              specHTML += `
+                <div style="background:#faf8f5; border:1px solid rgba(163,82,43,0.15); border-radius:8px; padding:10px; margin-bottom:8px; font-size:11px; line-height:1.5;">
+                  <div style="font-weight:bold; color:var(--ink); font-size:12px; margin-bottom:4px;">
+                    ${e.nomeExp || 'Experiência'} ${heianEmitido}
+                  </div>
+                  <div style="color:var(--ink-mid);">
+                    <div><strong>Horário:</strong> ${e.horaPartida || 'Definir'}</div>
+                    <div><strong>Passageiros:</strong> ${e.adultos ? e.adultos + ' Adultos' : ''}</div>
+                  </div>
+                  ${e.observacoes ? `<div style="margin-top:6px; font-style:italic; border-top:1px dashed rgba(163,82,43,0.15); padding-top:4px; color:var(--ink-lt);">Obs: ${e.observacoes}</div>` : ''}
+                </div>`;
+            });
+          }
+        }
+
+        if (specHTML) {
+          specContainer.innerHTML = specHTML;
+          specContainer.style.display = 'block';
+        }
+      }
+    }
+  }
+
   const backdrop = document.getElementById('calendarioEventModal');
   if (backdrop) backdrop.classList.add('active');
 };
