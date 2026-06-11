@@ -162,7 +162,7 @@ async function loadOrcamentos() {
       console.log('Migração de cotações locais concluída.');
     }
     
-    const res = await fetch('/api/orcamentos');
+    const res = await fetch('/api/orcamentos?t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     state.orcamentosDB = Array.isArray(data) ? data : [];
   } catch(e) {
@@ -2230,7 +2230,7 @@ function setupNotion() {
       if (notionClients.length === 0) {
         select.innerHTML = '<option>Carregando clientes...</option>';
         try {
-          const res = await fetch('/api/notion/clientes');
+          const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
           if (!res.ok) throw new Error('Erro na API');
           notionClients = await res.json(); window.notionClients = notionClients;
         } catch (e) {
@@ -2271,7 +2271,7 @@ function setupNotion() {
 
       // Puxa estadias salvas localmente ou faz o parse automático
       try {
-        const resLocal = await fetch('/api/clientes/local/' + c.id);
+        const resLocal = await fetch('/api/clientes/local/' + c.id + '?t=' + Date.now(), { cache: 'no-store' });
         const cLocal = await resLocal.json();
         let fetchedEstadias = [];
         if (cLocal && cLocal.estadias && cLocal.estadias.length > 0) {
@@ -2416,7 +2416,7 @@ async function loadClientesTabela() {
   if(tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Atualizando do Notion...</td></tr>';
   
   try {
-    const res = await fetch('/api/notion/clientes');
+    const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('Erro na API');
     notionClients = await res.json(); window.notionClients = notionClients;
     renderClientesTabela();
@@ -2751,7 +2751,7 @@ window.closeClienteModal = function() {
 window.editarClienteNotion = async function(id) {
     if (!notionClients || notionClients.length === 0) {
       try {
-        const res = await fetch('/api/notion/clientes');
+        const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
         notionClients = await res.json(); window.notionClients = notionClients;
       } catch (e) {
         console.error('Erro ao carregar clientes do Notion:', e);
@@ -3235,7 +3235,7 @@ window.handleAcaoClienteCotacao = async function() {
       });
 
       // Recarrega NotionClients
-      notionClients = await fetch('/api/notion/clientes').then(r=>r.json()); window.notionClients = notionClients;
+      notionClients = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' }).then(r=>r.json()); window.notionClients = notionClients;
 
       btn.innerHTML = '👤 Editar Cliente';
       btn.disabled = false;
