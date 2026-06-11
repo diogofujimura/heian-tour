@@ -373,7 +373,7 @@
       document.querySelectorAll('#hoteisList .dynamic-row').forEach(node => {
         const c = (node.querySelector('.hotel-cidade').value || '').trim();
         const p = (node.querySelector('.hotel-pref').value || '').trim();
-        if (c || p) hoteisArr.push(`${c ? c + ': ' : ''}${p}`);
+        if (c || p) hoteisArr.push(`${c ? c + ' - ' : ''}${p}`);
       });
 
       // Coletar voos
