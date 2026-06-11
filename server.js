@@ -321,6 +321,16 @@ app.post('/api/clientes/local', async (req, res) => {
     res.status(500).json({error: e.message});
   }
 });
+app.delete('/api/clientes/local/:id', async (req, res) => {
+  try {
+    const { error } = await supabase.from('clientes_locais').delete().eq('id', String(req.params.id));
+    if (error) throw error;
+    res.json({success:true});
+  } catch(e) {
+    console.error('Error deleting local client:', e);
+    res.status(500).json({error: e.message});
+  }
+});
 
 app.get('/api/transportes', async (req, res) => {
   try {
@@ -772,7 +782,7 @@ app.post('/api/sync', async (req, res) => {
         }
       }
       
-      const idxTrecho = headers.indexOf('trecho') > -1 ? headers.indexOf('trecho') : 0;
+      const idxTrecho = headers.findIndex(h => h.includes('trecho')) > -1 ? headers.findIndex(h => h.includes('trecho')) : 0;
       const idxIdade = headers.findIndex(h => h.includes('idade') || h.includes('adulto') || h.includes('infantil'));
       const idxTipo = headers.findIndex(h => h.includes('tipo') && !h.includes('idade') && !h.includes('adulto'));
       const idxLinha = headers.findIndex(h => h.includes('linha'));

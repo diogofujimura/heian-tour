@@ -1053,7 +1053,7 @@ html, body {
 }
 
 @media screen and (max-width: 768px) {
-  .mobile-header { display: flex; margin: 0 -20px 20px -20px; }
+  .mobile-header { display: flex; margin: 0 -6px 20px -6px; }
   
   .sidebar {
     transform: translateX(-100%);
@@ -1065,7 +1065,7 @@ html, body {
   
   .main {
     margin-left: 0;
-    padding: 0 20px 40px;
+    padding: 0 6px 40px !important;
   }
   
   .form-grid,
@@ -1073,7 +1073,7 @@ html, body {
   .form-grid-4,
   .resumo-grid,
   .pdf-estadias-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
   
   .card-title-row {
@@ -1551,14 +1551,35 @@ html, body {
     box-shadow: 0 4px 15px rgba(107, 31, 42, 0.05);
   }
   .pane-content {
+    display: block !important;
     height: auto !important;
     overflow-y: visible !important;
-    padding: 16px !important;
+    padding: 4px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .pane-content-inner {
-    padding: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px !important;
     min-height: auto !important;
     margin-bottom: 20px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+  #roteirosDetailWrapper,
+  #orcamentosPreviewWrapper,
+  #orcamentosEditorWrapper {
+    padding: 4px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .dia-card {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+  }
+  .roteiro-edit-container .dia-card::before {
+    display: none !important;
   }
 
   /* List Cards ajustados para mobile */
