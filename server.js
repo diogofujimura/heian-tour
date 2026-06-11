@@ -89,37 +89,46 @@ async function writeDB(db) {
   try {
     // Para simplificar essa transição imediata 1:1, gravamos as tabelas chaves
     const resCfg = await supabase.from('config').upsert({ id: 'app_config', data: db.config || {} });
-    if (resCfg.error) console.error('Error upsert app_config:', resCfg.error);
+    if (resCfg.error) throw new Error('Error upsert app_config: ' + resCfg.error.message);
     const resTransp = await supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] });
-    if (resTransp.error) console.error('Error upsert transportes:', resTransp.error);
+    if (resTransp.error) throw new Error('Error upsert transportes: ' + resTransp.error.message);
     const resExp = await supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] });
-    if (resExp.error) console.error('Error upsert experiencias:', resExp.error);
+    if (resExp.error) throw new Error('Error upsert experiencias: ' + resExp.error.message);
     const resAtr = await supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] });
-    if (resAtr.error) console.error('Error upsert atracoes:', resAtr.error);
+    if (resAtr.error) throw new Error('Error upsert atracoes: ' + resAtr.error.message);
 
     for (let o of db.orcamentosDB || []) {
       const resOrc = await supabase.from('orcamentos').upsert({ id: String(o.id), data: o });
-      if (resOrc.error) console.error('Error upsert orcamento', o.id, ':', resOrc.error);
+      if (resOrc.error) throw new Error('Error upsert orcamento ' + o.id + ': ' + resOrc.error.message);
     }
     for (let c of db.clientesDB || []) {
       const resCli = await supabase.from('clientes_locais').upsert({ id: String(c.id), data: c });
-      if (resCli.error) console.error('Error upsert cliente_local', c.id, ':', resCli.error);
+      if (resCli.error) throw new Error('Error upsert cliente_local ' + c.id + ': ' + resCli.error.message);
     }
 
     // Deleta rotas velhas e insere novas
     for (let [nome, dados] of Object.entries(db.rotas || {})) {
       if (nome === '[PLANILHA] Base de Rotas') {
         const resBase = await supabase.from('rotas_base').upsert({ id: 'base', data: dados.dias });
-        if (resBase.error) console.error('Error upsert rotas_base:', resBase.error);
+        if (resBase.error) throw new Error('Error upsert rotas_base: ' + resBase.error.message);
       } else {
         const resRoteiro = await supabase.from('roteiros').upsert({ nome, data: dados });
-        if (resRoteiro.error) console.error('Error upsert roteiro', nome, ':', resRoteiro.error);
+        if (resRoteiro.error) throw new Error('Error upsert roteiro ' + nome + ': ' + resRoteiro.error.message);
       }
     }
   } catch(e) {
     console.error('Erro no writeDB:', e);
+    throw e;
   }
 }
+
+const globalErrorLogs = [];
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  globalErrorLogs.unshift({ time: new Date().toISOString(), args: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)) });
+  if (globalErrorLogs.length > 50) globalErrorLogs.pop();
+  originalConsoleError.apply(console, args);
+};
 
 // Auxiliar para sincronização em duas vias com o Google Sheets via Apps Script Web App
 async function syncToGoogleSheets(type, action, data, oldData = null) {
@@ -178,15 +187,23 @@ app.get('/api/debug', async (req, res) => {
   }
 });
 
+app.get('/api/debug-logs', (req, res) => {
+  res.json(globalErrorLogs);
+});
+
 // ── API: Transportes ────────────────────────────────────────────────────────
 app.get('/api/orcamentos', async (req, res) => res.json(await readDB().orcamentosDB));
 app.post('/api/orcamentos', async (req, res) => {
-  const db = await readDB();
-  const index = db.orcamentosDB.findIndex(o => o.id === req.body.id);
-  if(index > -1) db.orcamentosDB[index] = req.body;
-  else db.orcamentosDB.push(req.body);
-  await writeDB(db);
-  res.json({success:true});
+  try {
+    const db = await readDB();
+    const index = db.orcamentosDB.findIndex(o => o.id === req.body.id);
+    if(index > -1) db.orcamentosDB[index] = req.body;
+    else db.orcamentosDB.push(req.body);
+    await writeDB(db);
+    res.json({success:true});
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
 });
 app.delete('/api/orcamentos/:id', async (req, res) => {
   const db = await readDB();
