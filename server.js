@@ -1419,7 +1419,7 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
     }
 
     const roteiro = rotData.data;
-    const clienteId = roteiro.notionClienteId;
+    const clienteId = roteiro.notionClienteId || roteiro.cliente?.notionClienteId;
     if (!clienteId) {
       return res.status(400).json({ error: 'Este roteiro não está associado a nenhum cliente do Notion.' });
     }
