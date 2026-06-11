@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Viagem | Heian Tour</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background-color: var(--bg-main, #F8F5F0);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      font-family: var(--ff-body);
+    }
+    .cadastro-container {
+      width: 100%;
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      box-shadow: 0 16px 48px rgba(107, 31, 42, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cadastro-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .cadastro-header h1 {
+      font-family: var(--ff-display);
+      color: var(--crimson);
+      font-size: 32px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .cadastro-header p {
+      color: var(--ink-mid);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: flex;
+      gap: 16px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-lt);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    input[type="text"], input[type="number"], input[type="date"] {
+      width: 100%;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: 1px solid rgba(196, 163, 90, 0.3);
+      border-radius: 12px;
+      font-family: var(--ff-body);
+      font-size: 15px;
+      color: var(--ink);
+      transition: all 0.3s;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.1);
+      background: #fff;
+    }
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--crimson) 0%, #4A151D 100%);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: var(--ff-body);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(107, 31, 42, 0.25);
+    }
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Success State */
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--gold-soft);
+      color: var(--gold-dk);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
+    }
+    .success-state h2 {
+      font-family: var(--ff-display);
+      color: var(--crimson);
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .success-state p {
+      color: var(--ink-mid);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    /* Decorative elements */
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(196,163,90,0.1) 0%, rgba(196,163,90,0) 70%);
+      z-index: -1;
+    }
+    .circle-1 { top: -100px; right: -100px; width: 400px; height: 400px; }
+    .circle-2 { bottom: -150px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(107,31,42,0.05) 0%, rgba(107,31,42,0) 70%); }
+
+    @media (max-width: 600px) {
+      .cadastro-container { padding: 30px 20px; }
+      .form-row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="bg-circle circle-1"></div>
+  <div class="bg-circle circle-2"></div>
+
+  <div class="cadastro-container">
+    <div id="formSection">
+      <div class="cadastro-header">
+        <h1>Planeje sua Viagem</h1>
+        <p>Preencha os detalhes abaixo para que possamos personalizar o seu roteiro no Japão.</p>
+      </div>
+      
+      <form id="cadastroForm">
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="nome" required placeholder="Ex: João da Silva">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Adultos</label>
+            <input type="number" id="adultos" value="2" min="1">
+          </div>
+          <div class="form-group">
+            <label>Crianças (até 11 anos)</label>
+            <input type="number" id="criancas" value="0" min="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data de Início</label>
+            <input type="date" id="dataInicio">
+          </div>
+          <div class="form-group">
+            <label>Data de Fim</label>
+            <input type="date" id="dataFim">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Hotel ou Hospedagem (Opcional)</label>
+          <input type="text" id="hotel" placeholder="Nome do hotel ou bairro de preferência">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Voo de Chegada (Opcional)</label>
+            <input type="text" id="vooChegada" placeholder="Ex: 15/04 às 14:00 (NRT)">
+          </div>
+          <div class="form-group">
+            <label>Voo de Partida (Opcional)</label>
+            <input type="text" id="vooPartida" placeholder="Ex: 25/04 às 09:30 (HND)">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          <span>Enviar Dados</span>
+          <div class="spinner" id="submitSpinner"></div>
+        </button>
+      </form>
+    </div>
+
+    <div id="successSection" class="success-state">
+      <div class="success-icon">✓</div>
+      <h2>Tudo Certo!</h2>
+      <p>Recebemos seus dados com sucesso. Em breve a nossa equipe entrará em contato com você para finalizar os detalhes do seu roteiro dos sonhos no Japão.</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btn = document.getElementById('btnSubmit');
+      const spinner = document.getElementById('submitSpinner');
+      
+      const payload = {
+        nome: document.getElementById('nome').value,
+        adultos: document.getElementById('adultos').value,
+        criancas: document.getElementById('criancas').value,
+        dataInicio: document.getElementById('dataInicio').value,
+        dataFim: document.getElementById('dataFim').value,
+        hotel: document.getElementById('hotel').value,
+        vooChegada: document.getElementById('vooChegada').value,
+        vooPartida: document.getElementById('vooPartida').value
+      };
+
+      try {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Enviando...';
+        spinner.style.display = 'block';
+
+        const res = await fetch('/api/public/cadastro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          // Show success screen
+          document.getElementById('formSection').style.display = 'none';
+          document.getElementById('successSection').style.display = 'block';
+        } else {
+          alert('Houve um erro ao enviar seu cadastro. Por favor, tente novamente.\n' + (data.error || ''));
+          btn.disabled = false;
+          btn.querySelector('span').textContent = 'Enviar Dados';
+          spinner.style.display = 'none';
+        }
+      } catch (err) {
+        alert('Erro de conexão. Tente novamente mais tarde.');
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Enviar Dados';
+        spinner.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

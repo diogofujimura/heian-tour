@@ -16,6 +16,70 @@ const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'database.json');
 const defaultData = { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
 
+// --- PUBLIC ROUTES (No Auth Required) ---
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+
+app.get('/cadastro', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
+});
+
+app.post('/api/public/cadastro', async (req, res) => {
+  try {
+    const { nome, adultos, criancas, dataInicio, dataFim, vooChegada, vooPartida, hotel } = req.body;
+    
+    if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
+
+    const fetch = require('node-fetch');
+    // Prepare proper date object
+    let dateObj = undefined;
+    if (dataInicio && dataFim && dataInicio !== dataFim) {
+      dateObj = { date: { start: dataInicio, end: dataFim } };
+    } else if (dataInicio) {
+      dateObj = { date: { start: dataInicio } };
+    }
+
+    const properties = {
+      "Name": { title: [{ text: { content: nome } }] },
+      "Status": { select: { name: "Novo" } },
+      "Adultos": { number: parseInt(adultos) || 0 },
+      "Crianças": { number: parseInt(criancas) || 0 },
+      "Voo Chegada": { rich_text: [{ text: { content: vooChegada || '' } }] },
+      "Voo Partida": { rich_text: [{ text: { content: vooPartida || '' } }] },
+      "Hotel": { rich_text: [{ text: { content: hotel || '' } }] }
+    };
+    if (dateObj) properties["Data da Viagem"] = dateObj;
+
+    const response = await fetch(`https://api.notion.com/v1/pages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_CLIENTS_DB_ID },
+        properties: properties
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      console.error('Notion API Error:', result);
+      return res.status(500).json({ error: 'Erro ao criar cliente no Notion', details: result });
+    }
+
+    res.json({ success: true, client: result });
+  } catch (error) {
+    console.error('Erro na rota /api/public/cadastro:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+// ----------------------------------------
+
 const basicAuth = require('express-basic-auth');
 if (process.env.APP_PASS) {
   const users = {};
@@ -27,8 +91,6 @@ if (process.env.APP_PASS) {
   }));
 }
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, path) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
