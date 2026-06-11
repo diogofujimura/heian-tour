@@ -29,7 +29,7 @@ app.get('/cadastro', (req, res) => {
 
 app.post('/api/public/cadastro', async (req, res) => {
   try {
-    const { nome, adultos, criancas, dataInicio, dataFim, vooChegada, vooPartida, hotel } = req.body;
+    const { nome, email, viajantes, adultos, criancas, dataInicio, dataFim, vooChegada, vooPartida, hotel, observacoes } = req.body;
     
     if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
 
@@ -43,15 +43,23 @@ app.post('/api/public/cadastro', async (req, res) => {
     }
 
     const properties = {
-      "Name": { title: [{ text: { content: nome } }] },
-      "Status": { select: { name: "Novo" } },
-      "Adultos": { number: parseInt(adultos) || 0 },
-      "Crianças": { number: parseInt(criancas) || 0 },
-      "Voo Chegada": { rich_text: [{ text: { content: vooChegada || '' } }] },
-      "Voo Partida": { rich_text: [{ text: { content: vooPartida || '' } }] },
-      "Hotel": { rich_text: [{ text: { content: hotel || '' } }] }
+      "Nome do Cliente": { title: [{ text: { content: nome } }] },
+      "Status do Cliente": { select: { name: "Novo" } },
+      "Qtd Adultos": { number: parseInt(adultos) || 0 },
+      "Qtd Crianças": { number: parseInt(criancas) || 0 }
     };
-    if (dateObj) properties["Data da Viagem"] = dateObj;
+    
+    if (vooChegada) properties["Voo de Chegada"] = { rich_text: [{ text: { content: vooChegada } }] };
+    if (vooPartida) properties["Voo de Partida"] = { rich_text: [{ text: { content: vooPartida } }] };
+    if (hotel) properties["Hotel"] = { rich_text: [{ text: { content: hotel } }] };
+    if (dateObj) properties["Período da Viagem"] = dateObj;
+    
+    if (email) {
+      const firstEmail = email.split('\n')[0].trim();
+      if (firstEmail) properties['Email'] = { email: firstEmail };
+    }
+    if (viajantes) properties['Nome dos Viajantes'] = { rich_text: [{ text: { content: viajantes } }] };
+    if (observacoes) properties['Observações'] = { rich_text: [{ text: { content: observacoes } }] };
 
     const response = await fetch(`https://api.notion.com/v1/pages`, {
       method: 'POST',
