@@ -1392,7 +1392,12 @@ function abrirModalAtracao(id) {
     </div>
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarAtracao(${id||'null'})">Salvar</button></div>`;
   openModal();
-  initRichText('m_a_desc', 'Descreva detalhadamente a atração/serviço...');
+  
+  // Clean up any stray HTML tags if the user accidentally saved with Quill previously
+  const descEl = document.getElementById('m_a_desc');
+  if (descEl.value) {
+    descEl.value = descEl.value.replace(/<[^>]*>?/gm, '').trim();
+  }
 }
 async function salvarAtracao(id){
   const dados={'Cidade':v('m_a_cidade'),'Bairro':v('m_a_bairro'),'Nome da Atração':v('m_a_nome'),'Preço (Ingresso)':v('m_a_preco'),'Descrição Detalhada':v('m_a_desc').trim()};
@@ -2656,15 +2661,17 @@ function abrirClienteModal(cliente = null) {
       if (currentEditingViajantes.length === 0 && cliente.viajantes) {
         // Parse: "Nome Sobrenome (Idade)" por linha
         cliente.viajantes.split('\n').filter(l => l.trim()).forEach(line => {
-          const match = line.trim().match(/^(.+?)\s+(\S+)\s*\((\d+)\)$/);
-          if (match) {
-            currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: match[1], sobrenome: match[2], idade: match[3] });
-          } else {
-            // Tenta formato simples "Nome Sobrenome"
-            const parts = line.trim().split(/\s+/);
-            const sobrenome = parts.length > 1 ? parts.pop() : '';
-            currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: parts.join(' '), sobrenome, idade: '' });
+          const text = line.trim();
+          const ageMatch = text.match(/\((\d+)\)$/);
+          let idade = '';
+          let namePart = text;
+          if (ageMatch) {
+            idade = ageMatch[1];
+            namePart = text.substring(0, ageMatch.index).trim();
           }
+          const parts = namePart.split(/\s+/);
+          const sobrenome = parts.length > 1 ? parts.pop() : '';
+          currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: parts.join(' '), sobrenome, idade });
         });
       }
       renderViajantesForm();
@@ -2700,14 +2707,17 @@ function abrirClienteModal(cliente = null) {
       }
       if (cliente.viajantes) {
         cliente.viajantes.split('\n').filter(l => l.trim()).forEach(line => {
-          const match = line.trim().match(/^(.+?)\s+(\S+)\s*\((\d+)\)$/);
-          if (match) {
-            currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: match[1], sobrenome: match[2], idade: match[3] });
-          } else {
-            const parts = line.trim().split(/\s+/);
-            const sobrenome = parts.length > 1 ? parts.pop() : '';
-            currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: parts.join(' '), sobrenome, idade: '' });
+          const text = line.trim();
+          const ageMatch = text.match(/\((\d+)\)$/);
+          let idade = '';
+          let namePart = text;
+          if (ageMatch) {
+            idade = ageMatch[1];
+            namePart = text.substring(0, ageMatch.index).trim();
           }
+          const parts = namePart.split(/\s+/);
+          const sobrenome = parts.length > 1 ? parts.pop() : '';
+          currentEditingViajantes.push({ id: Date.now() + Math.random(), nome: parts.join(' '), sobrenome, idade });
         });
       }
       if (cliente.email) {

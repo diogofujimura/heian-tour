@@ -378,7 +378,8 @@ function renderizarRoteiro(roteiroNome) {
           atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
           el.atracoesDoDia.forEach((atrNome, idxAtr) => {
             const atr = atracaoMap.get(atrNome.toLowerCase());
-            const desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
+            let desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
+            desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
             const isBairro = atr && (atr['Bairro'] === atr['Nome da Atração']);
             
             if (isBairro) {
@@ -449,7 +450,7 @@ function showPopover(e) {
   if (atracao) {
     document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
     document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
-    document.getElementById('popDesc').textContent = atracao['Descrição Detalhada'] || 'Visitação livre.';
+    document.getElementById('popDesc').textContent = (atracao['Descrição Detalhada'] || 'Visitação livre.').replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
     let preco = atracao['Preço (Ingresso)'];
     document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
   } else {
@@ -616,7 +617,8 @@ window.novoRoteiro = function() {
               atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
               el.atracoesDoDia.forEach((atrNome, idxAtr) => {
                 const atr = atracaoMap ? atracaoMap.get(atrNome.toLowerCase()) : null;
-                const desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
+                let desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
+                desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
                 const bairro = atr ? (atr['Bairro'] || '') : '';
                 const isBairro = bairro && bairro.toLowerCase() === atrNome.toLowerCase();
                 

@@ -393,6 +393,12 @@ app.get('/api/atracoes', async (req, res) => {
 app.post('/api/atracoes', async (req, res) => {
   const db = await readDB();
   if (!db.atracoes) db.atracoes = [];
+  
+  // Strip any HTML codes from the description
+  if (req.body && req.body['Descrição Detalhada']) {
+    req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+  }
+  
   const novo = { ...req.body, id: Date.now() };
   db.atracoes.push(novo);
   await writeDB(db);
@@ -407,6 +413,12 @@ app.put('/api/atracoes/:id', async (req, res) => {
   const db = await readDB();
   const idx = db.atracoes.findIndex(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+  
+  // Strip any HTML codes from the description
+  if (req.body && req.body['Descrição Detalhada']) {
+    req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
+  }
+  
   const oldItem = db.atracoes[idx];
   db.atracoes[idx] = { ...db.atracoes[idx], ...req.body };
   await writeDB(db);
@@ -690,7 +702,7 @@ app.post('/api/sync', async (req, res) => {
               Cidade: cellVal(c[idxCidade]) || 'Geral',
               Bairro: cellVal(c[idxBairro]) || '',
               'Nome da Atração': nome,
-              'Descrição Detalhada': cellVal(c[idxDescricao]) || '',
+              'Descrição Detalhada': (cellVal(c[idxDescricao]) || '').replace(/<[^>]*>?/gm, '').trim(),
               'Preço (Ingresso)': cellVal(c[idxPreco]) || 'Gratuito',
               Origem: cellVal(c[idxOrigem]) || 'Google Sheets'
             };
