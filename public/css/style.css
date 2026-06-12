@@ -2454,34 +2454,40 @@ html, body {
 }
 
 /* Cores e Bordas dos Cards na Lista do Calendário */
-.calendar-list-event-card.card-type-tour {
+.calendar-list-event-card.card-type-tour,
+.card-type-tour {
   border-left: 4px solid #e53e3e !important;
-  background: #fff5f5;
-  border-color: #feb8b8;
+  background: #fff5f5 !important;
+  border-color: #feb8b8 !important;
 }
-.calendar-list-event-card.card-type-tour:hover {
-  border-color: #e53e3e;
-  box-shadow: 0 3px 8px rgba(229, 62, 62, 0.12);
+.calendar-list-event-card.card-type-tour:hover,
+.card-type-tour:hover {
+  border-color: #e53e3e !important;
+  box-shadow: 0 3px 8px rgba(229, 62, 62, 0.12) !important;
 }
 
-.calendar-list-event-card.card-type-transporte {
+.calendar-list-event-card.card-type-transporte,
+.card-type-transporte {
   border-left: 4px solid #3182ce !important;
-  background: #ebf8ff;
-  border-color: #bee3f8;
+  background: #ebf8ff !important;
+  border-color: #bee3f8 !important;
 }
-.calendar-list-event-card.card-type-transporte:hover {
-  border-color: #3182ce;
-  box-shadow: 0 3px 8px rgba(49, 130, 206, 0.12);
+.calendar-list-event-card.card-type-transporte:hover,
+.card-type-transporte:hover {
+  border-color: #3182ce !important;
+  box-shadow: 0 3px 8px rgba(49, 130, 206, 0.12) !important;
 }
 
-.calendar-list-event-card.card-type-experiencia {
+.calendar-list-event-card.card-type-experiencia,
+.card-type-experiencia {
   border-left: 4px solid #d69e2e !important;
-  background: #fffdf0;
-  border-color: #fef08a;
+  background: #fffdf0 !important;
+  border-color: #fef08a !important;
 }
-.calendar-list-event-card.card-type-experiencia:hover {
-  border-color: #ca8a04;
-  box-shadow: 0 3px 8px rgba(202, 138, 4, 0.12);
+.calendar-list-event-card.card-type-experiencia:hover,
+.card-type-experiencia:hover {
+  border-color: #ca8a04 !important;
+  box-shadow: 0 3px 8px rgba(202, 138, 4, 0.12) !important;
 }
 
 @media screen and (max-width: 768px) {

@@ -584,15 +584,16 @@ function renderListaAgenda(eventos, container, ehHoje) {
   }
 
   eventos.forEach(ev => {
-    let tipoClass = 'event-type-transfer';
-    const tLower = ev.tipoServico.toLowerCase();
-    if (tLower.includes('roteiro') || tLower.includes('guia')) tipoClass = 'event-type-roteiro';
-    else if (tLower.includes('shinkansen')) tipoClass = 'event-type-shinkansen';
-    else if (tLower.includes('romancecar')) tipoClass = 'event-type-romancecar';
-    else if (tLower.includes('trem')) tipoClass = 'event-type-trem';
-    else if (tLower.includes('ônibus') || tLower.includes('onibus')) tipoClass = 'event-type-onibus';
-    else if (tLower.includes('experiência') || tLower.includes('experiencia')) tipoClass = 'event-type-experiencia';
-    else if (tLower.includes('transfer') || tLower.includes('carro')) tipoClass = 'event-type-transfer';
+    let tipoClassSuffix = 'transporte';
+    const tLower = (ev.tipoServico || '').toLowerCase();
+    
+    if (tLower.includes('roteiro')) {
+      tipoClassSuffix = 'tour';
+    } else if (tLower.includes('experiência') || tLower.includes('experiencia')) {
+      tipoClassSuffix = 'experiencia';
+    } else {
+      tipoClassSuffix = 'transporte';
+    }
 
     const dataFormatada = !ehHoje ? fmtDataBRAgenda(ev.dataServico) : '';
     const dateBadge = dataFormatada ? `<span style="font-size:10px; background:rgba(0,0,0,0.06); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">📅 ${dataFormatada}</span>` : '';
@@ -609,11 +610,12 @@ function renderListaAgenda(eventos, container, ehHoje) {
     const details = [hora, local].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
     const card = document.createElement('div');
-    card.className = `calendar-event-item ${tipoClass}`;
+    card.className = `calendar-event-item card-type-${tipoClassSuffix}`;
     Object.assign(card.style, {
       padding: '12px 14px',
       borderRadius: '6px',
       borderLeft: '4px solid',
+      border: '1px solid',
       boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
       display: 'flex',
       flexDirection: 'column',
