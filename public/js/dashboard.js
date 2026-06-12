@@ -956,12 +956,14 @@ function iniciarPagamentoGuia(eventoId, colaboradorId, colaboradorNome, servicoN
   const modal = document.getElementById('modalPagarGuia');
   modal.style.display = 'flex';
   modal.classList.remove('hidden');
+  modal.classList.add('active');
 }
 
 function fecharModalPagarGuia() {
   const modal = document.getElementById('modalPagarGuia');
   modal.style.display = 'none';
   modal.classList.add('hidden');
+  modal.classList.remove('active');
   
   if (currentPagamentoGuia) {
     const chk = document.getElementById(`chk-guia-${currentPagamentoGuia.eventoId}-${currentPagamentoGuia.colaboradorId}`);
@@ -1105,12 +1107,14 @@ function abrirVisaoGeralConta(contaId) {
   const modal = document.getElementById('modalVisaoGeralConta');
   modal.style.display = 'flex';
   modal.classList.remove('hidden');
+  modal.classList.add('active');
 }
 
 function fecharModalVisaoGeralConta() {
   const modal = document.getElementById('modalVisaoGeralConta');
   modal.style.display = 'none';
   modal.classList.add('hidden');
+  modal.classList.remove('active');
   window.currentVisaoGeralContaId = null;
 }
 
