@@ -2150,21 +2150,24 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
 
     const NOTION_COLABORADORES_DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
 
-    const [entradasData, saidasData, clientesData, colaboradoresData, appConfig] = await Promise.all([
+    const [entradasData, saidasData, clisRes, colaboradoresData, appConfig] = await Promise.all([
       queryAllNotion(NOTION_ENTRADAS_DB_ID),
       queryAllNotion(NOTION_SAIDAS_DB_ID),
-      queryAllNotion(NOTION_CLIENTS_DB_ID),
+      supabase.from('clientes_locais').select('data'),
       queryAllNotion(NOTION_COLABORADORES_DB_ID),
       supabase.from('config').select('data').eq('id', 'app_config').single()
     ]);
 
-    // Construir mapas de ID -> Nome para Clientes e Colaboradores do Notion
+    // Construir mapas de ID -> Nome para Clientes (local Supabase) e Colaboradores (Notion)
     const clientesMap = {};
-    (clientesData.results || []).forEach(item => {
-      const p = item.properties;
-      const nome = p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome';
-      clientesMap[item.id] = nome;
-    });
+    if (clisRes.data) {
+      clisRes.data.forEach(row => {
+        const c = row.data;
+        if (c && c.id) {
+          clientesMap[c.id] = c.nome || 'Sem Nome';
+        }
+      });
+    }
 
     const colaboradoresMap = {};
     (colaboradoresData.results || []).forEach(item => {
