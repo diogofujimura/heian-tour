@@ -1,4 +1,7 @@
 let chartClienteFinanceiro = null;
+window.notionContas = [];
+window.appConfig = {};
+let currentPagamentoGuia = null;
 
 const KANBAN_STATUSES = [
   { name: 'Início/call de dúvidas', color: '#787878', bgColor: 'rgba(120, 120, 120, 0.08)', borderColor: '#cbd5e1' },
@@ -13,6 +16,11 @@ const KANBAN_STATUSES = [
 ];
 
 async function renderDashboard() {
+  // Inicializa dados de contas e taxas se necessário
+  if (!window.notionContas || window.notionContas.length === 0) {
+    await inicializarDashboardFinanceiro();
+  }
+
   // Popula o select de clientes para o Dashboard
   const select = document.getElementById('dashClienteSelect');
   let clientes = window.notionClients || [];
@@ -48,6 +56,9 @@ async function renderDashboard() {
 
   // Renderiza o Kanban
   renderKanban();
+
+  // Carrega os saldos das contas
+  await carregarSaldosContas();
 }
 
 function renderKanban() {
@@ -297,9 +308,9 @@ async function selecionarClienteDashboard(clientId) {
   // Set loading state
   document.getElementById('kpiCliRecebido').textContent = 'Carregando...';
   document.getElementById('kpiCliDespesas').textContent = 'Carregando...';
-  document.getElementById('kpiCliLucroReal').textContent = 'Carregando...';
-  document.getElementById('kpiCliTaxas').textContent = 'Carregando...';
-  document.getElementById('kpiCliLucroProjetado').textContent = 'Carregando...';
+  document.getElementById('kpiCliCustoGuias').textContent = 'Carregando...';
+  document.getElementById('kpiCliCaixaAtual').textContent = 'Carregando...';
+  document.getElementById('kpiCliLucroProjetadoFinal').textContent = 'Carregando...';
 
   document.getElementById('cliFichaValorTotal').textContent = '...';
   document.getElementById('cliFichaTotalPago').textContent = '...';
@@ -318,20 +329,28 @@ async function selecionarClienteDashboard(clientId) {
     // Fill KPI cards
     document.getElementById('kpiCliRecebido').textContent = `¥ ${summary.totalRecebido.toLocaleString('en-US')}`;
     document.getElementById('kpiCliDespesas').textContent = `¥ ${summary.totalDespesas.toLocaleString('en-US')}`;
+    document.getElementById('kpiCliCustoGuias').textContent = `¥ ${summary.custoGuiasTotal.toLocaleString('en-US')}`;
     
-    const lucroRealEl = document.getElementById('kpiCliLucroReal');
-    lucroRealEl.textContent = `¥ ${summary.lucroReal.toLocaleString('en-US')}`;
-    if (summary.lucroReal < 0) {
-      lucroRealEl.style.color = '#e74c3c';
-    } else {
-      lucroRealEl.style.color = 'var(--gold-dk)';
+    const detEl = document.getElementById('kpiCliCustoGuiasDet');
+    if (detEl) {
+      detEl.textContent = `¥ ${summary.custoGuiasPago.toLocaleString('en-US')} Pago / ¥ ${summary.custoGuiasPendente.toLocaleString('en-US')} Pendente`;
     }
 
-    document.getElementById('kpiCliTaxas').textContent = `¥ ${summary.totalTaxas.toLocaleString('en-US')}`;
-    document.getElementById('kpiCliLucroProjetado').textContent = `¥ ${summary.totalLucroProjetado.toLocaleString('en-US')}`;
+    document.getElementById('kpiCliCaixaAtual').textContent = `¥ ${summary.caixaAtual.toLocaleString('en-US')}`;
 
     // Fill client ficha info
     const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+    const contrato = clientInfo ? (clientInfo.valorTotal || 0) : 0;
+    const lucroProjetadoFinal = contrato - summary.totalDespesas - summary.custoGuiasTotal;
+
+    const lucroProjEl = document.getElementById('kpiCliLucroProjetadoFinal');
+    lucroProjEl.textContent = `¥ ${lucroProjetadoFinal.toLocaleString('en-US')}`;
+    if (lucroProjetadoFinal < 0) {
+      lucroProjEl.style.color = '#e74c3c';
+    } else {
+      lucroProjEl.style.color = 'var(--crimson)';
+    }
+
     if (clientInfo) {
       document.getElementById('cliFichaValorTotal').textContent = `¥ ${(clientInfo.valorTotal || 0).toLocaleString('en-US')}`;
       document.getElementById('cliFichaTotalPago').textContent = `¥ ${(clientInfo.totalPago || 0).toLocaleString('en-US')}`;
@@ -354,12 +373,13 @@ async function selecionarClienteDashboard(clientId) {
     }
 
     // Render bar chart for comparison
-    renderChartCliente(summary.totalRecebido, summary.totalDespesas, summary.lucroReal);
+    renderChartCliente(summary.totalRecebido, summary.totalDespesas + summary.custoGuiasTotal, summary.caixaAtual, lucroProjetadoFinal);
 
     // Populate Tables
     renderTableCliEntradas(details.entradas);
     renderTableCliSaidas(details.saidas);
     renderTableCliTasks(details.tasks);
+    renderTableCliGuias(details.guias);
 
   } catch (err) {
     console.error(err);
@@ -367,7 +387,7 @@ async function selecionarClienteDashboard(clientId) {
   }
 }
 
-function renderChartCliente(recebido, despesas, lucro) {
+function renderChartCliente(recebido, despesas, caixa, lucro) {
   const ctx = document.getElementById('chartClienteFinanceiro')?.getContext('2d');
   if (!ctx) return;
 
@@ -376,18 +396,20 @@ function renderChartCliente(recebido, despesas, lucro) {
   chartClienteFinanceiro = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Recebido', 'Despesas', 'Lucro Líquido Real'],
+      labels: ['Recebido', 'Custos Totais', 'Caixa Líquido', 'Lucro Projetado'],
       datasets: [{
         label: 'Valor (¥)',
-        data: [recebido, despesas, lucro],
+        data: [recebido, despesas, caixa, lucro],
         backgroundColor: [
           'rgba(46, 204, 113, 0.75)',
           'rgba(231, 76, 60, 0.75)',
+          'rgba(52, 152, 219, 0.75)',
           'rgba(196, 163, 90, 0.75)'
         ],
         borderColor: [
           '#2ecc71',
           '#e74c3c',
+          '#3498db',
           '#c4a35a'
         ],
         borderWidth: 1,
@@ -639,3 +661,304 @@ function fmtDataBRAgenda(str) {
   if(parts.length !== 3) return str;
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
+
+// --- Novas Funções de Controle Financeiro e Diárias ---
+
+async function inicializarDashboardFinanceiro() {
+  try {
+    const resContas = await fetch('/api/notion/contas');
+    if (resContas.ok) {
+      window.notionContas = await resContas.json();
+      const selectConta = document.getElementById('modalPagarGuiaConta');
+      if (selectConta) {
+        selectConta.innerHTML = '<option value="">Selecione uma conta...</option>';
+        window.notionContas.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.nome;
+          selectConta.appendChild(opt);
+        });
+      }
+    }
+    const resConfig = await fetch('/api/config');
+    if (resConfig.ok) {
+      window.appConfig = await resConfig.json();
+    }
+  } catch (e) {
+    console.error('Erro ao inicializar dados financeiros:', e);
+  }
+}
+
+async function carregarSaldosContas() {
+  const container = document.getElementById('saldosContasContainer');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/dashboard/saldos-contas');
+    if (!res.ok) throw new Error('Erro ao buscar saldos de contas');
+    const contas = await res.json();
+
+    container.innerHTML = '';
+    if (contas.length === 0) {
+      container.innerHTML = '<div style="color:var(--ink-lt); font-size:12px; font-style:italic;">Nenhuma conta encontrada.</div>';
+      return;
+    }
+
+    contas.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'kpi-card';
+      Object.assign(card.style, {
+        background: 'var(--warm-white)',
+        padding: '16px 20px',
+        borderRadius: '8px',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
+      });
+
+      const title = document.createElement('h4');
+      Object.assign(title.style, {
+        fontSize: '13px',
+        color: 'var(--crimson)',
+        fontWeight: '600',
+        margin: '0',
+        textTransform: 'uppercase'
+      });
+      title.textContent = c.nome;
+      card.appendChild(title);
+
+      const saldosWrapper = document.createElement('div');
+      Object.assign(saldosWrapper.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+      });
+
+      const hasBRL = c.saldoBRL !== 0;
+      const hasJPY = c.saldoJPY !== 0;
+      const hasUSD = c.saldoUSD !== 0;
+
+      if (!hasBRL && !hasJPY && !hasUSD) {
+        const p = document.createElement('p');
+        Object.assign(p.style, {
+          fontFamily: 'var(--ff-display)',
+          fontSize: '18px',
+          color: 'var(--ink-mid)',
+          margin: '0',
+          fontWeight: '600'
+        });
+        p.textContent = '¥ 0';
+        saldosWrapper.appendChild(p);
+      } else {
+        if (hasJPY) {
+          const p = document.createElement('p');
+          Object.assign(p.style, {
+            fontFamily: 'var(--ff-display)',
+            fontSize: '18px',
+            color: 'var(--gold-dk)',
+            margin: '0',
+            fontWeight: '600'
+          });
+          p.textContent = `¥ ${Math.round(c.saldoJPY).toLocaleString('en-US')}`;
+          saldosWrapper.appendChild(p);
+        }
+        if (hasBRL) {
+          const p = document.createElement('p');
+          Object.assign(p.style, {
+            fontFamily: 'var(--ff-display)',
+            fontSize: '18px',
+            color: '#2ecc71',
+            margin: '0',
+            fontWeight: '600'
+          });
+          p.textContent = `R$ ${c.saldoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          saldosWrapper.appendChild(p);
+        }
+        if (hasUSD) {
+          const p = document.createElement('p');
+          Object.assign(p.style, {
+            fontFamily: 'var(--ff-display)',
+            fontSize: '18px',
+            color: '#3498db',
+            margin: '0',
+            fontWeight: '600'
+          });
+          p.textContent = `$ ${c.saldoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          saldosWrapper.appendChild(p);
+        }
+      }
+
+      card.appendChild(saldosWrapper);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div style="color:#e74c3c; font-size:12px;">Erro ao carregar saldos.</div>';
+  }
+}
+
+function renderTableCliGuias(guias) {
+  const tbody = document.querySelector('#tableCliGuias tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!guias || guias.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#888;">Nenhuma diária de guia registrada.</td></tr>';
+    return;
+  }
+  guias.forEach(g => {
+    const tr = document.createElement('tr');
+    const idCheckbox = `chk-guia-${g.id}-${g.colabId}`;
+    const isChecked = g.pago ? 'checked disabled' : '';
+    const labelStatus = g.pago 
+      ? '<span class="pdf-tag" style="background:#2ecc71; color:white; margin:0;">Pago</span>'
+      : '<span class="pdf-tag" style="background:#f1c40f; color:white; margin:0;">Pendente</span>';
+    
+    tr.innerHTML = `
+      <td>${g.dataServico ? fmtDataBR(g.dataServico) : '-'}</td>
+      <td><strong>${g.titulo}</strong></td>
+      <td>👤 ${g.colabName}</td>
+      <td style="text-align:right; font-family:var(--ff-num); font-weight:600;">¥ ${g.valor.toLocaleString('en-US')}</td>
+      <td style="text-align:center; display:flex; align-items:center; justify-content:center; gap:8px; height:100%; border:none;">
+        <input type="checkbox" id="${idCheckbox}" ${isChecked} onchange="iniciarPagamentoGuia('${g.id}', '${g.colabId}', '${g.colabName}', '${g.titulo}', ${g.valor})" style="width:16px; height:16px; cursor:pointer;">
+        ${labelStatus}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function iniciarPagamentoGuia(eventoId, colaboradorId, colaboradorNome, servicoNome, valorDiaria) {
+  const chk = document.getElementById(`chk-guia-${eventoId}-${colaboradorId}`);
+  if (chk && !chk.checked) {
+    return;
+  }
+  
+  currentPagamentoGuia = {
+    eventoId,
+    colaboradorId,
+    clienteId: document.getElementById('dashClienteSelect').value,
+    valorDiaria
+  };
+
+  document.getElementById('modalPagarGuiaServicoInfo').textContent = `Serviço: ${servicoNome}`;
+  document.getElementById('modalPagarGuiaColab').value = colaboradorNome;
+  
+  const selectMoeda = document.getElementById('modalPagarGuiaMoeda');
+  selectMoeda.value = 'JPY';
+  
+  const inputValor = document.getElementById('modalPagarGuiaValor');
+  inputValor.value = valorDiaria;
+  
+  document.getElementById('modalPagarGuiaPreviewJPYWrapper').style.display = 'none';
+  
+  const modal = document.getElementById('modalPagarGuia');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+}
+
+function fecharModalPagarGuia() {
+  const modal = document.getElementById('modalPagarGuia');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+  
+  if (currentPagamentoGuia) {
+    const chk = document.getElementById(`chk-guia-${currentPagamentoGuia.eventoId}-${currentPagamentoGuia.colaboradorId}`);
+    if (chk && !chk.disabled) {
+      chk.checked = false;
+    }
+  }
+  currentPagamentoGuia = null;
+}
+
+function onChangeMoedaPagarGuia() {
+  const moeda = document.getElementById('modalPagarGuiaMoeda').value;
+  const valorInput = Number(document.getElementById('modalPagarGuiaValor').value) || 0;
+  const wrapper = document.getElementById('modalPagarGuiaPreviewJPYWrapper');
+  const previewText = document.getElementById('modalPagarGuiaPreviewJPY');
+  
+  if (moeda === 'JPY') {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  let rate = 1;
+  if (moeda === 'BRL') {
+    rate = window.appConfig?.cambio_jpy_brl || 0.031670;
+  } else if (moeda === 'USD') {
+    rate = window.appConfig?.cambio_jpy_usd || 0.006280;
+  }
+
+  const valorJPY = Math.round(valorInput / rate);
+  previewText.textContent = `¥ ${valorJPY.toLocaleString('en-US')} JPY`;
+  wrapper.style.display = 'block';
+}
+
+// Adicionar eventos e handlers
+document.addEventListener('DOMContentLoaded', () => {
+  const inputVal = document.getElementById('modalPagarGuiaValor');
+  if (inputVal) {
+    inputVal.addEventListener('input', onChangeMoedaPagarGuia);
+  }
+
+  const btnConfirmar = document.getElementById('btnConfirmarPagarGuia');
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener('click', async () => {
+      if (!currentPagamentoGuia) return;
+      
+      const contaId = document.getElementById('modalPagarGuiaConta').value;
+      const moeda = document.getElementById('modalPagarGuiaMoeda').value;
+      const valorInput = Number(document.getElementById('modalPagarGuiaValor').value) || 0;
+      
+      if (!contaId) {
+        alert('Selecione a conta pagadora do Notion.');
+        return;
+      }
+      if (valorInput <= 0) {
+        alert('Preencha um valor válido para o pagamento.');
+        return;
+      }
+
+      document.body.style.cursor = 'progress';
+      btnConfirmar.disabled = true;
+      const oldText = btnConfirmar.textContent;
+      btnConfirmar.textContent = 'Enviando...';
+
+      try {
+        const response = await fetch('/api/calendario/pagar-guia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventoId: currentPagamentoGuia.eventoId,
+            colaboradorId: currentPagamentoGuia.colaboradorId,
+            clienteId: currentPagamentoGuia.clienteId,
+            contaId: contaId,
+            moeda: moeda,
+            valorMoedaOriginal: valorInput
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Erro na requisição');
+        }
+
+        alert('Pagamento registrado com sucesso no Supabase e na base de Saídas do Notion!');
+        fecharModalPagarGuia();
+        
+        const clientId = document.getElementById('dashClienteSelect').value;
+        await selecionarClienteDashboard(clientId);
+        await carregarSaldosContas();
+        
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao registrar pagamento: ' + err.message);
+      } finally {
+        document.body.style.cursor = 'default';
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = oldText;
+      }
+    });
+  }
+});

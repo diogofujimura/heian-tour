@@ -1944,7 +1944,272 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
   }
 });
 
-// ── API: Dashboard Consolidação Notion (Somente Leitura) ───────────────────
+// ── API: Dashboard Financeiro e Contas do Notion ─────────────────────────────
+
+app.get('/api/notion/contas', async (req, res) => {
+  try {
+    const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';
+    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CONTAS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Erro ao consultar base de contas: ${errText}`);
+    }
+
+    const data = await response.json();
+    const contas = (data.results || []).map(item => {
+      const p = item.properties;
+      return {
+        id: item.id,
+        nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome'
+      };
+    });
+
+    res.json(contas);
+  } catch (error) {
+    console.error('Erro ao buscar contas no Notion:', error);
+    res.status(500).json({ error: 'Erro ao buscar contas no Notion', details: error.message });
+  }
+});
+
+app.post('/api/calendario/pagar-guia', async (req, res) => {
+  try {
+    const { eventoId, colaboradorId, clienteId, contaId, moeda, valorMoedaOriginal } = req.body;
+    if (!eventoId || !colaboradorId || !clienteId || !contaId || !moeda || !valorMoedaOriginal) {
+      return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes: eventoId, colaboradorId, clienteId, contaId, moeda, valorMoedaOriginal.' });
+    }
+
+    // 1. Obter evento local
+    const { data: calCfg } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    const evIndex = eventos.findIndex(e => e.id === eventoId);
+    if (evIndex === -1) {
+      return res.status(404).json({ error: 'Evento não encontrado no calendário.' });
+    }
+
+    const ev = eventos[evIndex];
+
+    // Obter as taxas de câmbio da config do Supabase
+    const { data: appConfig } = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    // 2. Calcular valor em JPY
+    const valorOriginalNum = Number(valorMoedaOriginal) || 0;
+    let valorJPY = valorOriginalNum;
+    let descCambioText = '';
+
+    if (moeda === 'BRL') {
+      valorJPY = Math.round(valorOriginalNum / rateBRL);
+      descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${rateBRL.toFixed(6)}]`;
+    } else if (moeda === 'USD') {
+      valorJPY = Math.round(valorOriginalNum / rateUSD);
+      descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${rateUSD.toFixed(6)}]`;
+    } else {
+      descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
+    }
+
+    // 3. Criar registro de Saída no Notion
+    const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+    
+    const colabObj = ev.assignee ? ev.assignee.find(a => a.id === colaboradorId) : null;
+    const colabName = colabObj ? colabObj.name : 'Colaborador';
+    
+    const descricaoSaida = `Pagamento Guia: ${colabName} - ${ev.titulo || 'Serviço'}${descCambioText}`;
+
+    const properties = {
+      'Descrição': { title: [{ text: { content: descricaoSaida } }] },
+      'Valor (JPY)': { number: valorJPY },
+      'Data de pagamento': { date: { start: ev.dataServico || new Date().toISOString().substring(0, 10) } },
+      'Categoria': { select: { name: 'Pagamento Guia' } },
+      'Tipo de serviço': { select: { name: 'guia' } },
+      '🎀 Clientes': { relation: [{ id: clienteId }] },
+      '🫂 Colaboradores': { relation: [{ id: colaboradorId }] },
+      '💳 Contas': { relation: [{ id: contaId }] }
+    };
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_SAIDAS_DB_ID },
+        properties
+      })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao criar Saída no Notion: ${errTxt}`);
+    }
+
+    const notionData = await notionRes.json();
+
+    // 4. Atualizar evento local no Supabase
+    if (!ev.pagoColab) ev.pagoColab = {};
+    if (!ev.valorDiariaColab) ev.valorDiariaColab = {};
+
+    ev.pagoColab[colaboradorId] = true;
+    
+    // Sempre mantemos a diária local em JPY (convertida se necessário)
+    ev.valorDiariaColab[colaboradorId] = valorJPY;
+    
+    const primaryId = ev.assignee && ev.assignee.length > 0 ? ev.assignee[0].id : null;
+    if (colaboradorId === primaryId) {
+      ev.pago = true;
+      ev.valorDiaria = valorJPY;
+    }
+
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: eventos });
+    if (upsertErr) throw upsertErr;
+
+    res.json({ success: true, notionPageId: notionData.id, valorJPY });
+  } catch (error) {
+    console.error('Erro ao processar pagamento do guia no backend:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/dashboard/saldos-contas', async (req, res) => {
+  try {
+    const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';
+    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+    const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+
+    // Buscar contas
+    const contasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_CONTAS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!contasRes.ok) throw new Error('Erro ao buscar contas no Notion');
+    const contasData = await contasRes.json();
+    const contas = (contasData.results || []).map(item => {
+      const p = item.properties;
+      return {
+        id: item.id,
+        nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome',
+        saldoBRL: 0,
+        saldoJPY: 0,
+        saldoUSD: 0
+      };
+    });
+
+    // Consultas paralelas
+    const queryAllNotion = async (dbId) => {
+      const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        }
+      });
+      return await response.json();
+    };
+
+    const [entradasData, saidasData, appConfig] = await Promise.all([
+      queryAllNotion(NOTION_ENTRADAS_DB_ID),
+      queryAllNotion(NOTION_SAIDAS_DB_ID),
+      supabase.from('config').select('data').eq('id', 'app_config').single()
+    ]);
+
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    const rates = { brl: rateBRL, usd: rateUSD };
+
+    const extrairInfoVal = (descricao, valorJPY, moedaOriginal) => {
+      const match = descricao && descricao.match(/\[Original:\s*([BRL|USD|JPY$¥]+)\s*([\d.,\s]+)/i);
+      if (match) {
+        const valStr = match[2].replace(/[.\s]/g, '').replace(',', '.');
+        const parsedVal = parseFloat(valStr);
+        if (!isNaN(parsedVal)) {
+          const coinText = match[1].toUpperCase();
+          let parsedMoeda = 'JPY';
+          if (coinText.includes('R$') || coinText.includes('BRL')) parsedMoeda = 'BRL';
+          else if (coinText.includes('$') || coinText.includes('USD')) parsedMoeda = 'USD';
+          
+          return { valor: parsedVal, moeda: parsedMoeda };
+        }
+      }
+
+      if (moedaOriginal === 'BRL') return { valor: valorJPY * rates.brl, moeda: 'BRL' };
+      if (moedaOriginal === 'USD') return { valor: valorJPY * rates.usd, moeda: 'USD' };
+      return { valor: valorJPY, moeda: 'JPY' };
+    };
+
+    // Entradas
+    (entradasData.results || []).forEach(item => {
+      const p = item.properties;
+      const valorJPY = p['Valor (JPY)']?.number || 0;
+      const moedaOriginal = p['Moeda Original']?.select?.name || 'JPY';
+      const descricao = p['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || '';
+      const contasRel = p['💳 Contas']?.relation || [];
+
+      const info = extrairInfoVal(descricao, valorJPY, moedaOriginal);
+
+      contasRel.forEach(cRel => {
+        const conta = contas.find(c => c.id === cRel.id);
+        if (conta) {
+          if (info.moeda === 'BRL') conta.saldoBRL += info.valor;
+          else if (info.moeda === 'USD') conta.saldoUSD += info.valor;
+          else conta.saldoJPY += info.valor;
+        }
+      });
+    });
+
+    // Saídas
+    (saidasData.results || []).forEach(item => {
+      const p = item.properties;
+      const valorJPY = p['Valor (JPY)']?.number || 0;
+      const descricao = p['Descrição']?.title?.map(t => t.plain_text).join('') || '';
+      const contasRel = p['💳 Contas']?.relation || [];
+
+      const info = extrairInfoVal(descricao, valorJPY, 'JPY');
+
+      contasRel.forEach(cRel => {
+        const conta = contas.find(c => c.id === cRel.id);
+        if (conta) {
+          if (info.moeda === 'BRL') conta.saldoBRL -= info.valor;
+          else if (info.moeda === 'USD') conta.saldoUSD -= info.valor;
+          else conta.saldoJPY -= info.valor;
+        }
+      });
+    });
+
+    res.json(contas);
+  } catch (error) {
+    console.error('Erro ao calcular saldos das contas:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
   try {
     const { clientId } = req.params;
@@ -1956,7 +2221,6 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
       return res.status(400).json({ error: 'Configuração do Notion incompleta no arquivo .env.' });
     }
 
-    // Função auxiliar para fazer query nas bases do Notion de forma estritamente somente-leitura
     const queryNotionDB = async (dbId, filterProp) => {
       const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
         method: 'POST',
@@ -1981,11 +2245,11 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
       return await response.json();
     };
 
-    // Consultas paralelas em background
-    const [entradasData, saidasData, tasksData] = await Promise.all([
+    const [entradasData, saidasData, tasksData, calCfg] = await Promise.all([
       queryNotionDB(NOTION_ENTRADAS_DB_ID, 'Cliente (Relação)'),
       queryNotionDB(NOTION_SAIDAS_DB_ID, '🎀 Clientes'),
-      queryNotionDB(NOTION_TASKS_DB_ID, '🎀 Clientes')
+      queryNotionDB(NOTION_TASKS_DB_ID, '🎀 Clientes'),
+      supabase.from('config').select('data').eq('id', 'calendario_eventos').single()
     ]);
 
     // Parse de Entradas
@@ -2039,19 +2303,63 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
       };
     });
 
+    // Processar Diárias dos Guias do Calendário Local
+    let eventos = [];
+    if (calCfg && calCfg.data && Array.isArray(calCfg.data)) {
+      eventos = calCfg.data.filter(ev => ev.clienteId === clientId || (ev.clientes && ev.clientes.includes(clientId)));
+    }
+
+    let custoGuiasPago = 0;
+    let custoGuiasPendente = 0;
+    const guias = [];
+
+    eventos.forEach(ev => {
+      if (ev.assignee && ev.assignee.length > 0) {
+        ev.assignee.forEach(colab => {
+          const valor = ev.valorDiariaColab && ev.valorDiariaColab[colab.id] !== undefined
+            ? Number(ev.valorDiariaColab[colab.id]) || 0
+            : 0;
+          const pago = ev.pagoColab && ev.pagoColab[colab.id] !== undefined
+            ? !!ev.pagoColab[colab.id]
+            : false;
+
+          if (pago) {
+            custoGuiasPago += valor;
+          } else {
+            custoGuiasPendente += valor;
+          }
+
+          guias.push({
+            id: ev.id,
+            dataServico: ev.dataServico,
+            titulo: ev.titulo,
+            colabId: colab.id,
+            colabName: colab.name,
+            valor,
+            pago
+          });
+        });
+      }
+    });
+
     res.json({
       success: true,
       summary: {
         totalRecebido,
         totalDespesas,
-        lucroReal: totalRecebido - totalDespesas,
+        lucroReal: totalRecebido - totalDespesas - custoGuiasPago,
         totalTaxas,
-        totalLucroProjetado
+        totalLucroProjetado,
+        custoGuiasPago,
+        custoGuiasPendente,
+        custoGuiasTotal: custoGuiasPago + custoGuiasPendente,
+        caixaAtual: totalRecebido - totalDespesas - custoGuiasPago
       },
       details: {
         entradas,
         saidas,
-        tasks
+        tasks,
+        guias
       }
     });
 
@@ -2060,6 +2368,7 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
     res.status(500).json({ error: 'Erro ao consolidar dados do Notion', details: error.message });
   }
 });
+
 
 // ── Inicia servidor ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
