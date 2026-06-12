@@ -16,6 +16,13 @@ const KANBAN_STATUSES = [
 ];
 
 async function renderDashboard() {
+  const titleEl = document.getElementById('dashboardPageTitle');
+  const select = document.getElementById('dashClienteSelect');
+  const selectVal = select ? select.value : '';
+  if (titleEl && !selectVal) {
+    titleEl.textContent = 'Painel Geral & Operacional';
+  }
+
   // Inicializa dados de contas e taxas se necessário
   if (!window.notionContas || window.notionContas.length === 0) {
     await inicializarDashboardFinanceiro();
@@ -293,13 +300,20 @@ async function atualizarStatusClienteKanban(id, novoStatus) {
 async function selecionarClienteDashboard(clientId) {
   const containerGeral = document.getElementById('dashboardGeralContainer');
   const containerCliente = document.getElementById('dashboardClienteContainer');
+  const titleEl = document.getElementById('dashboardPageTitle');
   if (!containerGeral || !containerCliente) return;
 
   if (!clientId) {
+    if (titleEl) titleEl.textContent = 'Painel Geral & Operacional';
     containerGeral.classList.remove('hidden');
     containerCliente.classList.add('hidden');
     renderDashboard();
     return;
+  }
+
+  const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+  if (titleEl && clientInfo) {
+    titleEl.textContent = `Financeiro do Cliente: ${clientInfo.nome || 'Sem nome'}`;
   }
 
   containerGeral.classList.add('hidden');
