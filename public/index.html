@@ -61,6 +61,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <a class="nav-item" data-page="meus">💰 &nbsp;Cotações</a>
     <a class="nav-item" data-page="calendario">📅 &nbsp;Calendário</a>
     <a class="nav-item" data-page="colaboradores">👤 &nbsp;Colaboradores</a>
+    <a class="nav-item" data-page="contabilidade">💵 &nbsp;Contabilidade</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
     <a class="nav-item" data-page="orcamento">◈ &nbsp;Criar Cotação Rápida</a>
@@ -486,15 +487,6 @@ window.addEventListener('unhandledrejection', function(e) {
         </div>
       </div>
 
-      <!-- Saldos de Contas Financeiras -->
-      <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
-        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          💳 <span>Saldos das Contas (Notion Integrado)</span>
-        </h3>
-        <div id="saldosContasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;">
-          <div style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando saldos de contas...</div>
-        </div>
-      </div>
     </div>
 
     <!-- Container do Cliente (Notion) -->
@@ -606,6 +598,24 @@ window.addEventListener('unhandledrejection', function(e) {
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTABILIDADE ─────────────────────────────────────────────────── -->
+  <div id="page-contabilidade" class="page">
+    <div class="page-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px;">
+      <h1 style="margin: 0; color: var(--crimson); font-family: var(--ff-display); font-size: 28px; font-weight: 400;">Contabilidade & Saldos</h1>
+      <p style="margin: 0; color: var(--ink-lt); font-size: 13px;">Consolidação e controle financeiro multimoeda integrado ao Notion</p>
+    </div>
+
+    <!-- Saldos de Contas Financeiras -->
+    <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 28px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);">
+      <h3 style="font-size: 18px; color: var(--crimson); font-weight: 700; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 10px; display:flex; align-items:center; gap:8px">
+        💳 <span>Saldos Disponíveis por Conta</span>
+      </h3>
+      <div id="saldosContasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+        <div style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Carregando saldos de contas...</div>
       </div>
     </div>
   </div>

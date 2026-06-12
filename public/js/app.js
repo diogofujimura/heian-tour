@@ -476,6 +476,7 @@ function navToPage(pg) {
   }
   
   if (targetPg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
+  if (targetPg === 'contabilidade' && typeof carregarSaldosContas === 'function') carregarSaldosContas();
   if (targetPg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
   if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
   if (targetPg === 'colaboradores' && typeof setupColaboradoresTab === 'function') setupColaboradoresTab();
