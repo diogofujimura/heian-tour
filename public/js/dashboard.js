@@ -137,8 +137,8 @@ function renderKanban() {
           card.classList.remove('dragging');
         });
 
-        // Double click para navegar
-        card.addEventListener('dblclick', () => {
+        // Click simples para navegar
+        card.addEventListener('click', () => {
           const navItem = document.querySelector('.sidebar-nav a[data-page="clientes"]');
           if (navItem) {
             navItem.click();
