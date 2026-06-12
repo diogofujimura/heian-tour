@@ -4329,6 +4329,42 @@ let calSelectedEvent = null;
 // Inicialização e navegação de meses do calendário (Lista padrão no Mobile)
 let calViewMode = window.innerWidth <= 768 ? 'list' : 'grid';
 
+async function sincronizarCalendarioDoNotion() {
+  const btn = document.getElementById('btnSyncNotionCalendario');
+  if (!btn) return;
+
+  const oldText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⌛ Sincronizando...';
+  document.body.style.cursor = 'wait';
+
+  try {
+    const response = await fetch('/api/calendario/sincronizar-do-notion', {
+      method: 'POST'
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Erro na requisição');
+    }
+
+    const data = await response.json();
+    alert(`Calendário sincronizado com sucesso! ${data.count} eventos carregados do Notion.`);
+    
+    if (typeof renderCalendario === 'function') {
+      renderCalendario();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao sincronizar calendário do Notion: ' + err.message);
+  } finally {
+    document.body.style.cursor = 'default';
+    btn.disabled = false;
+    btn.innerHTML = oldText;
+  }
+}
+window.sincronizarCalendarioDoNotion = sincronizarCalendarioDoNotion;
+
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('calendarPrevMonthBtn');
   const nextBtn = document.getElementById('calendarNextMonthBtn');

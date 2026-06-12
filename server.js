@@ -1602,6 +1602,168 @@ app.delete('/api/calendario/eventos/:id', async (req, res) => {
   }
 });
 
+app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
+  try {
+    const NOTION_AGENDA_DB_ID = process.env.NOTION_AGENDA_DB_ID;
+    const NOTION_COLABORADORES_DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+
+    if (!NOTION_TOKEN || !NOTION_AGENDA_DB_ID) {
+      return res.status(400).json({ error: 'Configuração do Notion incompleta no .env.' });
+    }
+
+    // Função genérica para buscar todas as páginas de uma base do Notion (paginação)
+    const queryAllNotion = async (dbId) => {
+      let results = [];
+      let hasMore = true;
+      let startCursor = undefined;
+
+      while (hasMore) {
+        const body = {};
+        if (startCursor) {
+          body.start_cursor = startCursor;
+        }
+
+        const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
+        }
+
+        const data = await response.json();
+        results = results.concat(data.results || []);
+        hasMore = data.has_more;
+        startCursor = data.next_cursor;
+      }
+
+      return { results };
+    };
+
+    // 1. Buscar todos os colaboradores do Notion para mapear os IDs para nomes
+    const colaboradoresData = await queryAllNotion(NOTION_COLABORADORES_DB_ID);
+    const colaboradoresMap = {};
+    (colaboradoresData.results || []).forEach(item => {
+      const p = item.properties;
+      const nameProp = p.Name || p.Nome;
+      const nome = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+      colaboradoresMap[item.id] = nome;
+    });
+
+    // 2. Buscar todos os eventos da Agenda do Notion (ativos/não arquivados)
+    const agendaData = await queryAllNotion(NOTION_AGENDA_DB_ID);
+    const notionEvents = agendaData.results || [];
+
+    // 3. Buscar os eventos locais do calendário no Supabase
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventosLocais = [];
+    if (calCfg && calCfg.data) {
+      eventosLocais = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    // Criar um conjunto de IDs ativos no Notion para saber quais deletar localmente
+    const notionActiveIds = new Set(notionEvents.map(e => e.id));
+
+    // Filtrar eventos locais: manter os locais temporários (cal_...) e os que continuam ativos no Notion
+    let novosEventosLocais = eventosLocais.filter(ev => {
+      if (!ev.id) return false;
+      if (ev.id.startsWith('cal_')) return true; // Mantém eventos criados apenas localmente
+      return notionActiveIds.has(ev.id); // Mantém se ainda estiver no Notion
+    });
+
+    // 4. Mapear e atualizar/inserir eventos vindos do Notion
+    notionEvents.forEach(item => {
+      const p = item.properties;
+      const id = item.id;
+      
+      const titulo = p['Nome']?.title?.map(t => t.plain_text).join('') || 'Serviço sem nome';
+      const dataServico = p['Data do Tour']?.date?.start || '';
+      
+      const clientesRel = p['🎀 Clientes']?.relation || [];
+      const clienteId = clientesRel[0]?.id || 'cliente_desconhecido';
+
+      const cidade = p['Cidade']?.select?.name || '';
+      const valorDiariaNotion = p['Valor diária do Guia']?.number || 0;
+
+      // Mapear responsáveis (colaboradores)
+      const responsaveisRel = p['Responsável']?.relation || [];
+      const assignee = responsaveisRel.map(r => ({
+        id: r.id,
+        name: colaboradoresMap[r.id] || 'Desconhecido'
+      }));
+
+      // Determinar o tipo de serviço baseado no título ou observações
+      let tipoServico = 'Roteiro';
+      const tLower = titulo.toLowerCase();
+      if (tLower.includes('transporte') || tLower.includes('transfer') || tLower.includes('carro')) {
+        tipoServico = 'Transporte';
+      } else if (tLower.includes('experiencia') || tLower.includes('experiência')) {
+        tipoServico = 'Experiência';
+      }
+
+      // Procurar se já existe o evento localmente
+      let evLocal = novosEventosLocais.find(ev => ev.id === id);
+
+      if (evLocal) {
+        // Atualiza campos
+        evLocal.titulo = titulo;
+        evLocal.dataServico = dataServico;
+        evLocal.clienteId = clienteId;
+        evLocal.cidade = cidade;
+        evLocal.assignee = assignee;
+        
+        // Atualizar diária local se houver guias
+        if (!evLocal.valorDiariaColab) evLocal.valorDiariaColab = {};
+        if (!evLocal.pagoColab) evLocal.pagoColab = {};
+
+        assignee.forEach(a => {
+          if (evLocal.valorDiariaColab[a.id] === undefined) {
+            evLocal.valorDiariaColab[a.id] = valorDiariaNotion;
+          }
+        });
+      } else {
+        // Criar novo evento vindo do Notion
+        const valorDiariaColab = {};
+        const pagoColab = {};
+        assignee.forEach(a => {
+          valorDiariaColab[a.id] = valorDiariaNotion;
+          pagoColab[a.id] = false;
+        });
+
+        novosEventosLocais.push({
+          id,
+          titulo,
+          dataServico,
+          clienteId,
+          tipoServico,
+          cidade,
+          assignee,
+          valorDiariaColab,
+          pagoColab,
+          compradoHeian: true,
+          observacoes: p['Observações']?.rich_text?.map(t => t.plain_text).join('') || ''
+        });
+      }
+    });
+
+    // 5. Salvar de volta no Supabase
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: novosEventosLocais });
+    if (upsertErr) throw upsertErr;
+
+    res.json({ success: true, count: notionEvents.length });
+  } catch (error) {
+    console.error('Erro ao sincronizar do Notion para o calendário local:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
   try {
     const { roteiroNome } = req.body;
