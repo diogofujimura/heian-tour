@@ -2005,6 +2005,7 @@ html, body {
   border: 1px solid var(--border);
   padding: 24px;
   margin-top: 16px;
+  overflow-x: auto;
 }
 
 .calendar-top-bar {
@@ -2113,6 +2114,7 @@ html, body {
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
+  min-width: 840px;
 }
 
 .calendar-weekday-header {
@@ -2208,47 +2210,47 @@ html, body {
   filter: brightness(0.95);
 }
 
-/* Cores harmônicas para tipos de serviços do Notion */
+/* Cores harmônicas e sólidas para tipos de serviços do Notion (estilo Google Calendar) */
 .event-type-roteiro {
-  background: rgba(107, 31, 42, 0.06);
-  color: var(--crimson);
-  border-left-color: var(--crimson);
+  background: #fdf2f2;
+  color: #b91c1c;
+  border-left: 4px solid #ef4444;
 }
 
 .event-type-shinkansen {
-  background: rgba(196, 163, 90, 0.08);
-  color: #9c8248;
-  border-left-color: #c4a35a;
+  background: #fef9e7;
+  color: #a16207;
+  border-left: 4px solid #eab308;
 }
 
 .event-type-romancecar {
-  background: rgba(120, 120, 120, 0.06);
-  color: #555555;
-  border-left-color: #777777;
+  background: #f8fafc;
+  color: #475569;
+  border-left: 4px solid #64748b;
 }
 
 .event-type-trem {
-  background: rgba(0, 114, 206, 0.06);
-  color: #00569e;
-  border-left-color: #0072ce;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-left: 4px solid #3b82f6;
 }
 
 .event-type-onibus {
-  background: rgba(230, 80, 140, 0.06);
-  color: #b82563;
-  border-left-color: #e6508c;
+  background: #fdf2f8;
+  color: #be185d;
+  border-left: 4px solid #ec4899;
 }
 
 .event-type-experiencia {
-  background: rgba(135, 75, 45, 0.06);
-  color: #7a3e20;
-  border-left-color: #a3522b;
+  background: #faf5ff;
+  color: #6d28d9;
+  border-left: 4px solid #a855f7;
 }
 
 .event-type-transfer {
-  background: rgba(235, 120, 0, 0.06);
-  color: #a85200;
-  border-left-color: #eb7800;
+  background: #fff7ed;
+  color: #c2410c;
+  border-left: 4px solid #f97316;
 }
 
 /* Modal e Popover de Evento */
@@ -2342,6 +2344,7 @@ html, body {
 @media screen and (max-width: 768px) {
   .calendar-grid-container {
     grid-template-columns: 1fr;
+    min-width: 0;
   }
   .calendar-weekday-header {
     display: none;
