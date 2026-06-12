@@ -2,7 +2,7 @@ let chartEvolucaoVendas = null;
 let chartTopDestinos = null;
 let chartClienteFinanceiro = null;
 
-function renderDashboard() {
+async function renderDashboard() {
   if (!state || !state.orcamentosDB) return;
 
   // Popula o select de clientes para o Dashboard
@@ -79,6 +79,9 @@ function renderDashboard() {
 
   renderChartEvolucao(vendasPorMes);
   renderChartDestinos(cidadesCount);
+  
+  // Carrega e renderiza a agenda operacional (Ordens de Serviço do dia e da semana)
+  await carregarAgendaOperacional();
 }
 
 function calculateOrcamentoTotals(orc) {
@@ -403,4 +406,145 @@ function switchCliDashTab(event, tabId) {
     activeContent.classList.add('active');
     activeContent.style.display = 'block';
   }
+}
+
+async function carregarAgendaOperacional() {
+  const listHoje = document.getElementById('agendaHojeLista');
+  const listSemana = document.getElementById('agendaSemanaLista');
+  const dateHojeText = document.getElementById('agendaHojeData');
+  
+  if (!listHoje || !listSemana) return;
+
+  try {
+    const hoje = new Date();
+    const y = hoje.getFullYear();
+    const m = String(hoje.getMonth() + 1).padStart(2, '0');
+    const d = String(hoje.getDate()).padStart(2, '0');
+    const hojeStr = `${y}-${m}-${d}`;
+    
+    // Atualizar texto de Hoje
+    if (dateHojeText) {
+      dateHojeText.textContent = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    // Buscar eventos
+    const res = await fetch('/api/calendario/eventos');
+    if (!res.ok) throw new Error('Erro ao buscar eventos');
+    const eventos = await res.json();
+
+    // Data de 7 dias à frente
+    const limiteSemana = new Date(hoje);
+    limiteSemana.setDate(limiteSemana.getDate() + 7);
+    const yL = limiteSemana.getFullYear();
+    const mL = String(limiteSemana.getMonth() + 1).padStart(2, '0');
+    const dL = String(limiteSemana.getDate()).padStart(2, '0');
+    const limiteSemanaStr = `${yL}-${mL}-${dL}`;
+
+    // Filtrar eventos de Hoje
+    const eventosHoje = eventos.filter(ev => ev.dataServico === hojeStr).sort((a,b) => (a.horaEncontro || '').localeCompare(b.horaEncontro || ''));
+
+    // Filtrar eventos da Semana (excluindo hoje e limitando aos próximos 7 dias)
+    const eventosSemana = eventos.filter(ev => ev.dataServico > hojeStr && ev.dataServico <= limiteSemanaStr).sort((a,b) => {
+      const dataDiff = a.dataServico.localeCompare(b.dataServico);
+      if (dataDiff !== 0) return dataDiff;
+      return (a.horaEncontro || '').localeCompare(b.horaEncontro || '');
+    });
+
+    // Renderizar lista de Hoje
+    renderListaAgenda(eventosHoje, listHoje, true);
+
+    // Renderizar lista de Semana
+    renderListaAgenda(eventosSemana, listSemana, false);
+
+  } catch (err) {
+    console.error('Erro na agenda operacional:', err);
+    listHoje.innerHTML = `<p style="color:#e74c3c; font-size:12px;">Falha ao carregar a agenda.</p>`;
+    listSemana.innerHTML = `<p style="color:#e74c3c; font-size:12px;">Falha ao carregar a agenda.</p>`;
+  }
+}
+
+function renderListaAgenda(eventos, container, ehHoje) {
+  container.innerHTML = '';
+  if (eventos.length === 0) {
+    container.innerHTML = `<p style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Nenhum serviço agendado para este período.</p>`;
+    return;
+  }
+
+  eventos.forEach(ev => {
+    let tipoClass = 'event-type-transfer';
+    const tLower = ev.tipoServico.toLowerCase();
+    if (tLower.includes('roteiro') || tLower.includes('guia')) tipoClass = 'event-type-roteiro';
+    else if (tLower.includes('shinkansen')) tipoClass = 'event-type-shinkansen';
+    else if (tLower.includes('romancecar')) tipoClass = 'event-type-romancecar';
+    else if (tLower.includes('trem')) tipoClass = 'event-type-trem';
+    else if (tLower.includes('ônibus') || tLower.includes('onibus')) tipoClass = 'event-type-onibus';
+    else if (tLower.includes('experiência') || tLower.includes('experiencia')) tipoClass = 'event-type-experiencia';
+    else if (tLower.includes('transfer') || tLower.includes('carro')) tipoClass = 'event-type-transfer';
+
+    const dataFormatada = !ehHoje ? fmtDataBRAgenda(ev.dataServico) : '';
+    const dateBadge = dataFormatada ? `<span style="font-size:10px; background:rgba(0,0,0,0.06); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">📅 ${dataFormatada}</span>` : '';
+    
+    // Chips de colaboradores
+    const colabs = ev.assignee && ev.assignee.length > 0
+      ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+           ${ev.assignee.map(a => `<span style="font-size:10px; background:rgba(107,31,42,0.08); color:var(--crimson); padding:2px 6px; border-radius:12px; font-weight:600;">👤 ${a.name}</span>`).join('')}
+         </div>`
+      : `<span style="font-size:10px; color:var(--ink-lt); font-style:italic; display:block; margin-top:6px;">👤 Sem colaborador designado</span>`;
+
+    const hora = ev.horaEncontro ? `🕒 ${ev.horaEncontro}` : '';
+    const local = ev.localEncontro ? `📍 ${ev.localEncontro}` : '';
+    const details = [hora, local].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+    const card = document.createElement('div');
+    card.className = `calendar-event-item ${tipoClass}`;
+    Object.assign(card.style, {
+      padding: '12px 14px',
+      borderRadius: '6px',
+      borderLeft: '4px solid',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      marginBottom: '4px',
+      whiteSpace: 'normal',
+      overflow: 'visible',
+      textOverflow: 'clip'
+    });
+
+    card.onclick = () => {
+      if (typeof window.abrirCalendarioEventModal === 'function') {
+        // Altera a aba para calendário e abre o modal
+        const navItem = document.querySelector('.sidebar-nav a[data-page="calendario"]');
+        if (navItem) {
+          navItem.click();
+          setTimeout(() => {
+            window.abrirCalendarioEventModal(ev.id);
+          }, 300);
+        }
+      }
+    };
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
+        <span style="font-size:13px; font-weight:700; color:var(--ink); line-height:1.3;">${ev.titulo}</span>
+        ${dateBadge}
+      </div>
+      <div style="font-size:11px; color:var(--ink-lt); font-weight:500;">
+        Cliente: <strong style="color:var(--ink-mid)">${ev.clienteNome || 'Geral'}</strong>
+      </div>
+      ${details ? `<div style="font-size:11px; color:var(--ink-mid); font-style:italic; margin-top:2px;">${details}</div>` : ''}
+      ${colabs}
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function fmtDataBRAgenda(str) {
+  if(!str) return '—';
+  const parts = str.split('-');
+  if(parts.length !== 3) return str;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }

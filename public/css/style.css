@@ -2512,3 +2512,8 @@ html, body {
   color: var(--crimson) !important;
 }
 
+@media (max-width: 768px) {
+  .agenda-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
