@@ -1167,7 +1167,7 @@ function renderTableCliGuias(guias) {
   if (!tbody) return;
   tbody.innerHTML = '';
   if (!guias || guias.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#888;">Nenhuma diária de guia registrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#888;">Nenhuma diária de guia registrada.</td></tr>';
     return;
   }
   guias.forEach(g => {
@@ -1187,9 +1187,40 @@ function renderTableCliGuias(guias) {
         <input type="checkbox" id="${idCheckbox}" ${isChecked} onchange="iniciarPagamentoGuia('${g.id}', '${g.colabId}', '${g.colabName}', '${g.titulo}', ${g.valor})" style="width:16px; height:16px; cursor:pointer;">
         ${labelStatus}
       </td>
+      <td style="text-align:center;">
+        <button onclick="deletarItemCalendarioTabela('${g.id}', '${g.titulo.replace(/'/g, "\\'")}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:14px; padding: 4px;" title="Excluir Item do Calendário">🗑️</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+async function deletarItemCalendarioTabela(id, titulo) {
+  if (!confirm(`Deseja realmente excluir o dia/serviço "${titulo}" do calendário local e arquivar o card correspondente no Notion? Esta ação não pode ser desfeita.`)) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/calendario/eventos/${id}`, {
+      method: 'DELETE'
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao deletar dia do calendário');
+    }
+    
+    alert('Dia excluído com sucesso do calendário e arquivado no Notion!');
+    
+    // Recarrega os dados do dashboard do cliente selecionado
+    const clientId = document.getElementById('dashClienteSelect').value;
+    if (clientId) {
+      await selecionarClienteDashboard(clientId);
+    }
+  } catch (err) {
+    console.error(err);
+    alert(`Erro ao excluir dia: ${err.message}`);
+  }
 }
 
 function iniciarPagamentoGuia(eventoId, colaboradorId, colaboradorNome, servicoNome, valorDiaria) {
