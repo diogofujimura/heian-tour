@@ -1724,6 +1724,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const clienteId = document.getElementById('modalRegistrarSaidaCliente').value;
       const colaboradorId = document.getElementById('modalRegistrarSaidaColab').value;
       const eventoId = document.getElementById('modalRegistrarSaidaEventoId').value;
+      const taskId = document.getElementById('modalRegistrarSaidaTask')?.value || undefined;
 
       if (!descricao) {
         alert('Por favor, insira a descrição da saída.');
@@ -1755,7 +1756,8 @@ document.addEventListener('DOMContentLoaded', () => {
             valorOriginal,
             moeda,
             contaId,
-            data
+            data,
+            taskId: taskId || undefined
           })
         });
 
@@ -1860,6 +1862,43 @@ window.abrirModalRegistrarSaidaGeral = async function() {
   const selectColab = document.getElementById('modalRegistrarSaidaColab');
   selectColab.innerHTML = '<option value="">Nenhum colaborador</option>';
 
+  // Setup select de Tasks
+  const selectTask = document.getElementById('modalRegistrarSaidaTask');
+  if (selectTask) {
+    selectTask.innerHTML = '<option value="">Selecione um cliente primeiro...</option>';
+  }
+
+  // Função para carregar as tasks do cliente
+  window.carregarTasksDoClienteNoModal = async function(clientId) {
+    if (!selectTask) return;
+    if (!clientId) {
+      selectTask.innerHTML = '<option value="">Selecione um cliente primeiro...</option>';
+      return;
+    }
+    selectTask.innerHTML = '<option value="">Carregando serviços...</option>';
+    try {
+      const res = await fetch(`/api/notion/tasks-cliente/${clientId}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      selectTask.innerHTML = '<option value="">Nenhum (Despesa avulsa)</option>';
+      if (data.success && data.tasks && data.tasks.length > 0) {
+        data.tasks.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.nome;
+          selectTask.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      selectTask.innerHTML = '<option value="">Erro ao carregar serviços</option>';
+    }
+  };
+
+  selectCli.onchange = function() {
+    window.carregarTasksDoClienteNoModal(this.value);
+  };
+
   try {
     // 1. Contas
     const res = await fetch('/api/notion/contas');
@@ -1889,6 +1928,15 @@ window.abrirModalRegistrarSaidaGeral = async function() {
       opt.textContent = col.name;
       selectColab.appendChild(opt);
     });
+
+    // Se já houver um cliente selecionado na tela do dashboard
+    const currentClientId = document.getElementById('dashClienteSelect')?.value || '';
+    if (currentClientId && currentClientId !== 'Geral') {
+      selectCli.value = currentClientId;
+      window.carregarTasksDoClienteNoModal(currentClientId);
+    } else {
+      window.carregarTasksDoClienteNoModal('');
+    }
 
   } catch (err) {
     console.error(err);

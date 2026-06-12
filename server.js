@@ -2674,7 +2674,7 @@ app.post('/api/notion/registrar-entrada', async (req, res) => {
 
 app.post('/api/notion/registrar-saida', async (req, res) => {
   try {
-    const { clienteId, colaboradorId, eventoId, descricao, valorOriginal, moeda, contaId, data } = req.body;
+    const { clienteId, colaboradorId, eventoId, descricao, valorOriginal, moeda, contaId, data, taskId } = req.body;
 
     if (!descricao || !valorOriginal || !moeda || !contaId) {
       return res.status(400).json({ error: 'Parâmetros incompletos.' });
@@ -2722,6 +2722,10 @@ app.post('/api/notion/registrar-saida', async (req, res) => {
 
     if (colaboradorId) {
       properties['🫂 Colaboradores'] = { relation: [{ id: colaboradorId }] };
+    }
+
+    if (taskId) {
+      properties['Saída financeira'] = { relation: [{ id: taskId }] };
     }
 
     const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
@@ -2779,6 +2783,55 @@ app.post('/api/notion/registrar-saida', async (req, res) => {
     res.json({ success: true, notionPageId: notionData.id, valorJPY, localUpdated });
   } catch (error) {
     console.error('Erro ao registrar saída de pagamento:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/notion/tasks-cliente/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+
+    if (!NOTION_TOKEN || !NOTION_TASKS_DB_ID) {
+      return res.status(400).json({ error: 'Configuração do Notion incompleta.' });
+    }
+
+    console.log(`[Tasks Cliente] Buscando tasks do cliente ${clientId} no Notion...`);
+    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: {
+          property: '🎀 Clientes',
+          relation: {
+            contains: clientId
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Erro ao consultar tasks: ${errText}`);
+    }
+
+    const data = await response.json();
+    const tasks = (data.results || []).map(item => {
+      const p = item.properties;
+      const nome = p['Task name']?.title?.map(t => t.plain_text).join('') || 'Sem nome';
+      return {
+        id: item.id,
+        nome
+      };
+    });
+
+    res.json({ success: true, tasks });
+  } catch (error) {
+    console.error('Erro ao buscar tasks do cliente:', error);
     res.status(500).json({ error: error.message });
   }
 });
