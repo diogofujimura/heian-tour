@@ -701,6 +701,61 @@ async function carregarSaldosContas() {
     const contas = await res.json();
     window.notionSaldosContas = contas;
 
+    // 1. Calcular KPIs Consolidados
+    let totalCaixaJPY = 0;
+    let totalEntradasMesJPY = 0;
+    let totalSaidasMesJPY = 0;
+
+    const rateBRL = window.appConfig?.cambio_jpy_brl || 0.031670;
+    const rateUSD = window.appConfig?.cambio_jpy_usd || 0.006280;
+
+    const hoje = new Date();
+    const anoMesAtual = hoje.toISOString().substring(0, 7); // "yyyy-mm"
+
+    contas.forEach(c => {
+      // Caixa consolidado
+      totalCaixaJPY += c.saldoJPY;
+      if (c.saldoBRL !== 0) {
+        totalCaixaJPY += Math.round(c.saldoBRL / rateBRL);
+      }
+      if (c.saldoUSD !== 0) {
+        totalCaixaJPY += Math.round(c.saldoUSD / rateUSD);
+      }
+
+      // Entradas e saídas do mês
+      (c.movimentacoes || []).forEach(m => {
+        if (m.data && m.data.startsWith(anoMesAtual)) {
+          const valorMovJPY = m.valorJPY || 0;
+          if (m.tipo === 'entrada') {
+            totalEntradasMesJPY += valorMovJPY;
+          } else {
+            totalSaidasMesJPY += valorMovJPY;
+          }
+        }
+      });
+    });
+
+    // Renderizar KPIs
+    const kpiCaixa = document.getElementById('kpiCaixaConsolidado');
+    const kpiEntradas = document.getElementById('kpiEntradasMes');
+    const kpiSaidas = document.getElementById('kpiSaidasMes');
+    const subkpiEntradas = document.getElementById('subkpiEntradasMes');
+    const subkpiSaidas = document.getElementById('subkpiSaidasMes');
+
+    const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const mesAtualNome = mesesNomes[hoje.getMonth()];
+
+    if (kpiCaixa) kpiCaixa.textContent = `¥ ${totalCaixaJPY.toLocaleString('en-US')}`;
+    if (kpiEntradas) kpiEntradas.textContent = `¥ ${totalEntradasMesJPY.toLocaleString('en-US')}`;
+    if (kpiSaidas) kpiSaidas.textContent = `¥ ${totalSaidasMesJPY.toLocaleString('en-US')}`;
+    if (subkpiEntradas) subkpiEntradas.textContent = `${mesAtualNome} / ${hoje.getFullYear()}`;
+    if (subkpiSaidas) subkpiSaidas.textContent = `${mesAtualNome} / ${hoje.getFullYear()}`;
+
+    // Atualizar diárias pendentes na coluna da direita
+    if (typeof carregarDiariasPendentesContabilidade === 'function') {
+      carregarDiariasPendentesContabilidade();
+    }
+
     container.innerHTML = '';
     if (contas.length === 0) {
       container.innerHTML = '<div style="color:var(--ink-lt); font-size:12px; font-style:italic;">Nenhuma conta encontrada.</div>';
@@ -1259,6 +1314,18 @@ async function abrirModalRegistrarEntrada() {
   const clienteNome = selectCli.options[selectCli.selectedIndex].text;
   document.getElementById('modalRegistrarEntradaDesc').value = `Pagamento - ${clienteNome}`;
   
+  // Preencher e desabilitar o select de cliente do modal
+  const selectCliModal = document.getElementById('modalRegistrarEntradaCliente');
+  if (selectCliModal) {
+    selectCliModal.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = clienteId;
+    opt.textContent = clienteNome;
+    selectCliModal.appendChild(opt);
+    selectCliModal.value = clienteId;
+    selectCliModal.disabled = true;
+  }
+  
   // Resetar outros campos
   document.getElementById('modalRegistrarEntradaMoeda').value = 'JPY';
   document.getElementById('modalRegistrarEntradaValor').value = '';
@@ -1333,15 +1400,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmar = document.getElementById('btnConfirmarRegistrarEntrada');
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', async () => {
-      const clienteId = document.getElementById('dashClienteSelect').value;
+      let clienteId = document.getElementById('modalRegistrarEntradaCliente').value;
+      if (!clienteId) {
+        clienteId = document.getElementById('dashClienteSelect').value;
+      }
+      
       const descricao = document.getElementById('modalRegistrarEntradaDesc').value.trim();
       const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
       const valorOriginal = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
       const contaId = document.getElementById('modalRegistrarEntradaConta').value;
       const data = document.getElementById('modalRegistrarEntradaData').value;
 
-      if (!clienteId) {
-        alert('Nenhum cliente selecionado.');
+      if (!clienteId || clienteId === 'Geral') {
+        alert('Selecione o cliente vinculado ao pagamento.');
         return;
       }
       if (!descricao) {
@@ -1403,4 +1474,340 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Configurar o listener para confirmar a saída/pagamento
+  const btnConfirmarSaida = document.getElementById('btnConfirmarRegistrarSaida');
+  if (btnConfirmarSaida) {
+    btnConfirmarSaida.addEventListener('click', async () => {
+      const descricao = document.getElementById('modalRegistrarSaidaDesc').value.trim();
+      const moeda = document.getElementById('modalRegistrarSaidaMoeda').value;
+      const valorOriginal = Number(document.getElementById('modalRegistrarSaidaValor').value) || 0;
+      const contaId = document.getElementById('modalRegistrarSaidaConta').value;
+      const data = document.getElementById('modalRegistrarSaidaData').value;
+      const clienteId = document.getElementById('modalRegistrarSaidaCliente').value;
+      const colaboradorId = document.getElementById('modalRegistrarSaidaColab').value;
+      const eventoId = document.getElementById('modalRegistrarSaidaEventoId').value;
+
+      if (!descricao) {
+        alert('Por favor, insira a descrição da saída.');
+        return;
+      }
+      if (valorOriginal <= 0) {
+        alert('Por favor, insira um valor válido maior que zero.');
+        return;
+      }
+      if (!contaId) {
+        alert('Por favor, selecione a conta debitada.');
+        return;
+      }
+
+      const oldText = btnConfirmarSaida.textContent;
+      btnConfirmarSaida.disabled = true;
+      btnConfirmarSaida.textContent = 'Gravando...';
+      document.body.style.cursor = 'wait';
+
+      try {
+        const response = await fetch('/api/notion/registrar-saida', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clienteId: clienteId || undefined,
+            colaboradorId: colaboradorId || undefined,
+            eventoId: eventoId || undefined,
+            descricao,
+            valorOriginal,
+            moeda,
+            contaId,
+            data
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Erro na requisição');
+        }
+
+        alert('Lançamento de Saída registrado com sucesso no Notion!');
+        fecharModalRegistrarSaida();
+
+        // Recarregar os dados do cliente e os saldos/extrato de contabilidade
+        const clientId = document.getElementById('dashClienteSelect').value;
+        if (clientId && clientId !== 'Geral' && typeof selecionarClienteDashboard === 'function') {
+          await selecionarClienteDashboard(clientId);
+        }
+        if (typeof carregarSaldosContas === 'function') {
+          await carregarSaldosContas();
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao registrar saída: ' + err.message);
+      } finally {
+        document.body.style.cursor = 'default';
+        btnConfirmarSaida.disabled = false;
+        btnConfirmarSaida.textContent = oldText;
+      }
+    });
+  }
 });
+
+// --- Novas Funções de Ações Financeiras Rápidas da Contabilidade ---
+
+window.abrirModalRegistrarEntradaGeral = async function() {
+  // Resetar campos
+  document.getElementById('modalRegistrarEntradaDesc').value = 'Recebimento de Cliente';
+  document.getElementById('modalRegistrarEntradaMoeda').value = 'JPY';
+  document.getElementById('modalRegistrarEntradaValor').value = '';
+  document.getElementById('modalRegistrarEntradaPreviewJPYWrapper').style.display = 'none';
+  document.getElementById('modalRegistrarEntradaData').value = new Date().toISOString().substring(0, 10);
+
+  // Popular select de clientes com a lista global notionClients
+  const selectCliModal = document.getElementById('modalRegistrarEntradaCliente');
+  if (selectCliModal) {
+    selectCliModal.innerHTML = '<option value="">Selecione o cliente...</option>';
+    const clientes = window.notionClients || [];
+    clientes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectCliModal.appendChild(opt);
+    });
+    selectCliModal.disabled = false;
+  }
+
+  // Carregar contas
+  const selectConta = document.getElementById('modalRegistrarEntradaConta');
+  selectConta.innerHTML = '<option value="">Selecione a conta receptora...</option>';
+
+  try {
+    const res = await fetch('/api/notion/contas');
+    if (!res.ok) throw new Error('Erro ao buscar contas');
+    const contas = await res.json();
+    
+    contas.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectConta.appendChild(opt);
+    });
+  } catch (err) {
+    console.error(err);
+    selectConta.innerHTML = '<option value="">Erro ao carregar contas</option>';
+  }
+
+  // Exibir modal
+  const modal = document.getElementById('modalRegistrarEntrada');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+};
+
+window.abrirModalRegistrarSaidaGeral = async function() {
+  // Resetar campos
+  document.getElementById('modalRegistrarSaidaDesc').value = '';
+  document.getElementById('modalRegistrarSaidaMoeda').value = 'JPY';
+  document.getElementById('modalRegistrarSaidaValor').value = '';
+  document.getElementById('modalRegistrarSaidaPreviewJPYWrapper').style.display = 'none';
+  document.getElementById('modalRegistrarSaidaData').value = new Date().toISOString().substring(0, 10);
+  document.getElementById('modalRegistrarSaidaEventoId').value = '';
+
+  // Carregar contas
+  const selectConta = document.getElementById('modalRegistrarSaidaConta');
+  selectConta.innerHTML = '<option value="">Selecione a conta debitada...</option>';
+
+  // Carregar clientes
+  const selectCli = document.getElementById('modalRegistrarSaidaCliente');
+  selectCli.innerHTML = '<option value="">Nenhum cliente (Despesa geral)</option>';
+
+  // Carregar colaboradores
+  const selectColab = document.getElementById('modalRegistrarSaidaColab');
+  selectColab.innerHTML = '<option value="">Nenhum colaborador</option>';
+
+  try {
+    // 1. Contas
+    const res = await fetch('/api/notion/contas');
+    if (!res.ok) throw new Error('Erro ao buscar contas');
+    const contas = await res.json();
+    contas.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectConta.appendChild(opt);
+    });
+
+    // 2. Clientes
+    const clis = window.notionClients || [];
+    clis.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectCli.appendChild(opt);
+    });
+
+    // 3. Colaboradores
+    const colabs = window.calColaboradores || [];
+    colabs.forEach(col => {
+      const opt = document.createElement('option');
+      opt.value = col.id;
+      opt.textContent = col.name;
+      selectColab.appendChild(opt);
+    });
+
+  } catch (err) {
+    console.error(err);
+    selectConta.innerHTML = '<option value="">Erro ao carregar contas</option>';
+  }
+
+  // Exibir modal
+  const modal = document.getElementById('modalRegistrarSaida');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+};
+
+window.fecharModalRegistrarSaida = function() {
+  const modal = document.getElementById('modalRegistrarSaida');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+  modal.classList.remove('active');
+};
+
+window.onMoedaChangeRegistrarSaida = function() {
+  onValorChangeRegistrarSaida();
+};
+
+window.onValorChangeRegistrarSaida = function() {
+  const moeda = document.getElementById('modalRegistrarSaidaMoeda').value;
+  const valorInput = Number(document.getElementById('modalRegistrarSaidaValor').value) || 0;
+  const wrapper = document.getElementById('modalRegistrarSaidaPreviewJPYWrapper');
+  const previewText = document.getElementById('modalRegistrarSaidaPreviewJPY');
+
+  if (moeda === 'JPY' || valorInput === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  const rateBRL = window.appConfig?.cambio_jpy_brl || 0.031670;
+  const rateUSD = window.appConfig?.cambio_jpy_usd || 0.006280;
+
+  let estimadoJPY = 0;
+  if (moeda === 'BRL') {
+    estimadoJPY = Math.round(valorInput / rateBRL);
+  } else if (moeda === 'USD') {
+    estimadoJPY = Math.round(valorInput / rateUSD);
+  }
+
+  previewText.textContent = `¥ ${estimadoJPY.toLocaleString('en-US')}`;
+  wrapper.style.display = 'flex';
+};
+
+// --- Funções de Gestão de Diárias Pendentes na Contabilidade ---
+
+window.carregarDiariasPendentesContabilidade = async function() {
+  const container = document.getElementById('diarasPendentesContabilidadeContainer');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/financeiro/diarias-pendentes');
+    if (!res.ok) throw new Error('Erro ao buscar diárias pendentes');
+    const diarias = await res.json();
+
+    container.innerHTML = '';
+    if (diarias.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding: 24px; color: var(--ink-lt); font-style: italic; font-size: 13px;">
+          🎉 Todas as diárias de guias foram pagas!
+        </div>`;
+      return;
+    }
+
+    diarias.forEach(d => {
+      const item = document.createElement('div');
+      Object.assign(item.style, {
+        background: 'rgba(0,0,0,0.01)',
+        border: '1px solid var(--border)',
+        borderRadius: '8px',
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        fontSize: '12px'
+      });
+
+      // Formatação de data
+      let dateStr = d.dataServico || '';
+      if (dateStr) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+          <strong style="color:var(--crimson); font-size:13px;">👤 ${d.colaboradorNome}</strong>
+          <span style="font-size:10px; background:rgba(0,0,0,0.05); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">📅 ${dateStr}</span>
+        </div>
+        <div style="font-weight:600; color:var(--ink-dk); margin-top:2px;">${d.eventoTitulo}</div>
+        <div style="font-size:11px; color:var(--ink-lt);">
+          Cliente: <span style="color:var(--ink-mid); font-weight:500;">${d.clienteNome}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
+          <span style="font-family:var(--ff-num); font-size:13px; font-weight:700; color:var(--gold-dk);">¥ ${d.valorDiaria.toLocaleString('en-US')}</span>
+          <button class="btn-primary" onclick="iniciarPagamentoGuiaDeContabilidade('${d.eventoId}', '${d.colaboradorId}', '${d.colaboradorNome}', '${d.eventoTitulo}', ${d.valorDiaria}, '${d.clienteId}')" style="margin:0; padding:6px 12px; font-size:11px; border-radius:6px; font-weight:600; background-color:#e74c3c; border-color:#c0392b;">
+            💸 Pagar Guia
+          </button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+
+  } catch (err) {
+    console.error('Erro ao carregar diárias pendentes:', err);
+    container.innerHTML = '<div style="color:#e74c3c; font-size:12px;">Erro ao carregar diárias pendentes.</div>';
+  }
+};
+
+window.iniciarPagamentoGuiaDeContabilidade = async function(eventoId, colaboradorId, colaboradorNome, servicoNome, valorDiaria, clienteId) {
+  currentPagamentoGuia = {
+    eventoId,
+    colaboradorId,
+    clienteId: clienteId || 'cliente_desconhecido',
+    valorDiaria
+  };
+
+  document.getElementById('modalPagarGuiaServicoInfo').textContent = `Serviço: ${servicoNome}`;
+  document.getElementById('modalPagarGuiaColab').value = colaboradorNome;
+  
+  const selectMoeda = document.getElementById('modalPagarGuiaMoeda');
+  selectMoeda.value = 'JPY';
+  
+  const inputValor = document.getElementById('modalPagarGuiaValor');
+  inputValor.value = valorDiaria;
+  
+  document.getElementById('modalPagarGuiaPreviewJPYWrapper').style.display = 'none';
+  
+  // Carregar contas
+  const selectConta = document.getElementById('modalPagarGuiaConta');
+  selectConta.innerHTML = '<option value="">Carregando contas...</option>';
+  
+  try {
+    const res = await fetch('/api/notion/contas');
+    if (!res.ok) throw new Error('Erro ao buscar contas');
+    const contas = await res.json();
+    
+    selectConta.innerHTML = '<option value="">Selecione a conta pagadora...</option>';
+    contas.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectConta.appendChild(opt);
+    });
+  } catch (err) {
+    console.error(err);
+    selectConta.innerHTML = '<option value="">Erro ao carregar contas</option>';
+  }
+
+  const modal = document.getElementById('modalPagarGuia');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+};

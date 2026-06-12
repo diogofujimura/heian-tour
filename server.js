@@ -2342,6 +2342,162 @@ app.post('/api/notion/registrar-entrada', async (req, res) => {
   }
 });
 
+app.post('/api/notion/registrar-saida', async (req, res) => {
+  try {
+    const { clienteId, colaboradorId, eventoId, descricao, valorOriginal, moeda, contaId, data } = req.body;
+
+    if (!descricao || !valorOriginal || !moeda || !contaId) {
+      return res.status(400).json({ error: 'Parâmetros incompletos.' });
+    }
+
+    // 1. Obter taxas de câmbio
+    const appConfig = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    const valorOriginalNum = Number(valorOriginal) || 0;
+    let valorJPY = valorOriginalNum;
+    let descCambioText = '';
+
+    if (moeda === 'BRL') {
+      valorJPY = Math.round(valorOriginalNum / rateBRL);
+      descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${rateBRL.toFixed(6)}]`;
+    } else if (moeda === 'USD') {
+      valorJPY = Math.round(valorOriginalNum / rateUSD);
+      descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${rateUSD.toFixed(6)}]`;
+    } else {
+      descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
+    }
+
+    const descricaoCompleta = `${descricao}${descCambioText}`;
+
+    // 2. Criar página na base de Saídas do Notion
+    const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+    
+    const properties = {
+      'Descrição': { title: [{ text: { content: descricaoCompleta } }] },
+      'Valor (JPY)': { number: valorJPY },
+      'Data de pagamento': { date: { start: data || new Date().toISOString().substring(0, 10) } },
+      'Moeda Original': { select: { name: moeda } },
+      '💳 Contas': { relation: [{ id: contaId }] }
+    };
+
+    if (clienteId && clienteId !== 'cliente_desconhecido' && clienteId !== 'Sem Nome' && clienteId !== 'Geral') {
+      properties['🎀 Clientes'] = { relation: [{ id: clienteId }] };
+    }
+
+    if (colaboradorId) {
+      properties['🫂 Colaboradores'] = { relation: [{ id: colaboradorId }] };
+    }
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_SAIDAS_DB_ID },
+        properties
+      })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao criar saída no Notion: ${errTxt}`);
+    }
+
+    const notionData = await notionRes.json();
+
+    // 3. Se houver eventoId e colaboradorId, marcar o colaborador como pago no Supabase
+    let localUpdated = false;
+    if (eventoId && colaboradorId) {
+      const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+      if (calCfg && calCfg.data) {
+        let eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+        eventos = eventos.map(ev => {
+          if (ev.id === eventoId) {
+            localUpdated = true;
+            const newEv = { ...ev };
+            if (!newEv.pagoColab) newEv.pagoColab = {};
+            newEv.pagoColab[colaboradorId] = true;
+
+            // Se for o colaborador principal, atualizar o campo global "pago"
+            const primaryId = newEv.assignee && newEv.assignee.length > 0 ? newEv.assignee[0].id : null;
+            if (colaboradorId === primaryId || !primaryId) {
+              newEv.pago = true;
+            }
+            return newEv;
+          }
+          return ev;
+        });
+
+        if (localUpdated) {
+          const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: eventos });
+          if (upsertErr) {
+            console.error('Erro ao atualizar status de pagamento do evento no Supabase:', upsertErr);
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, notionPageId: notionData.id, valorJPY, localUpdated });
+  } catch (error) {
+    console.error('Erro ao registrar saída de pagamento:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/financeiro/diarias-pendentes', async (req, res) => {
+  try {
+    const { data: calCfg } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    const diariasPendentes = [];
+
+    eventos.forEach(ev => {
+      if (ev.assignee && ev.assignee.length > 0) {
+        ev.assignee.forEach(a => {
+          const colabId = a.id;
+          const colabName = a.name;
+          const valor = ev.valorDiariaColab ? ev.valorDiariaColab[colabId] : 0;
+          const pago = ev.pagoColab ? ev.pagoColab[colabId] : false;
+
+          // Se tiver valor de diária configurado e não estiver pago
+          if (valor > 0 && !pago) {
+            diariasPendentes.push({
+              eventoId: ev.id,
+              eventoTitulo: ev.titulo,
+              dataServico: ev.dataServico,
+              clienteId: ev.clienteId,
+              clienteNome: ev.clienteNome || 'Geral',
+              colaboradorId: colabId,
+              colaboradorNome: colabName,
+              valorDiaria: valor
+            });
+          }
+        });
+      }
+    });
+
+    // Ordenar por data (mais antigas primeiro, para priorizar o pagamento)
+    diariasPendentes.sort((a, b) => (a.dataServico || '').localeCompare(b.dataServico || ''));
+
+    res.json(diariasPendentes);
+  } catch (error) {
+    console.error('Erro ao buscar diárias pendentes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/dashboard/saldos-contas', async (req, res) => {
   try {
     const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';

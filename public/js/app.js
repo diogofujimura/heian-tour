@@ -4447,6 +4447,7 @@ window.renderCalendario = async function() {
       const res = await fetch('/api/notion/colaboradores');
       if (res.ok) {
         calColaboradores = await res.json();
+        window.calColaboradores = calColaboradores;
         // Popular dropdown no modal de edição
         const select = document.getElementById('calEventModalAssigneeSelect');
         if (select) {
