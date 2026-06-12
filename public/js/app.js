@@ -5874,7 +5874,29 @@ window.abrirModalCriarEventoCalendario = function() {
     }
   }
 
-  // 3. Resetar inputs e campos
+  // 3. Carregar contas do Notion no select contábil
+  const selectConta = document.getElementById('modalCriarEvConta');
+  if (selectConta) {
+    selectConta.innerHTML = '<option value="">Carregando contas...</option>';
+    fetch('/api/notion/contas')
+      .then(res => res.json())
+      .then(contas => {
+        selectConta.innerHTML = '';
+        if (contas && contas.length > 0) {
+          contas.forEach(c => {
+            selectConta.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+          });
+        } else {
+          selectConta.innerHTML = '<option value="">Nenhuma conta encontrada</option>';
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao carregar contas:', err);
+        selectConta.innerHTML = '<option value="">Erro ao obter contas</option>';
+      });
+  }
+
+  // 4. Resetar inputs e campos
   document.getElementById('modalCriarEvTitulo').value = '';
   document.getElementById('modalCriarEvCidade').value = '';
   document.getElementById('modalCriarEvValorDiaria').value = '';
@@ -5893,7 +5915,13 @@ window.abrirModalCriarEventoCalendario = function() {
   document.getElementById('modalCriarEvPassageiros').value = '2';
   document.getElementById('modalCriarEvObservacoes').value = '';
 
-  // Data padrão = hoje
+  // Resetar contabilidade
+  document.getElementById('modalCriarEvCustoValor').value = '';
+  const checkLancar = document.getElementById('modalCriarEvLancarFinanceiro');
+  if (checkLancar) checkLancar.checked = false;
+  window.onLancarFinanceiroChange();
+
+  // Resetar data
   const inputData = document.getElementById('modalCriarEvData');
   if (inputData) {
     const hoje = new Date();
@@ -5930,6 +5958,35 @@ window.onTipoServicoCriarChange = function() {
   document.getElementById('modalCriarEvPainelTour').style.display = tipo === 'Roteiro' ? 'block' : 'none';
   document.getElementById('modalCriarEvPainelTransporte').style.display = tipo === 'Transporte' ? 'block' : 'none';
   document.getElementById('modalCriarEvPainelExperiencia').style.display = tipo === 'Experiência' ? 'block' : 'none';
+  
+  // Atualizar contabilidade
+  window.atualizarVisibilidadeSecaoContabil();
+};
+
+window.atualizarVisibilidadeSecaoContabil = function() {
+  const tipo = document.getElementById('modalCriarEvTipoServico').value;
+  let emitidoHeian = false;
+
+  if (tipo === 'Transporte') {
+    const radio = document.querySelector('input[name="modalCriarEvTranspCompradoHeian"]:checked');
+    emitidoHeian = radio ? radio.value === 'sim' : true;
+  } else if (tipo === 'Experiência') {
+    const radio = document.querySelector('input[name="modalCriarEvExpCompradoHeian"]:checked');
+    emitidoHeian = radio ? radio.value === 'sim' : true;
+  }
+
+  const secao = document.getElementById('modalCriarEvSecaoContabil');
+  if (secao) {
+    secao.style.display = (emitidoHeian && (tipo === 'Transporte' || tipo === 'Experiência')) ? 'block' : 'none';
+  }
+};
+
+window.onLancarFinanceiroChange = function() {
+  const checkbox = document.getElementById('modalCriarEvLancarFinanceiro');
+  const contaWrapper = document.getElementById('modalCriarEvContaWrapper');
+  if (contaWrapper) {
+    contaWrapper.style.display = checkbox && checkbox.checked ? 'block' : 'none';
+  }
 };
 
 window.salvarNovoEventoCalendario = function() {
@@ -5950,6 +6007,25 @@ window.salvarNovoEventoCalendario = function() {
   let richData = {};
   let valorDiaria = null;
   let assigneeIds = [];
+  
+  // Coletar dados contábeis se visíveis
+  let lancarFinanceiro = false;
+  let contaFinanceiraId = null;
+  let valorCusto = null;
+
+  const secaoContabil = document.getElementById('modalCriarEvSecaoContabil');
+  if (secaoContabil && secaoContabil.style.display !== 'none') {
+    valorCusto = Number(document.getElementById('modalCriarEvCustoValor').value) || null;
+    const checkLancar = document.getElementById('modalCriarEvLancarFinanceiro');
+    lancarFinanceiro = checkLancar ? checkLancar.checked : false;
+    if (lancarFinanceiro) {
+      contaFinanceiraId = document.getElementById('modalCriarEvConta').value;
+      if (!contaFinanceiraId || !valorCusto) {
+        alert('Por favor, defina o Valor do Custo e selecione a Conta de Origem para lançar na contabilidade.');
+        return;
+      }
+    }
+  }
 
   if (tipoServico === 'Roteiro') {
     valorDiaria = Number(document.getElementById('modalCriarEvValorDiaria').value) || null;
@@ -6003,7 +6079,10 @@ window.salvarNovoEventoCalendario = function() {
       valorDiaria,
       assigneeIds,
       observacoes,
-      richData
+      richData,
+      lancarFinanceiro,
+      contaFinanceiraId,
+      valorCusto
     })
   })
   .then(res => res.json())

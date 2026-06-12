@@ -1567,11 +1567,11 @@ window.addEventListener('unhandledrejection', function(e) {
             <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Emissão de Bilhete</label>
             <div style="display:flex; gap:14px; align-items:center; height:40px;">
               <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="sim" checked style="width:15px; height:15px; cursor:pointer;">
+                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="sim" checked onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
                 <span>Emitido por Heian</span>
               </label>
               <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="nao" style="width:15px; height:15px; cursor:pointer;">
+                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="nao" onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
                 <span>Emitido pelo Cliente</span>
               </label>
             </div>
@@ -1603,11 +1603,11 @@ window.addEventListener('unhandledrejection', function(e) {
             <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Emissão de Voucher</label>
             <div style="display:flex; gap:14px; align-items:center; height:40px;">
               <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvExpCompradoHeian" value="sim" checked style="width:15px; height:15px; cursor:pointer;">
+                <input type="radio" name="modalCriarEvExpCompradoHeian" value="sim" checked onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
                 <span>Emitido por Heian</span>
               </label>
               <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvExpCompradoHeian" value="nao" style="width:15px; height:15px; cursor:pointer;">
+                <input type="radio" name="modalCriarEvExpCompradoHeian" value="nao" onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
                 <span>Emitido pelo Cliente</span>
               </label>
             </div>
@@ -1627,6 +1627,29 @@ window.addEventListener('unhandledrejection', function(e) {
         </div>
       </div>
 
+      <!-- Seção Contábil Dinâmica (Apenas para Transporte/Experiência emitidos pela Heian) -->
+      <div id="modalCriarEvSecaoContabil" style="display:none; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px;">
+        <h4 style="font-size:13px; color:var(--crimson); font-weight:700; margin:0 0 12px 0;">Contabilidade & Despesa (Emissão Heian)</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor do Custo (¥ JPY)</label>
+            <input type="number" id="modalCriarEvCustoValor" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 15000">
+          </div>
+          <div style="display:flex; align-items:center; height:60px; padding-top:10px;">
+            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+              <input type="checkbox" id="modalCriarEvLancarFinanceiro" onchange="onLancarFinanceiroChange()" style="width:16px; height:16px; cursor:pointer;">
+              <span>Lançar como Saída no Notion</span>
+            </label>
+          </div>
+        </div>
+        <div id="modalCriarEvContaWrapper" style="display:none;">
+          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Conta de Origem (Débito)</label>
+          <select id="modalCriarEvConta" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
+            <option value="">Carregando contas...</option>
+          </select>
+        </div>
+      </div>
+
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
@@ -1637,7 +1660,7 @@ window.addEventListener('unhandledrejection', function(e) {
 </div>
 
 <script src="js/roteiros.js?v=20260612_v2"></script>
-<script src="js/app.js?v=20260612_v3"></script>
+<script src="js/app.js?v=20260612_v4"></script>
 <script src="js/sync_roteiro_cotacao.js?v=20260612_v2"></script>
 <script src="js/sync_clientes.js?v=20260612_v2"></script>
 

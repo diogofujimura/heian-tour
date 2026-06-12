@@ -1374,7 +1374,10 @@ app.get('/api/calendario/eventos', async (req, res) => {
 
 app.post('/api/calendario/eventos', async (req, res) => {
   try {
-    const { titulo, tipoServico, dataServico, clienteId, cidade, valorDiaria, assigneeIds, observacoes, richData } = req.body;
+    const {
+      titulo, tipoServico, dataServico, clienteId, cidade, valorDiaria, assigneeIds, observacoes, richData,
+      lancarFinanceiro, contaFinanceiraId, valorCusto
+    } = req.body;
 
     if (!titulo || !tipoServico || !dataServico) {
       return res.status(400).json({ error: 'Campos obrigatórios: titulo, tipoServico e dataServico.' });
@@ -1533,6 +1536,63 @@ app.post('/api/calendario/eventos', async (req, res) => {
       }
     }
 
+    // 4.1 Lançar despesa na contabilidade (Notion Saídas) se solicitado
+    let notionSaidaPageId = null;
+    if (lancarFinanceiro && valorCusto && Number(valorCusto) > 0 && NOTION_TOKEN) {
+      const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+      if (NOTION_SAIDAS_DB_ID) {
+        try {
+          const descricaoSaida = `Custo Emissão: ${titulo}`;
+          const propertiesSaida = {
+            'Descrição': { title: [{ text: { content: descricaoSaida } }] },
+            'Valor (JPY)': { number: Number(valorCusto) },
+            'Data de pagamento': { date: { start: dataServico || new Date().toISOString().substring(0, 10) } }
+          };
+
+          if (contaFinanceiraId) {
+            propertiesSaida['💳 Contas'] = { relation: [{ id: contaFinanceiraId }] };
+          }
+
+          if (clienteId && clienteId !== 'cliente_desconhecido' && clienteId !== 'Sem Nome' && clienteId !== 'Geral') {
+            propertiesSaida['🎀 Clientes'] = { relation: [{ id: clienteId }] };
+          }
+
+          if (tipoServico === 'Transporte') {
+            propertiesSaida['Categoria'] = { select: { name: 'Transporte' } };
+            propertiesSaida['Tipo de serviço'] = { select: { name: 'transporte' } };
+          } else if (tipoServico === 'Experiência') {
+            propertiesSaida['Categoria'] = { select: { name: 'Experiência' } };
+            propertiesSaida['Tipo de serviço'] = { select: { name: 'experiência' } };
+          }
+
+          console.log(`[Nova Saída] Criando página de custo no Notion para ${tipoServico}...`);
+          const responseSaida = await fetch('https://api.notion.com/v1/pages', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${NOTION_TOKEN}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              parent: { database_id: NOTION_SAIDAS_DB_ID },
+              properties: propertiesSaida
+            })
+          });
+
+          if (responseSaida.ok) {
+            const pageDataSaida = await responseSaida.json();
+            notionSaidaPageId = pageDataSaida.id;
+            console.log(`[Nova Saída] Criada com sucesso no Notion: ${notionSaidaPageId}`);
+          } else {
+            const errText = await responseSaida.text();
+            console.error('Erro na API do Notion ao cadastrar saída:', errText);
+          }
+        } catch (e) {
+          console.error('Erro na chamada da API do Notion ao cadastrar saída:', e);
+        }
+      }
+    }
+
     // 5. Salvar na base local do Supabase
     const newEventId = notionPageId || `cal_manual_${Date.now()}`;
     const valorDiariaColab = {};
@@ -1575,14 +1635,22 @@ app.post('/api/calendario/eventos', async (req, res) => {
         tempo: richData?.tempo || '',
         adultos: richData?.adultos ? Number(richData.adultos) : null,
         compradoHeian: richData?.compradoHeian !== false,
-        observacoes: observacoes || ''
+        observacoes: observacoes || '',
+        custoValor: valorCusto ? Number(valorCusto) : null,
+        lancarFinanceiro: !!lancarFinanceiro,
+        contaFinanceiraId: contaFinanceiraId || null,
+        notionSaidaPageId: notionSaidaPageId || null
       } : null,
       expInfo: tipoServico === 'Experiência' ? {
         nomeExp: richData?.nomeExp || titulo,
         horaPartida: richData?.horaPartida || '',
         adultos: richData?.adultos ? Number(richData.adultos) : null,
         compradoHeian: richData?.compradoHeian !== false,
-        observacoes: observacoes || ''
+        observacoes: observacoes || '',
+        custoValor: valorCusto ? Number(valorCusto) : null,
+        lancarFinanceiro: !!lancarFinanceiro,
+        contaFinanceiraId: contaFinanceiraId || null,
+        notionSaidaPageId: notionSaidaPageId || null
       } : null
     };
 
