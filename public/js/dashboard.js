@@ -143,8 +143,11 @@ function renderKanban() {
         card.className = 'kanban-card';
         card.draggable = true;
 
-        // Ao arrastar
+        let isDraggingAction = false;
+
+        // Ao arrastar (Desktop)
         card.addEventListener('dragstart', (e) => {
+          isDraggingAction = true;
           card.classList.add('dragging');
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setData('text/plain', JSON.stringify({ id: c.id, fromStatus: c.status || 'Início/call de dúvidas' }));
@@ -152,10 +155,104 @@ function renderKanban() {
 
         card.addEventListener('dragend', () => {
           card.classList.remove('dragging');
+          setTimeout(() => { isDraggingAction = false; }, 100);
         });
 
-        // Click simples para navegar
-        card.addEventListener('click', () => {
+        // Eventos de Toque (Mobile / Tablet Drag & Drop)
+        let startX, startY;
+        let ghostEl = null;
+        let activeContainer = null;
+
+        card.addEventListener('touchstart', (e) => {
+          isDraggingAction = false;
+          const touch = e.touches[0];
+          startX = touch.clientX;
+          startY = touch.clientY;
+          card.dataset.id = c.id;
+          card.dataset.fromStatus = c.status || 'Início/call de dúvidas';
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+          const touch = e.touches[0];
+          const diffX = touch.clientX - startX;
+          const diffY = touch.clientY - startY;
+
+          // Considera arrasto se mover mais de 10px
+          if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+            isDraggingAction = true;
+          }
+
+          if (!isDraggingAction) return;
+
+          // Previne scroll de tela ao arrastar o card
+          if (e.cancelable) e.preventDefault();
+
+          if (!ghostEl) {
+            ghostEl = card.cloneNode(true);
+            ghostEl.style.position = 'fixed';
+            ghostEl.style.width = card.offsetWidth + 'px';
+            ghostEl.style.height = card.offsetHeight + 'px';
+            ghostEl.style.opacity = '0.85';
+            ghostEl.style.pointerEvents = 'none';
+            ghostEl.style.zIndex = '9999';
+            ghostEl.style.transform = 'scale(1.03)';
+            ghostEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.18)';
+            document.body.appendChild(ghostEl);
+            card.classList.add('dragging');
+          }
+
+          ghostEl.style.left = (touch.clientX - card.offsetWidth / 2) + 'px';
+          ghostEl.style.top = (touch.clientY - card.offsetHeight / 2) + 'px';
+
+          const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (elementUnder) {
+            const container = elementUnder.closest('.kanban-cards-container');
+            if (container) {
+              if (activeContainer && activeContainer !== container) {
+                activeContainer.classList.remove('drag-over');
+              }
+              activeContainer = container;
+              activeContainer.classList.add('drag-over');
+            } else {
+              if (activeContainer) {
+                activeContainer.classList.remove('drag-over');
+                activeContainer = null;
+              }
+            }
+          }
+        }, { passive: false });
+
+        card.addEventListener('touchend', async (e) => {
+          if (ghostEl) {
+            ghostEl.remove();
+            ghostEl = null;
+          }
+          card.classList.remove('dragging');
+
+          if (activeContainer) {
+            activeContainer.classList.remove('drag-over');
+            const targetStatus = activeContainer.dataset.status;
+            const fromStatus = card.dataset.fromStatus;
+            const id = card.dataset.id;
+            activeContainer = null;
+
+            if (targetStatus && fromStatus && targetStatus.toLowerCase() !== fromStatus.toLowerCase()) {
+              await atualizarStatusClienteKanban(id, targetStatus);
+            }
+          }
+
+          if (isDraggingAction) {
+            setTimeout(() => { isDraggingAction = false; }, 100);
+          }
+        });
+
+        // Click simples para navegar (só se não for arrasto)
+        card.addEventListener('click', (e) => {
+          if (isDraggingAction) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
           const navItem = document.querySelector('.sidebar-nav a[data-page="clientes"]');
           if (navItem) {
             navItem.click();
