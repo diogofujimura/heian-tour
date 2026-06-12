@@ -3774,6 +3774,9 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
         <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\\D/g,'')}', '_blank');" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
           💬 WhatsApp
         </button>
+        <button class="btn-secondary" onclick="if(typeof copiarLinkClienteFromId === 'function') copiarLinkClienteFromId('${cliente.id}');" title="Copiar Link da Área do Cliente">
+          🔗 Link do Cliente
+        </button>
         <button class="btn-secondary" onclick="navToPage('dashboard'); if(typeof selecionarClienteDashboard === 'function') selecionarClienteDashboard('${cliente.id}'); closeClienteModal();" title="Painel Financeiro do Cliente">
           💼 Financeiro
         </button>

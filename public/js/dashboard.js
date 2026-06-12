@@ -490,10 +490,19 @@ async function atualizarStatusClienteKanban(id, novoStatus) {
 
 
 async function selecionarClienteDashboard(clientId) {
+  const select = document.getElementById('dashClienteSelect');
+  if (select) {
+    select.value = clientId || '';
+  }
   const containerGeral = document.getElementById('dashboardGeralContainer');
   const containerCliente = document.getElementById('dashboardClienteContainer');
   const titleEl = document.getElementById('dashboardPageTitle');
   if (!containerGeral || !containerCliente) return;
+
+  const btnLink = document.getElementById('btnFichaLinkCliente');
+  if (btnLink) {
+    btnLink.style.display = clientId ? 'inline-flex' : 'none';
+  }
 
   if (!clientId) {
     if (titleEl) titleEl.textContent = 'Painel Geral & Operacional';
@@ -1538,6 +1547,37 @@ function onFiltroMesVisaoGeralConta() {
 }
 
 // --- Modal de Registrar Entrada / Recebimento de Cliente ---
+
+window.copiarLinkClienteFromId = function(clientId) {
+  if (!clientId || clientId === 'Geral') {
+    alert('Selecione um cliente no menu superior para copiar o link correspondente.');
+    return;
+  }
+
+  const link = `${window.location.origin}/cliente.html?id=${clientId}`;
+  
+  navigator.clipboard.writeText(link).then(() => {
+    alert('Link da Área do Cliente copiado com sucesso para a área de transferência!');
+  }).catch(err => {
+    console.error('Erro ao copiar link:', err);
+    const tempInput = document.createElement('input');
+    tempInput.value = link;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    try {
+      document.execCommand('copy');
+      alert('Link da Área do Cliente copiado com sucesso!');
+    } catch (e) {
+      alert('Não foi possível copiar o link automaticamente. Copie manualmente: ' + link);
+    }
+    document.body.removeChild(tempInput);
+  });
+};
+
+window.copiarLinkCliente = function() {
+  const clientId = document.getElementById('dashClienteSelect').value;
+  window.copiarLinkClienteFromId(clientId);
+};
 
 async function abrirModalRegistrarEntrada() {
   const clienteId = document.getElementById('dashClienteSelect').value;

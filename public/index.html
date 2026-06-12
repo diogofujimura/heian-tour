@@ -547,12 +547,15 @@ window.addEventListener('unhandledrejection', function(e) {
               <span style="color:var(--ink-lt); font-weight:500;">Status do Pagamento:</span>
               <span id="cliFichaStatusPgto" style="font-weight:600; background:rgba(0,0,0,0.04); padding:2px 8px; border-radius:4px;">-</span>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px; width: 100%;">
-              <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 0; padding: 10px; flex: 1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #2ecc71; border-color: #27ae60; font-size:12px;">
+            <div style="display: flex; gap: 8px; margin-top: 10px; width: 100%; flex-wrap: wrap;">
+              <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #2ecc71; border-color: #27ae60; font-size:12px;">
                 💵 Recebimento
               </button>
-              <button class="btn-primary" id="btnFichaRegistrarSaida" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 10px; flex: 1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #e74c3c; border-color: #c0392b; font-size:12px;">
+              <button class="btn-primary" id="btnFichaRegistrarSaida" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #e74c3c; border-color: #c0392b; font-size:12px;">
                 🔴 Registrar Saída
+              </button>
+              <button class="btn-secondary" id="btnFichaLinkCliente" onclick="copiarLinkCliente()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size:12px; background-color: #34495e; border-color: #2c3e50; color: white;" title="Copiar Link da Área do Cliente">
+                🔗 Link do Cliente
               </button>
             </div>
           </div>
@@ -1672,10 +1675,10 @@ window.addEventListener('unhandledrejection', function(e) {
 </div>
 
 <script src="js/roteiros.js?v=20260612_v2"></script>
-<script src="js/app.js?v=20260612_v4"></script>
+<script src="js/app.js?v=20260613_v1"></script>
 <script src="js/sync_roteiro_cotacao.js?v=20260612_v2"></script>
 <script src="js/sync_clientes.js?v=20260612_v2"></script>
 
 <!-- Scripts Adicionais -->
-<script src="js/dashboard.js?v=20260612_v2"></script>
+<script src="js/dashboard.js?v=20260613_v1"></script>
 </body></html>

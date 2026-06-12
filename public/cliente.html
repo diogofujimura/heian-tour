@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Viagem — Heian Tour</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #8e1c1c; /* Crimson Heian */
+      --primary-light: #fef2f2;
+      --accent: #d97706; /* Ouro/Gold */
+      --accent-light: #fef3c7;
+      --bg: #faf8f6;
+      --card-bg: #ffffff;
+      --border: #e8e3dd;
+      --ink: #1e1b18;
+      --ink-mid: #6b6259;
+      --ink-light: #a3968a;
+      
+      --ff-display: 'Outfit', sans-serif;
+      --ff-body: 'Inter', sans-serif;
+      --ff-num: 'Outfit', sans-serif;
+      --shadow: 0 4px 20px rgba(142, 28, 28, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+      --shadow-hover: 0 10px 30px rgba(142, 28, 28, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--ff-body);
+      line-height: 1.6;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 60px;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header & Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #4c0d0d 0%, #8e1c1c 100%);
+      color: white;
+      padding: 40px 0 60px 0;
+      position: relative;
+      overflow: hidden;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+      box-shadow: 0 10px 30px rgba(142, 28, 28, 0.15);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hero-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-text {
+      font-family: var(--ff-display);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    .hero-content {
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .hero-subtitle {
+      font-family: var(--ff-display);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .hero-title {
+      font-family: var(--ff-display);
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      color: white;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .meta-badge {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Financial Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: -30px;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .summary-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: var(--transition);
+    }
+
+    .summary-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .summary-label {
+      font-size: 12px;
+      color: var(--ink-mid);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-value {
+      font-family: var(--ff-num);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .summary-card.accent-paid .summary-value {
+      color: #2e7d32;
+    }
+
+    .summary-card.accent-pending .summary-value {
+      color: #c62828;
+    }
+
+    /* Navigation Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      gap: 24px;
+      margin-bottom: 30px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      font-family: var(--ff-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink-mid);
+      padding: 12px 4px;
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background-color: var(--primary);
+      border-radius: 3px;
+    }
+
+    /* Tab Content Layouts */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Itinerary / Timeline styling */
+    .timeline {
+      position: relative;
+      padding-left: 32px;
+      margin-top: 10px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 10px;
+      bottom: 10px;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 30px;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -32px;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 3px solid var(--primary);
+      z-index: 2;
+      box-shadow: 0 0 0 4px var(--bg);
+    }
+
+    .timeline-item.no-tour .timeline-dot {
+      border-color: var(--ink-light);
+    }
+
+    .timeline-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .timeline-card:hover {
+      box-shadow: var(--shadow-hover);
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .timeline-day-title {
+      font-family: var(--ff-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .timeline-day-tag {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .timeline-day-tag.guide-no {
+      background: var(--bg);
+      color: var(--ink-mid);
+      border: 1px solid var(--border);
+    }
+
+    .timeline-desc {
+      color: var(--ink-mid);
+      font-size: 13.5px;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+    }
+
+    .timeline-events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .event-pill {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 3px solid var(--primary);
+    }
+
+    .event-pill.transport {
+      border-left-color: #3b82f6;
+    }
+
+    .event-pill.experience {
+      border-left-color: var(--accent);
+    }
+
+    /* Cards generic */
+    .info-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .info-card-title {
+      font-family: var(--ff-display);
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    /* Tables */
+    .data-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .data-table th {
+      color: var(--ink-mid);
+      font-family: var(--ff-display);
+      font-weight: 600;
+      padding: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Flight & Stays Details */
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      color: var(--ink-light);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 13.5px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    /* Loading and empty states */
+    .loader-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 0;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .error-container {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 40px;
+      text-align: center;
+      max-width: 500px;
+      margin: 80px auto;
+      box-shadow: var(--shadow);
+    }
+
+    .error-title {
+      font-family: var(--ff-display);
+      color: var(--primary);
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .badge-paid {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 11px;
+      display: inline-block;
+    }
+
+    .badge-pending {
+      background: #ffebee;
+      color: #c62828;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 11px;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING CONTAINER -->
+  <div id="loader" class="loader-container">
+    <div class="spinner"></div>
+    <div style="color: var(--ink-mid); font-family: var(--ff-display); font-weight: 500;">Carregando os detalhes da sua viagem...</div>
+  </div>
+
+  <!-- ERROR CONTAINER -->
+  <div id="error-screen" class="error-container" style="display: none;">
+    <div style="font-size: 40px; margin-bottom: 10px;">🌸</div>
+    <h3 class="error-title">Resumo de Viagem indisponível</h3>
+    <p style="color: var(--ink-mid); font-size: 13.5px; margin-bottom: 20px;">Não encontramos os dados ou o link de acesso está incompleto. Entre em contato com a equipe da Heian Tour.</p>
+  </div>
+
+  <!-- CONTENT SCREEN -->
+  <div id="app-content" style="display: none;">
+    <header class="hero">
+      <div class="container">
+        <div class="hero-header">
+          <div class="logo-text">⛩️ Heian<span>Tour</span></div>
+          <div class="meta-badge" style="background: rgba(255,255,255,0.15)">Área do Viajante</div>
+        </div>
+        
+        <div class="hero-content">
+          <h4 class="hero-subtitle" id="hero-subtitle">Bem-vindo(a)</h4>
+          <h1 class="hero-title" id="client-name">Família</h1>
+          <div class="hero-meta">
+            <span class="meta-badge" id="meta-dates">📅 -- / -- a -- / --</span>
+            <span class="meta-badge" id="meta-passengers">👥 - Viajantes</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Summary Box -->
+      <section class="summary-grid">
+        <div class="summary-card">
+          <span class="summary-label">Valor do Pacote</span>
+          <span class="summary-value" id="financial-total">¥ --</span>
+        </div>
+        <div class="summary-card accent-paid">
+          <span class="summary-label">Total Pago</span>
+          <span class="summary-value" id="financial-paid">¥ --</span>
+        </div>
+        <div class="summary-card accent-pending">
+          <span class="summary-label">Saldo a Pagar</span>
+          <span class="summary-value" id="financial-balance">¥ --</span>
+        </div>
+      </section>
+
+      <!-- Tabs Header -->
+      <nav class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-itinerary')">📅 Roteiro de Viagem</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-services')">💼 Serviços Inclusos</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-info')">✈️ Voos & Hotéis</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-payments')">💳 Extrato Financeiro</button>
+      </nav>
+
+      <!-- TAB 1: ITINERARY -->
+      <section id="tab-itinerary" class="tab-content active">
+        <div class="timeline" id="itinerary-timeline">
+          <!-- Timeline items rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 2: SERVICES -->
+      <section id="tab-services" class="tab-content">
+        <!-- Tours -->
+        <div class="info-card" id="card-tours-wrapper" style="display:none;">
+          <h3 class="info-card-title">🌸 Passeios e Tours Guiados</h3>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="table-tours">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cidade</th>
+                  <th>Duração</th>
+                  <th style="text-align: right">Valor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ingressos / Experiências -->
+        <div class="info-card" id="card-experiences-wrapper" style="display:none;">
+          <h3 class="info-card-title">🎟️ Ingressos & Experiências</h3>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="table-experiences">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Atração</th>
+                  <th>Quantidade</th>
+                  <th>Comprado por</th>
+                  <th style="text-align: right">Valor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Transportes -->
+        <div class="info-card" id="card-transports-wrapper" style="display:none;">
+          <h3 class="info-card-title">🚄 Bilhetes & Transportes</h3>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="table-transports">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Serviço</th>
+                  <th>Origem ➔ Destino</th>
+                  <th>Comprado por</th>
+                  <th style="text-align: right">Valor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Itens Adicionais -->
+        <div class="info-card" id="card-addons-wrapper" style="display:none;">
+          <h3 class="info-card-title">➕ Outros Serviços / Consultoria</h3>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="table-addons">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th style="text-align: right">Valor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: FLIGHTS & HOTELS -->
+      <section id="tab-info" class="tab-content">
+        <div class="details-grid">
+          <!-- Voos -->
+          <div class="info-card">
+            <h3 class="info-card-title">✈️ Voos de Chegada & Partida</h3>
+            <div class="detail-item">
+              <span class="detail-label">Voo de Chegada</span>
+              <span class="detail-value" id="info-flight-arrival">-</span>
+            </div>
+            <div class="detail-item" style="margin-top: 15px;">
+              <span class="detail-label">Voo de Partida</span>
+              <span class="detail-value" id="info-flight-departure">-</span>
+            </div>
+          </div>
+
+          <!-- Stays -->
+          <div class="info-card">
+            <h3 class="info-card-title">🏨 Hospedagens (Hotéis)</h3>
+            <div class="detail-item" id="info-stays-list">
+              <!-- Rendered stays -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Travelers list -->
+        <div class="info-card">
+          <h3 class="info-card-title">👤 Passageiros / Viajantes</h3>
+          <div class="detail-item">
+            <span class="detail-label">Nome dos Passageiros</span>
+            <span class="detail-value" id="info-travelers" style="white-space: pre-line;">-</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: PAYMENTS -->
+      <section id="tab-payments" class="tab-content">
+        <div class="info-card">
+          <h3 class="info-card-title">💳 Histórico de Pagamentos Confirmados</h3>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="table-payments">
+              <thead>
+                <tr>
+                  <th>Data do Recebimento</th>
+                  <th>Descrição do Lançamento</th>
+                  <th style="text-align: right">Moeda Original</th>
+                  <th style="text-align: right">Equivalente em Ienes (¥)</th>
+                  <th style="text-align: center">Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Render and tab control script -->
+  <script>
+    // Tab controller
+    function switchTab(evt, tabId) {
+      const tabContents = document.getElementsByClassName("tab-content");
+      for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove("active");
+      }
+      
+      const tabBtns = document.getElementsByClassName("tab-btn");
+      for (let i = 0; i < tabBtns.length; i++) {
+        tabBtns[i].classList.remove("active");
+      }
+      
+      document.getElementById(tabId).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
+
+    // Date formatting helper
+    function fmtDateBR(dateStr) {
+      if (!dateStr) return '-';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dateStr;
+    }
+
+    // Main fetch routine
+    async function loadClientArea() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientId = urlParams.get('id');
+      
+      if (!clientId) {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/public/client-data/${clientId}`);
+        if (!response.ok) {
+          throw new Error('Falha ao obter dados do cliente');
+        }
+        
+        const resData = await response.json();
+        if (!resData.success) {
+          throw new Error(resData.error || 'Erro desconhecido');
+        }
+
+        renderClientData(resData);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'block';
+      }
+    }
+
+    function renderClientData(data) {
+      const { clientInfo, payments, quote, itinerary, clientLocalInfo } = data;
+      
+      // Hide loader and show content
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('app-content').style.display = 'block';
+
+      // 1. Header info
+      document.getElementById('client-name').textContent = clientInfo.nome ? `Família ${clientInfo.nome.replace('Família ', '')}` : 'Minha Viagem';
+      
+      const dataInicioFormatted = clientInfo.dataInicio ? fmtDateBR(clientInfo.dataInicio) : '';
+      const dataFimFormatted = clientInfo.dataFim ? fmtDateBR(clientInfo.dataFim) : '';
+      document.getElementById('meta-dates').textContent = dataInicioFormatted && dataFimFormatted 
+        ? `📅 ${dataInicioFormatted} a ${dataFimFormatted}` 
+        : '📅 Período da Viagem';
+        
+      const passageiros = (clientInfo.adultos || 0) + (clientInfo.criancas || 0);
+      let paxText = `${passageiros} Passageiro${passageiros > 1 ? 's' : ''}`;
+      if (clientInfo.adultos > 0 || clientInfo.criancas > 0) {
+        paxText = `👥 ${clientInfo.adultos} Adulto${clientInfo.adultos > 1 ? 's' : ''}`;
+        if (clientInfo.criancas > 0) {
+          paxText += ` e ${clientInfo.criancas} Criança${clientInfo.criancas > 1 ? 's' : ''}`;
+        }
+      }
+      document.getElementById('meta-passengers').textContent = paxText;
+
+      // 2. Financial Info
+      document.getElementById('financial-total').textContent = `¥ ${(clientInfo.valorTotal || 0).toLocaleString('en-US')}`;
+      document.getElementById('financial-paid').textContent = `¥ ${(clientInfo.totalPago || 0).toLocaleString('en-US')}`;
+      document.getElementById('financial-balance').textContent = `¥ ${(clientInfo.saldoPagar || 0).toLocaleString('en-US')}`;
+
+      // 3. Tab 1: Itinerary
+      const timeline = document.getElementById('itinerary-timeline');
+      timeline.innerHTML = '';
+      
+      if (itinerary && itinerary.dias && itinerary.dias.length > 0) {
+        const dataInicioStr = clientInfo.dataInicio;
+        const somarDias = (dataStr, dias) => {
+          if (!dataStr) return '';
+          const [year, month, day] = dataStr.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          date.setDate(date.getDate() + dias);
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return `${d}/${m}/${y}`;
+        };
+
+        itinerary.dias.forEach((dia, index) => {
+          const item = document.createElement('div');
+          item.className = `timeline-item ${dia.tourGuiado ? '' : 'no-tour'}`;
+          
+          const diaData = somarDias(dataInicioStr, index);
+          const headerTag = dia.tourGuiado 
+            ? '<span class="timeline-day-tag">🚗 Tour Guiado</span>' 
+            : '<span class="timeline-day-tag guide-no">自由 Roteiro Livre</span>';
+            
+          let elementsHTML = '';
+          let temConteudo = false;
+          
+          if (dia.elementos && dia.elementos.length > 0) {
+            dia.elementos.forEach(el => {
+              if (el.tipo === 'texto' && el.conteudo) {
+                temConteudo = true;
+                elementsHTML += `
+                  <div class="timeline-text-block" style="margin-bottom: 14px; color: var(--ink-mid); font-size: 13.5px; white-space: pre-line;">
+                    ${el.conteudo}
+                  </div>
+                `;
+              } else if (el.tipo === 'info') {
+                temConteudo = true;
+                elementsHTML += `
+                  <div class="event-pill info" style="border-left-color: var(--accent); background: var(--accent-light); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <span>🕒 <strong>Encontro com Guia:</strong> ${el.horarioEncontro || '--:--'} no ${el.localEncontro || 'Local combinado'} ${el.duracaoTour ? `(Duração: ${el.duracaoTour})` : ''}</span>
+                  </div>
+                `;
+              } else if (el.tipo === 'sequencia') {
+                temConteudo = true;
+                const atrHtml = el.atracoesDoDia && el.atracoesDoDia.length > 0 
+                  ? `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                      ${el.atracoesDoDia.map(atr => `<span class="meta-badge" style="font-size: 11px; background: rgba(142, 28, 28, 0.08); color: var(--primary); font-weight: 500; border: none; padding: 3px 8px;">${atr}</span>`).join('')}
+                     </div>`
+                  : '';
+                elementsHTML += `
+                  <div class="event-pill sequence" style="border-left-color: var(--primary); background: var(--primary-light); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 10px; width: 100%;">
+                    <div>📍 <strong>${el.nomeDaRota || 'Atividades recomendadas'}</strong></div>
+                    ${atrHtml}
+                  </div>
+                `;
+              } else if (el.tipo === 'experiencia') {
+                temConteudo = true;
+                elementsHTML += `
+                  <div class="event-pill experience" style="border-left-color: var(--accent); display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;">
+                    <span>🎟️ <strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--accent);">(${el.horaPartida})</span>` : ''}</span>
+                    <span class="meta-badge" style="font-size: 11px; border: none; background: ${el.compradoHeian !== false ? '#e2f0d9; color: #385723' : '#f2f2f2; color: #7f7f7f'}">
+                      ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
+                    </span>
+                  </div>
+                `;
+              } else if (el.tipo === 'transporte') {
+                temConteudo = true;
+                const rotaStr = el.cidadeOrigem || el.cidadeDestino 
+                  ? `<div style="font-size: 11.5px; color: var(--ink-mid); margin-top: 2px;"><strong>${el.cidadeOrigem || ''}</strong> ${el.cidadeDestino ? `➔ <strong>${el.cidadeDestino}</strong>` : ''}${el.linha ? ` | Linha: ${el.linha}` : ''}${el.categoria ? ` (${el.categoria})` : ''}${el.tempo ? ` | ⏱ ${el.tempo}` : ''}</div>`
+                  : '';
+                elementsHTML += `
+                  <div class="event-pill transport" style="border-left-color: #3b82f6; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 10px; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                      <span>🚄 <strong>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb;">(${el.horario})</span>` : ''}</span>
+                      <span class="meta-badge" style="font-size: 11px; border: none; background: ${el.compradoHeian !== false ? '#e2f0d9; color: #385723' : '#f2f2f2; color: #7f7f7f'}">
+                        ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
+                      </span>
+                    </div>
+                    ${rotaStr}
+                  </div>
+                `;
+              }
+            });
+          }
+          
+          if (!temConteudo) {
+            elementsHTML = `<p class="timeline-desc">Aproveite o dia para explorar a cidade livremente.</p>`;
+          }
+          
+          let dayCityText = dia.cidade ? ` • ${dia.cidade}` : '';
+
+          item.innerHTML = `
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div class="timeline-header">
+                <h3 class="timeline-day-title">Dia ${index + 1} (${diaData})${dayCityText}</h3>
+                ${headerTag}
+              </div>
+              <div class="timeline-events-list">
+                ${elementsHTML}
+              </div>
+            </div>
+          `;
+          timeline.appendChild(item);
+        });
+      } else {
+        timeline.innerHTML = '<div class="info-card" style="text-align:center; padding: 40px; color: var(--ink-mid);">Roteiro dia a dia ainda não sincronizado.</div>';
+      }
+
+      // 4. Tab 2: Services
+      // Funções locais de cálculo de totais sanitizados
+      function calcTotalExperiencia(e) {
+        let base = (e.preco || 0) * (e.pessoas || 1);
+        if (e.taxaAtiva) {
+          base += e.taxaTipo === 'grupo' ? (e.taxaValor || 3000) : (e.taxaValor || 3000) * (e.pessoas || 1);
+        }
+        return base;
+      }
+
+      function calcTotalTransporte(t) {
+        const adultos = t.adultos || 0;
+        const criancas = t.criancas || 0;
+        const descLow = t.descricao ? t.descricao.toLowerCase() : '';
+        const isTransfer = descLow.includes('transfer') || descLow.includes('privado') || descLow.includes('privativo');
+        
+        let base = 0;
+        if (isTransfer) {
+          base = t.preco || 0;
+        } else {
+          base = (t.preco || 0) * adultos + (t.precoInfantil || 0) * criancas;
+        }
+        
+        let totalPessoas = adultos + criancas;
+        if (t.taxaAtiva) {
+          base += t.taxaTipo === 'grupo' ? (t.taxaValor || 3000) : (t.taxaValor || 3000) * (totalPessoas > 0 ? totalPessoas : 1);
+        }
+        return base;
+      }
+
+      let hasAnyService = false;
+      if (quote) {
+        const toursBody = document.querySelector('#table-tours tbody');
+        toursBody.innerHTML = '';
+        if (quote.tours && quote.tours.length > 0) {
+          hasAnyService = true;
+          document.getElementById('card-tours-wrapper').style.display = 'block';
+          quote.tours.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${t.data ? fmtDateBR(t.data) : '-'}</td>
+              <td><strong>Tour Guiado: ${t.descricao || t.cidade || 'Passeio'}</strong>${t.pontos ? `<br><span style="font-size:11.5px; color:var(--ink-mid);">${t.pontos}</span>` : ''}</td>
+              <td>${t.duracao || '-'}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(t.valor || 0).toLocaleString('en-US')}</td>
+            `;
+            toursBody.appendChild(tr);
+          });
+        }
+        
+        const expBody = document.querySelector('#table-experiences tbody');
+        expBody.innerHTML = '';
+        if (quote.experiencias && quote.experiencias.length > 0) {
+          hasAnyService = true;
+          document.getElementById('card-experiences-wrapper').style.display = 'block';
+          quote.experiencias.forEach(e => {
+            const tr = document.createElement('tr');
+            const total = calcTotalExperiencia(e);
+            const compradoPor = e.compradoHeian !== false ? 'Heian Tour (Incluído)' : 'Pelo Cliente';
+            const extraDesc = e.descricao || e.observacao ? `<br><span style="font-size:11px; color:var(--ink-mid);">${e.descricao || e.observacao}</span>` : '';
+            tr.innerHTML = `
+              <td>${e.data ? fmtDateBR(e.data) : '-'}</td>
+              <td><strong>${e.nome || 'Experiência'}</strong>${extraDesc}</td>
+              <td>${e.pessoas || 1}x</td>
+              <td>${compradoPor}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('en-US')}</td>
+            `;
+            expBody.appendChild(tr);
+          });
+        }
+
+        const transBody = document.querySelector('#table-transports tbody');
+        transBody.innerHTML = '';
+        if (quote.transportes && quote.transportes.length > 0) {
+          hasAnyService = true;
+          document.getElementById('card-transports-wrapper').style.display = 'block';
+          quote.transportes.forEach(t => {
+            const tr = document.createElement('tr');
+            const total = calcTotalTransporte(t);
+            const compradoPor = t.compradoHeian !== false ? 'Heian Tour (Incluído)' : 'Pelo Cliente';
+            const extraDesc = t.observacao ? `<br><span style="font-size:11px; color:var(--ink-mid);">${t.observacao}</span>` : '';
+            const paxDetails = ` (Adultos: ${t.adultos || 0}${t.criancas ? `, Crianças: ${t.criancas}` : ''})`;
+            
+            tr.innerHTML = `
+              <td>${t.data ? fmtDateBR(t.data) : '-'}</td>
+              <td><strong>Transporte / Deslocamento</strong>${paxDetails}</td>
+              <td><strong>${t.descricao || 'Transporte'}</strong>${extraDesc}</td>
+              <td>${compradoPor}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('en-US')}</td>
+            `;
+            transBody.appendChild(tr);
+          });
+        }
+
+        const addonBody = document.querySelector('#table-addons tbody');
+        addonBody.innerHTML = '';
+        let hasAddons = false;
+        
+        if (quote.consultoria && quote.consultoria.ativa) {
+          hasAddons = true;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+             <td>-</td>
+             <td><strong>Taxa de Consultoria e Planejamento</strong><br><span style="color:var(--ink-light); font-size:11px;">${quote.consultoria.descricao || 'Planejamento de Roteiro Personalizado'}</span></td>
+             <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(quote.consultoria.valor || 0).toLocaleString('en-US')}</td>
+          `;
+          addonBody.appendChild(tr);
+        }
+
+        if (quote.itensAdicionais && quote.itensAdicionais.length > 0) {
+          hasAddons = true;
+          quote.itensAdicionais.forEach(i => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${i.data ? fmtDateBR(i.data) : '-'}</td>
+              <td><strong>${i.nome || 'Serviço Adicional'}</strong></td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(i.valor || 0).toLocaleString('en-US')}</td>
+            `;
+            addonBody.appendChild(tr);
+          });
+        }
+
+        if (hasAddons) {
+          hasAnyService = true;
+          document.getElementById('card-addons-wrapper').style.display = 'block';
+        }
+      }
+
+      if (!hasAnyService) {
+        document.getElementById('tab-services').innerHTML = '<div class="info-card" style="text-align:center; padding: 40px; color: var(--ink-mid);">Nenhum detalhe de serviço/cotação encontrado.</div>';
+      }
+
+      // 5. Tab 3: Flights & Hotels
+      const arrivalVal = clientInfo.vooChegada || clientLocalInfo.vooChegada || '-';
+      const departureVal = clientInfo.vooPartida || clientLocalInfo.vooPartida || '-';
+      document.getElementById('info-flight-arrival').textContent = arrivalVal;
+      document.getElementById('info-flight-departure').textContent = departureVal;
+
+      const staysList = document.getElementById('info-stays-list');
+      staysList.innerHTML = '';
+      
+      const stays = clientLocalInfo.estadias || [];
+      if (stays.length > 0) {
+        stays.forEach(s => {
+          const item = document.createElement('div');
+          item.style.marginBottom = '12px';
+          
+          const dtStart = s.dataInicio ? fmtDateBR(s.dataInicio) : '';
+          const dtEnd = s.dataFim ? fmtDateBR(s.dataFim) : '';
+          const periodStr = dtStart && dtEnd ? ` (${dtStart} a ${dtEnd})` : '';
+          
+          item.innerHTML = `
+            <div style="font-weight:600; color:var(--ink);">${s.cidade || 'Cidade'}</div>
+            <div style="font-size:13px; color:var(--ink-mid);">${s.hotel || 'Não especificado'}${periodStr}</div>
+          `;
+          staysList.appendChild(item);
+        });
+      } else {
+        const rawHotel = clientInfo.hotel || '-';
+        staysList.innerHTML = `
+          <div style="font-weight:600; color:var(--ink);">Hotéis reservados</div>
+          <div style="font-size:13px; color:var(--ink-mid);">${rawHotel}</div>
+        `;
+      }
+
+      const travelersVal = clientInfo.viajantes || clientLocalInfo.viajantes || '-';
+      document.getElementById('info-travelers').textContent = travelersVal;
+
+      // 6. Tab 4: Payments List
+      const paymentsBody = document.querySelector('#table-payments tbody');
+      paymentsBody.innerHTML = '';
+      
+      if (payments && payments.length > 0) {
+        payments.forEach(p => {
+          const tr = document.createElement('tr');
+          
+          let origValStr = '-';
+          if (p.moeda === 'BRL') {
+            origValStr = `R$ ${(p.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          } else if (p.moeda === 'USD') {
+            origValStr = `$ ${(p.valor || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          } else {
+            origValStr = `¥ ${(p.valor || 0).toLocaleString('en-US')}`;
+          }
+
+          tr.innerHTML = `
+            <td>${p.data ? fmtDateBR(p.data) : '-'}</td>
+            <td><strong>${p.descricao}</strong></td>
+            <td style="text-align: right; font-weight: 500; font-family:var(--ff-num);">${origValStr} (${p.moeda})</td>
+            <td style="text-align: right; font-weight: 600; font-family:var(--ff-num);">¥ ${(p.valor || 0).toLocaleString('en-US')} JPY</td>
+            <td style="text-align: center;"><span class="badge-paid">Confirmado</span></td>
+          `;
+          paymentsBody.appendChild(tr);
+        });
+      } else {
+        paymentsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--ink-light);">Nenhum pagamento registrado no momento.</td></tr>';
+      }
+    }
+
+    window.addEventListener('load', loadClientArea);
+  </script>
+</body>
+</html>

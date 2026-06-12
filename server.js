@@ -2503,7 +2503,7 @@ app.post('/api/calendario/pagar-guia', async (req, res) => {
     const { data: calCfg } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
     let eventos = [];
     if (calCfg && calCfg.data) {
-      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+      eventos = Array.isArray(calCfg.data.data) ? calCfg.data.data : (Array.isArray(calCfg.data) ? calCfg.data : []);
     }
 
     const evIndex = eventos.findIndex(e => e.id === eventoId);
@@ -2712,7 +2712,6 @@ app.post('/api/notion/registrar-saida', async (req, res) => {
       'Descrição': { title: [{ text: { content: descricaoCompleta } }] },
       'Valor (JPY)': { number: valorJPY },
       'Data de pagamento': { date: { start: data || new Date().toISOString().substring(0, 10) } },
-      'Moeda Original': { select: { name: moeda } },
       '💳 Contas': { relation: [{ id: contaId }] }
     };
 
@@ -3085,6 +3084,232 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
   } catch (error) {
     console.error('Erro ao calcular saldos das contas:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/public/client-data/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
+    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+
+    if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
+      return res.status(400).json({ error: 'Configuração do Notion incompleta no arquivo .env.' });
+    }
+
+    // 1. Buscar dados do cliente no Notion
+    const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+
+    if (!notionClientRes.ok) {
+      return res.status(notionClientRes.status).json({ error: 'Cliente não encontrado no Notion.' });
+    }
+
+    const clientPage = await notionClientRes.json();
+    const p = clientPage.properties;
+
+    const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
+    const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
+    const getNumber = (prop) => prop?.number || 0;
+    const getSelect = (prop) => prop?.select?.name || '';
+    const getDateStart = (prop) => prop?.date?.start || '';
+    const getDateEnd = (prop) => prop?.date?.end || '';
+    const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+    const getFormulaString = (prop) => prop?.formula?.string || '';
+    const getRollupNumber = (prop) => prop?.rollup?.number || 0;
+
+    const clientInfo = {
+      id: clientPage.id,
+      nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
+      status: getSelect(p['Status do Cliente'] || p['Status']),
+      adultos: getNumber(p['Qtd Adultos']),
+      criancas: getNumber(p['Qtd Crianças']),
+      vooChegada: getRichText(p['Voo de Chegada']),
+      vooPartida: getRichText(p['Voo de Partida']),
+      dataInicio: getDateStart(p['Período da Viagem']),
+      dataFim: getDateEnd(p['Período da Viagem']),
+      hotel: getRichText(p['Hotel']),
+      viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+      valorTotal: getNumber(p['Valor Total']),
+      totalPago: getRollupNumber(p['Total Pago']),
+      saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+      statusPagamento: getFormulaString(p['Status de pagamento'])
+    };
+
+    // 2. Buscar Entradas (pagamentos confirmados) do cliente no Notion
+    const entradasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_ENTRADAS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: {
+          property: 'Cliente (Relação)',
+          relation: {
+            contains: clientId
+          }
+        }
+      })
+    });
+
+    let payments = [];
+    if (entradasRes.ok) {
+      const entradasData = await entradasRes.json();
+      payments = (entradasData.results || []).map(item => {
+        const ep = item.properties;
+        return {
+          id: item.id,
+          descricao: ep['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada',
+          valor: ep['Valor (JPY)']?.number || 0,
+          data: ep['Data do pagamento']?.date?.start || '',
+          moeda: ep['Moeda Original']?.select?.name || 'JPY'
+        };
+      }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    }
+
+    // 3. Buscar cotação local (orcamento) no Supabase
+    const { data: orcamentos } = await supabase.from('orcamentos').select('data');
+    let quote = null;
+    if (orcamentos && orcamentos.length > 0) {
+      const matched = orcamentos.find(o => {
+        if (!o.data) return false;
+        if (o.data.notionClienteId === clientId) return true;
+        if (clientInfo.nome) {
+          const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+          if (o.data.cliente?.nome) {
+            const orcClientName = o.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+            if (clientNameNormalized === orcClientName || clientNameNormalized.includes(orcClientName) || orcClientName.includes(clientNameNormalized)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+      if (matched && matched.data) {
+        const o = matched.data;
+        // Sanitizar a cotação (deletando margens, custos e dados confidenciais)
+        const sanitizeTours = (tours) => (tours || []).map(t => ({
+          id: t.id,
+          data: t.data,
+          valor: Number(t.valor) || 0,
+          duracao: t.duracao || '',
+          descricao: t.descricao || '',
+          pontos: t.pontos || '',
+          observacao: t.observacao || ''
+        }));
+        const sanitizeTransportes = (trans) => (trans || []).map(t => ({
+          id: t.id,
+          data: t.data,
+          descricao: t.descricao || '',
+          preco: Number(t.preco) || 0,
+          precoInfantil: Number(t.precoInfantil) || 0,
+          adultos: Number(t.adultos) || 0,
+          criancas: Number(t.criancas) || 0,
+          taxaAtiva: !!t.taxaAtiva,
+          taxaTipo: t.taxaTipo || 'pessoa',
+          taxaValor: Number(t.taxaValor) || 0,
+          compradoHeian: t.compradoHeian !== false,
+          observacao: t.observacao || ''
+        }));
+        const sanitizeExperiencias = (exps) => (exps || []).map(e => ({
+          id: e.id,
+          data: e.data,
+          nome: e.nome || '',
+          pessoas: Number(e.pessoas) || 1,
+          preco: Number(e.preco) || 0,
+          taxaAtiva: !!e.taxaAtiva,
+          taxaTipo: e.taxaTipo || 'pessoa',
+          taxaValor: Number(e.taxaValor) || 0,
+          compradoHeian: e.compradoHeian !== false,
+          observacao: e.observacao || '',
+          descricao: e.descricao || ''
+        }));
+        const sanitizeItens = (items) => (items || []).map(i => ({
+          data: i.data,
+          nome: i.nome,
+          valor: Number(i.valor) || 0
+        }));
+
+        quote = {
+          tours: sanitizeTours(o.tours),
+          transportes: sanitizeTransportes(o.transportes),
+          experiencias: sanitizeExperiencias(o.experiencias),
+          itensAdicionais: sanitizeItens(o.itensAdicionais),
+          consultoria: {
+            ativa: o.consultoria?.ativa || false,
+            valor: Number(o.consultoria?.valor) || 0,
+            descricao: o.consultoria?.descricao || ''
+          }
+        };
+      }
+    }
+
+    // 4. Buscar roteiro local no Supabase
+    const { data: roteiros } = await supabase.from('roteiros').select('*');
+    let itinerary = null;
+    if (roteiros && roteiros.length > 0) {
+      const matched = roteiros.find(r => {
+        if (!r.data) return false;
+        if (r.data.notionClienteId === clientId || r.data.cliente?.notionClienteId === clientId) return true;
+        if (clientInfo.nome) {
+          const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+          if (r.data.cliente?.nome) {
+            const rotClientName = r.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+            if (clientNameNormalized === rotClientName || clientNameNormalized.includes(rotClientName) || rotClientName.includes(clientNameNormalized)) {
+              return true;
+            }
+          }
+          if (r.nome) {
+            const rotNameClean = r.nome.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
+            if (clientNameNormalized === rotNameClean || clientNameNormalized.includes(rotNameClean) || rotNameClean.includes(clientNameNormalized)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+      if (matched && matched.data) {
+        const r = matched.data;
+        const sanitizedDays = (r.dias || []).map(d => {
+          const sanitizedElements = (d.elementos || []).map(el => {
+            const { valorCusto, comissao, ...cleanEl } = el;
+            return cleanEl;
+          });
+          return {
+            cidade: d.cidade,
+            tourGuiado: d.tourGuiado,
+            elementos: sanitizedElements
+          };
+        });
+        itinerary = {
+          nome: r.nome,
+          dias: sanitizedDays
+        };
+      }
+    }
+
+    // 5. Buscar Ficha Local (Supabase clientes_locais)
+    const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', clientId).single();
+    const clientLocalInfo = localData && localData.data ? localData.data : { estadias: [], viajantes: [] };
+
+    res.json({
+      success: true,
+      clientInfo,
+      payments,
+      quote,
+      itinerary,
+      clientLocalInfo
+    });
+  } catch (error) {
+    console.error('Erro na API pública da Área do Cliente:', error);
+    res.status(500).json({ error: 'Erro ao buscar dados do cliente', details: error.message });
   }
 });
 
