@@ -1,13 +1,34 @@
-let chartEvolucaoVendas = null;
-let chartTopDestinos = null;
 let chartClienteFinanceiro = null;
 
-async function renderDashboard() {
-  if (!state || !state.orcamentosDB) return;
+const KANBAN_STATUSES = [
+  { name: 'Início/call de dúvidas', color: '#787878', bgColor: 'rgba(120, 120, 120, 0.08)', borderColor: '#cbd5e1' },
+  { name: 'Em Negociação', color: '#64748b', bgColor: 'rgba(100, 116, 139, 0.08)', borderColor: '#cbd5e1' },
+  { name: 'Negociação Aprovada', color: '#0284c7', bgColor: 'rgba(2, 132, 199, 0.08)', borderColor: '#bae6fd' },
+  { name: 'Roteiro Rascunho', color: '#db2777', bgColor: 'rgba(219, 39, 119, 0.08)', borderColor: '#fbcfe8' },
+  { name: 'Roteiro versão final', color: '#ea580c', bgColor: 'rgba(234, 88, 12, 0.08)', borderColor: '#ffedd5' },
+  { name: 'Em Viagem', color: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.08)', borderColor: '#e9d5ff' },
+  { name: 'Cancelado', color: '#dc2626', bgColor: 'rgba(220, 38, 38, 0.08)', borderColor: '#fee2e2' },
+  { name: 'Finalizados', color: '#16a34a', bgColor: 'rgba(22, 163, 74, 0.08)', borderColor: '#dcfce7' },
+  { name: 'Atendimento Pós', color: '#b45309', bgColor: 'rgba(180, 83, 9, 0.08)', borderColor: '#fef3c7' }
+];
 
+async function renderDashboard() {
   // Popula o select de clientes para o Dashboard
   const select = document.getElementById('dashClienteSelect');
-  const clientes = window.notionClients || [];
+  let clientes = window.notionClients || [];
+
+  if (clientes.length === 0) {
+    try {
+      const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        clientes = await res.json();
+        window.notionClients = clientes;
+      }
+    } catch (e) {
+      console.error('Erro ao buscar clientes no dashboard:', e);
+    }
+  }
+
   if (select && (select.options.length <= 1 || select.dataset.loadedCount != clientes.length)) {
     select.dataset.loadedCount = clientes.length;
     const currentVal = select.value;
@@ -22,171 +43,236 @@ async function renderDashboard() {
     if (select.value !== currentVal) select.value = "";
   }
 
-  const orcamentos = state.orcamentosDB;
-  const roteirosObj = window.dbRotas || {};
-
-  let totalFechadas = 0;
-  let totalPendentes = 0;
-  let totalPerdidas = 0;
-  
-  let receitaTotal = 0;
-  let lucroTotal = 0;
-
-  // For chart data
-  const vendasPorMes = {};
-  const cidadesCount = {};
-
-  orcamentos.forEach(orc => {
-    const status = orc.statusVenda || 'Pendente';
-    if (status === 'Fechado') totalFechadas++;
-    else if (status === 'Perdido') totalPerdidas++;
-    else totalPendentes++;
-
-    // Se tiver fechado, contabilizar receita e lucro
-    if (status === 'Fechado') {
-      const { valorTotalFinal, lucroTotalCalc } = calculateOrcamentoTotals(orc);
-      receitaTotal += valorTotalFinal || 0;
-      lucroTotal += lucroTotalCalc || 0;
-
-      // Evolução de Vendas
-      const mes = orc.criadoEm ? orc.criadoEm.substring(0, 7) : 'Sem Data'; // YYYY-MM
-      if (!vendasPorMes[mes]) vendasPorMes[mes] = 0;
-      vendasPorMes[mes] += valorTotalFinal || 0;
-
-      // Destinos a partir do Roteiro
-      if (orc.orcRoteiroVinculado) {
-        const rot = roteirosObj[orc.orcRoteiroVinculado];
-        if (rot && rot.dias) {
-          rot.dias.forEach(dia => {
-            const cityName = dia.cidadeBase || dia.cidade || 'Desconhecida';
-            if (cityName && cityName !== 'Desconhecida') {
-              cidadesCount[cityName] = (cidadesCount[cityName] || 0) + 1;
-            }
-          });
-        }
-      }
-    }
-  });
-
-  const totalGeral = totalFechadas + totalPendentes + totalPerdidas;
-  const taxaConversao = totalGeral > 0 ? ((totalFechadas / totalGeral) * 100).toFixed(1) : '0.0';
-
-  document.getElementById('kpiVendasTotal').textContent = `¥ ${receitaTotal.toLocaleString('en-US')}`;
-  document.getElementById('kpiLucroTotal').textContent = `¥ ${lucroTotal.toLocaleString('en-US')}`;
-  document.getElementById('kpiConversao').textContent = `${taxaConversao}%`;
-  document.getElementById('kpiStats').textContent = `${totalFechadas} Fechadas / ${totalGeral} Totais`;
-  document.getElementById('kpiPendentes').textContent = totalPendentes;
-
-  renderChartEvolucao(vendasPorMes);
-  renderChartDestinos(cidadesCount);
-  
   // Carrega e renderiza a agenda operacional (Ordens de Serviço do dia e da semana)
   await carregarAgendaOperacional();
+
+  // Renderiza o Kanban
+  renderKanban();
 }
 
-function calculateOrcamentoTotals(orc) {
-  let valorTotalFinal = 0;
-  let lucroTotalCalc = 0;
-  let custoTotalCalc = 0;
+function renderKanban() {
+  const board = document.getElementById('kanbanBoard');
+  if (!board) return;
 
-  ['tours', 'transportes', 'experiencias', 'estadias'].forEach(cat => {
-    if (orc[cat]) {
-      orc[cat].forEach(item => {
-        let custo = 0; let markup = 0; let venda = 0;
-        if (cat === 'tours') {
-          custo = item.custoBase || 0;
-          markup = orc.markupTours || 20;
-          venda = custo / (1 - (markup / 100));
-        } else if (cat === 'transportes') {
-          custo = item.valorTotal || 0;
-          markup = orc.markupTransportes || 15;
-          venda = custo / (1 - (markup / 100));
-        } else if (cat === 'experiencias') {
-          custo = item.valorTotal || 0;
-          markup = orc.markupExperiencias || 15;
-          venda = custo / (1 - (markup / 100));
-        } else if (cat === 'estadias') {
-          custo = item.valorTotal || 0;
-          markup = orc.markupEstadias || 15;
-          venda = custo / (1 - (markup / 100));
+  const clientes = window.notionClients || [];
+  board.innerHTML = '';
+
+  KANBAN_STATUSES.forEach(statusConfig => {
+    const colStatus = statusConfig.name;
+    const colClients = clientes.filter(c => (c.status || 'Início/call de dúvidas').toLowerCase() === colStatus.toLowerCase());
+
+    const column = document.createElement('div');
+    column.className = 'kanban-column';
+    column.style.borderColor = statusConfig.borderColor;
+    
+    // Header
+    const header = document.createElement('div');
+    header.className = 'kanban-column-header';
+    header.style.backgroundColor = statusConfig.bgColor;
+    header.style.borderTop = `3px solid ${statusConfig.color}`;
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = colStatus;
+    titleSpan.style.color = statusConfig.color;
+    
+    const countSpan = document.createElement('span');
+    countSpan.className = 'kanban-column-count';
+    countSpan.textContent = colClients.length;
+
+    header.appendChild(titleSpan);
+    header.appendChild(countSpan);
+    column.appendChild(header);
+
+    // Cards Container
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'kanban-cards-container';
+    cardsContainer.dataset.status = colStatus;
+
+    // Listeners do Drag and Drop
+    cardsContainer.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      cardsContainer.classList.add('drag-over');
+    });
+
+    cardsContainer.addEventListener('dragleave', () => {
+      cardsContainer.classList.remove('drag-over');
+    });
+
+    cardsContainer.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      cardsContainer.classList.remove('drag-over');
+      const clientStr = e.dataTransfer.getData('text/plain');
+      if (!clientStr) return;
+      
+      const { id, fromStatus } = JSON.parse(clientStr);
+      if (fromStatus.toLowerCase() !== colStatus.toLowerCase()) {
+        await atualizarStatusClienteKanban(id, colStatus);
+      }
+    });
+
+    // Renderiza os cards de cliente
+    if (colClients.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.style.color = 'var(--ink-lt)';
+      emptyMsg.style.fontSize = '11px';
+      emptyMsg.style.fontStyle = 'italic';
+      emptyMsg.style.textAlign = 'center';
+      emptyMsg.style.padding = '20px 0';
+      emptyMsg.textContent = 'Sem clientes';
+      cardsContainer.appendChild(emptyMsg);
+    } else {
+      colClients.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.draggable = true;
+
+        // Ao arrastar
+        card.addEventListener('dragstart', (e) => {
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', JSON.stringify({ id: c.id, fromStatus: c.status || 'Início/call de dúvidas' }));
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+        });
+
+        // Double click para navegar
+        card.addEventListener('dblclick', () => {
+          const navItem = document.querySelector('.sidebar-nav a[data-page="clientes"]');
+          if (navItem) {
+            navItem.click();
+            setTimeout(() => {
+              if (typeof window.abrirDetalhesCliente === 'function') {
+                window.abrirDetalhesCliente(c.id);
+              }
+            }, 100);
+          }
+        });
+
+        // Nome
+        const nameEl = document.createElement('div');
+        nameEl.className = 'kanban-card-title';
+        nameEl.textContent = c.nome || 'Sem Nome';
+
+        // Meta
+        const metaEl = document.createElement('div');
+        metaEl.className = 'kanban-card-meta';
+
+        // Período
+        if (c.dataInicio) {
+          const dtStart = fmtDataBRAgenda(c.dataInicio);
+          const dtEnd = c.dataFim ? fmtDataBRAgenda(c.dataFim) : '';
+          const periodStr = dtEnd ? `📅 ${dtStart} - ${dtEnd}` : `📅 A partir de ${dtStart}`;
+          
+          const pEl = document.createElement('span');
+          pEl.textContent = periodStr;
+          metaEl.appendChild(pEl);
         }
-        valorTotalFinal += venda;
-        custoTotalCalc += custo;
+
+        // Pax
+        if (c.adultos > 0 || c.criancas > 0) {
+          const paxArr = [];
+          if (c.adultos > 0) paxArr.push(`${c.adultos} ad`);
+          if (c.criancas > 0) paxArr.push(`${c.criancas} cr`);
+          
+          const paxEl = document.createElement('span');
+          paxEl.textContent = `👥 ${paxArr.join(' · ')}`;
+          metaEl.appendChild(paxEl);
+        }
+
+        // Valor
+        if (c.valorTotal > 0) {
+          const valEl = document.createElement('span');
+          valEl.innerHTML = `<strong style="color:var(--crimson)">¥ ${c.valorTotal.toLocaleString('en-US')}</strong>`;
+          metaEl.appendChild(valEl);
+        }
+
+        // Hotel
+        if (c.hotel) {
+          const hotEl = document.createElement('span');
+          hotEl.textContent = `🏨 ${c.hotel}`;
+          hotEl.style.whiteSpace = 'nowrap';
+          hotEl.style.overflow = 'hidden';
+          hotEl.style.textOverflow = 'ellipsis';
+          metaEl.appendChild(hotEl);
+        }
+
+        card.appendChild(nameEl);
+        card.appendChild(metaEl);
+        cardsContainer.appendChild(card);
       });
     }
+
+    column.appendChild(cardsContainer);
+    board.appendChild(column);
   });
-
-  const cons = orc.consultoria?.ativa ? (parseFloat(orc.consultoria.valor) || 0) : 0;
-  valorTotalFinal += cons;
-
-  const taxaCC = orc.taxaCartao || 0;
-  const taxaHeian = orc.taxaHeian || 0;
-
-  const valorLiquido = valorTotalFinal * (1 - (taxaCC/100) - (taxaHeian/100));
-  lucroTotalCalc = valorLiquido - custoTotalCalc;
-
-  return { valorTotalFinal, lucroTotalCalc };
 }
 
-function renderChartEvolucao(vendasPorMes) {
-  const ctx = document.getElementById('chartEvolucaoVendas').getContext('2d');
-  
-  const labels = Object.keys(vendasPorMes).sort();
-  const data = labels.map(l => vendasPorMes[l]);
+async function atualizarStatusClienteKanban(id, novoStatus) {
+  document.body.style.cursor = 'progress';
 
-  if (chartEvolucaoVendas) chartEvolucaoVendas.destroy();
+  try {
+    // 1. Notion PATCH
+    const notionRes = await fetch(`/api/notion/clientes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: novoStatus })
+    });
 
-  chartEvolucaoVendas = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Vendas (¥)',
-        data: data,
-        backgroundColor: '#6b1f2a',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true }
-      }
+    if (!notionRes.ok) {
+      throw new Error('Erro ao atualizar status no Notion');
     }
-  });
-}
 
-function renderChartDestinos(cidadesCount) {
-  const ctx = document.getElementById('chartTopDestinos').getContext('2d');
-  
-  // Sort descending
-  const sorted = Object.entries(cidadesCount).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  const labels = sorted.map(s => s[0]);
-  const data = sorted.map(s => s[1]);
+    // 2. Supabase POST
+    const index = window.notionClients.findIndex(c => c.id === id);
+    if (index !== -1) {
+      const clienteOriginal = window.notionClients[index];
+      const clienteAtualizado = { ...clienteOriginal, status: novoStatus };
+      
+      const localRes = await fetch('/api/clientes/local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clienteAtualizado)
+      });
 
-  if (chartTopDestinos) chartTopDestinos.destroy();
-
-  chartTopDestinos = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: ['#6b1f2a', '#d9a05b', '#0f172a', '#94a3b8', '#e2e8f0'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '60%',
-      plugins: {
-        legend: { position: 'right', labels: { boxWidth: 12, font: {size: 10} } }
+      if (!localRes.ok) {
+        console.warn('Erro ao atualizar status no banco local, continuando...');
       }
+
+      window.notionClients[index] = clienteAtualizado;
     }
-  });
+
+    // 3. UI Sync
+    renderKanban();
+    
+    if (typeof window.renderClientesTabela === 'function') {
+      window.renderClientesTabela();
+    }
+
+    const select = document.getElementById('dashClienteSelect');
+    if (select) {
+      select.dataset.loadedCount = window.notionClients.length;
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Geral (Todos os orçamentos locais)</option>';
+      window.notionClients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome || 'Sem nome';
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+    }
+
+  } catch (err) {
+    console.error('Erro ao atualizar status do cliente:', err);
+    alert('Erro ao atualizar status do cliente: ' + err.message);
+    renderKanban();
+  } finally {
+    document.body.style.cursor = 'default';
+  }
 }
+
 
 async function selecionarClienteDashboard(clientId) {
   const containerGeral = document.getElementById('dashboardGeralContainer');

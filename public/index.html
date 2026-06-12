@@ -445,43 +445,8 @@ window.addEventListener('unhandledrejection', function(e) {
 
     <!-- Container Geral -->
     <div id="dashboardGeralContainer">
-      <div class="dashboard-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px;">
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Vendas (Ganhas)</h3>
-          <p id="kpiVendasTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--crimson); margin-top: 5px; font-weight: 600;">¥ 0</p>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Lucro Líquido Estimado</h3>
-          <p id="kpiLucroTotal" style="font-family: var(--ff-display); font-size: 28px; color: var(--gold-dk); margin-top: 5px; font-weight: 600;">¥ 0</p>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Taxa de Conversão</h3>
-          <p id="kpiConversao" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0%</p>
-          <p id="kpiStats" style="font-size: 11px; color: var(--ink-lt); margin-top: 5px;">0 Fechadas / 0 Totais</p>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 13px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Negócios Pendentes</h3>
-          <p id="kpiPendentes" style="font-family: var(--ff-display); font-size: 28px; color: var(--ink); margin-top: 5px; font-weight: 600;">0</p>
-        </div>
-      </div>
-      
-      <div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-        <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Evolução de Vendas (Fechadas)</h3>
-          <div style="position: relative; height: 250px; width: 100%;">
-            <canvas id="chartEvolucaoVendas"></canvas>
-          </div>
-        </div>
-        <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Top Destinos (Em Alta)</h3>
-          <div style="position: relative; height: 250px; width: 100%;">
-            <canvas id="chartTopDestinos"></canvas>
-          </div>
-        </div>
-      </div>
-
       <!-- Ordens de Serviço (Dia e Semana) -->
-      <div class="dashboard-agenda-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
+      <div class="dashboard-agenda-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
         <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
           📅 <span>Agenda Operacional (Ordens de Serviço)</span>
         </h3>
@@ -507,6 +472,17 @@ window.addEventListener('unhandledrejection', function(e) {
               <p style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando...</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Kanban de Clientes -->
+      <div class="dashboard-kanban-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
+        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
+          📋 <span>Quadro de Clientes (Status Notion)</span>
+        </h3>
+        
+        <div id="kanbanBoard" class="kanban-board-scroll">
+          <div style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando Kanban...</div>
         </div>
       </div>
     </div>
