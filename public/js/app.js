@@ -5844,7 +5844,10 @@ window.enviarLembreteTrabalho = function(eventoId, meio = 'email') {
 };
 
 // ── FUNÇÕES PARA CADASTRO MANUAL DE EVENTOS OPERACIONAIS ───────────────────
+console.log("[Novo Evento] Script app.js com cadastro de eventos carregado (v20260612_v2).");
+
 window.abrirModalCriarEventoCalendario = function() {
+  console.log("[Novo Evento] abrirModalCriarEventoCalendario() chamada.");
   // 1. Carregar clientes no select
   const selectCli = document.getElementById('modalCriarEvCliente');
   if (selectCli) {
