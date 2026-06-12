@@ -2096,17 +2096,44 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
     const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
     const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
 
-    // Buscar contas
-    const contasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_CONTAS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
+    // Função genérica para buscar todas as páginas de uma base do Notion (paginação)
+    const queryAllNotion = async (dbId) => {
+      let results = [];
+      let hasMore = true;
+      let startCursor = undefined;
+
+      while (hasMore) {
+        const body = {};
+        if (startCursor) {
+          body.start_cursor = startCursor;
+        }
+
+        const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
+        }
+
+        const data = await response.json();
+        results = results.concat(data.results || []);
+        hasMore = data.has_more;
+        startCursor = data.next_cursor;
       }
-    });
-    if (!contasRes.ok) throw new Error('Erro ao buscar contas no Notion');
-    const contasData = await contasRes.json();
+
+      return { results };
+    };
+
+    // Buscar contas
+    const contasData = await queryAllNotion(NOTION_CONTAS_DB_ID);
     const contas = (contasData.results || [])
       .map(item => {
         const p = item.properties;
@@ -2120,19 +2147,6 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
         };
       })
       .filter(c => !c.nome.toLowerCase().includes('wise da mocreia') && !c.nome.toLowerCase().includes('wise da mocréia'));
-
-    // Consultas paralelas
-    const queryAllNotion = async (dbId) => {
-      const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        }
-      });
-      return await response.json();
-    };
 
     const [entradasData, saidasData, appConfig] = await Promise.all([
       queryAllNotion(NOTION_ENTRADAS_DB_ID),

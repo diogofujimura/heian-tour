@@ -1076,6 +1076,12 @@ function abrirVisaoGeralConta(contaId) {
   // Preencher título
   document.getElementById('modalVisaoGeralContaTitulo').textContent = `Extrato da Conta: ${conta.nome}`;
 
+  // Preencher link para editar a conta no Notion
+  const linkEditar = document.getElementById('modalVisaoGeralContaEditarLink');
+  if (linkEditar) {
+    linkEditar.href = `https://notion.so/${conta.id.replace(/-/g, '')}`;
+  }
+
   // Preencher select de meses/anos com base nas movimentações
   const selectFiltro = document.getElementById('modalVisaoGeralContaMesFiltro');
   selectFiltro.innerHTML = '<option value="">Todos os meses</option>';
@@ -1221,7 +1227,7 @@ function onFiltroMesVisaoGeralConta() {
     else valorOrigStr = `¥ ${Math.round(m.valorOriginal).toLocaleString('en-US')}`;
 
     const notionPageUrl = `https://notion.so/${m.id.replace(/-/g, '')}`;
-    const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);">🔗 Notion</a>`;
+    const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);">✏️ Editar no Notion</a>`;
 
     tr.innerHTML = `
       <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${dateStr}</td>

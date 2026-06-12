@@ -1186,7 +1186,12 @@ window.addEventListener('unhandledrejection', function(e) {
         <h3 class="event-modal-title" id="modalVisaoGeralContaTitulo" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Extrato da Conta: -</h3>
         <span style="font-size: 11px; color: var(--ink-lt);">Histórico de entradas e saídas do Notion</span>
       </div>
-      <button class="event-modal-close" onclick="fecharModalVisaoGeralConta()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
+      <div style="display:flex; align-items:center; gap: 12px;">
+        <a id="modalVisaoGeralContaEditarLink" href="#" target="_blank" class="btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--warm-white);">
+          ✏️ Editar Conta no Notion
+        </a>
+        <button class="event-modal-close" onclick="fecharModalVisaoGeralConta()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt); padding: 0; line-height: 1;">✕</button>
+      </div>
     </div>
 
     <!-- Filtros e Balanço -->
