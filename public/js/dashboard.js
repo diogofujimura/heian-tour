@@ -1203,7 +1203,7 @@ function onFiltroMesVisaoGeralConta() {
   tbody.innerHTML = '';
 
   if (filtradas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#888; font-style:italic;">Nenhuma movimentação para o período.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#888; font-style:italic;">Nenhuma movimentação para o período.</td></tr>';
     return;
   }
 
@@ -1233,6 +1233,8 @@ function onFiltroMesVisaoGeralConta() {
       <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${dateStr}</td>
       <td style="padding: 10px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${tipoLabel}</td>
       <td style="padding: 10px 12px; font-size: 12px; font-weight:500; border-bottom:1px solid rgba(0,0,0,0.04);">${m.descricao}</td>
+      <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); color:var(--ink-mid);">${m.clienteNome || '-'}</td>
+      <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); color:var(--ink-mid);">${m.colaboradorNome || '-'}</td>
       <td style="padding: 10px 12px; text-align: right; font-family:var(--ff-num); font-size: 12px; font-weight:600; color:${m.tipo === 'entrada' ? '#2ecc71' : '#e74c3c'}; border-bottom:1px solid rgba(0,0,0,0.04);">${valorOrigStr}</td>
       <td style="padding: 10px 12px; text-align: right; font-family:var(--ff-num); font-size: 12px; font-weight:600; border-bottom:1px solid rgba(0,0,0,0.04);">¥ ${Math.round(m.valorJPY).toLocaleString('en-US')}</td>
       <td style="padding: 10px 12px; text-align: center; border-bottom:1px solid rgba(0,0,0,0.04);">${btnAcao}</td>

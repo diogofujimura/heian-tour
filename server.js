@@ -2148,11 +2148,31 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
       })
       .filter(c => !c.nome.toLowerCase().includes('wise da mocreia') && !c.nome.toLowerCase().includes('wise da mocréia'));
 
-    const [entradasData, saidasData, appConfig] = await Promise.all([
+    const NOTION_COLABORADORES_DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+
+    const [entradasData, saidasData, clientesData, colaboradoresData, appConfig] = await Promise.all([
       queryAllNotion(NOTION_ENTRADAS_DB_ID),
       queryAllNotion(NOTION_SAIDAS_DB_ID),
+      queryAllNotion(NOTION_CLIENTS_DB_ID),
+      queryAllNotion(NOTION_COLABORADORES_DB_ID),
       supabase.from('config').select('data').eq('id', 'app_config').single()
     ]);
+
+    // Construir mapas de ID -> Nome para Clientes e Colaboradores do Notion
+    const clientesMap = {};
+    (clientesData.results || []).forEach(item => {
+      const p = item.properties;
+      const nome = p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome';
+      clientesMap[item.id] = nome;
+    });
+
+    const colaboradoresMap = {};
+    (colaboradoresData.results || []).forEach(item => {
+      const p = item.properties;
+      const nameProp = p.Name || p.Nome;
+      const nome = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+      colaboradoresMap[item.id] = nome;
+    });
 
     let rateBRL = 0.031670;
     let rateUSD = 0.006280;
@@ -2192,6 +2212,11 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
       const data = p['Data do pagamento']?.date?.start || '';
       const contasRel = p['💳 Contas']?.relation || [];
 
+      // Mapear Cliente
+      const clienteRel = p['Cliente (Relação)']?.relation || [];
+      const clienteId = clienteRel[0]?.id;
+      const clienteNome = clienteId ? (clientesMap[clienteId] || 'Desconhecido') : '';
+
       const info = extrairInfoVal(descricao, valorJPY, moedaOriginal);
 
       contasRel.forEach(cRel => {
@@ -2208,7 +2233,9 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
             descricao,
             valorOriginal: info.valor,
             moedaOriginal: info.moeda,
-            valorJPY
+            valorJPY,
+            clienteNome,
+            colaboradorNome: ''
           });
         }
       });
@@ -2221,6 +2248,15 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
       const descricao = p['Descrição']?.title?.map(t => t.plain_text).join('') || 'Saída sem nome';
       const data = p['Data de pagamento']?.date?.start || '';
       const contasRel = p['💳 Contas']?.relation || [];
+
+      // Mapear Cliente e Colaborador
+      const clienteRel = p['🎀 Clientes']?.relation || [];
+      const clienteId = clienteRel[0]?.id;
+      const clienteNome = clienteId ? (clientesMap[clienteId] || 'Desconhecido') : '';
+
+      const colabRel = p['🫂 Colaboradores']?.relation || [];
+      const colabId = colabRel[0]?.id;
+      const colaboradorNome = colabId ? (colaboradoresMap[colabId] || 'Desconhecido') : '';
 
       const info = extrairInfoVal(descricao, valorJPY, 'JPY');
 
@@ -2238,7 +2274,9 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
             descricao,
             valorOriginal: info.valor,
             moedaOriginal: info.moeda,
-            valorJPY
+            valorJPY,
+            clienteNome,
+            colaboradorNome
           });
         }
       });
