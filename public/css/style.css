@@ -2203,18 +2203,20 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   border-left: 3px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Sombra sutil para destacar divisões */
 }
 
 .calendar-event-item:hover {
   transform: translateX(1px);
   filter: brightness(0.95);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* Cores harmônicas e sólidas para tipos de serviços, alinhadas com o calendário em lista */
 .event-type-roteiro {
   background: #fff5f5 !important;
   color: #c53030 !important;
-  border: 1px solid #feb8b8 !important;
+  border: 1px solid #fca5a5 !important; /* Vermelho um pouco mais contrastado */
   border-left: 4px solid #e53e3e !important;
 }
 
@@ -2225,14 +2227,14 @@ html, body {
 .event-type-transfer {
   background: #ebf8ff !important;
   color: #2b6cb0 !important;
-  border: 1px solid #bee3f8 !important;
+  border: 1px solid #93c5fd !important; /* Azul um pouco mais contrastado */
   border-left: 4px solid #3182ce !important;
 }
 
 .event-type-experiencia {
   background: #fffdf0 !important;
   color: #b7791f !important;
-  border: 1px solid #fef08a !important;
+  border: 1px solid #fde047 !important; /* Amarelo/Dourado um pouco mais contrastado */
   border-left: 4px solid #d69e2e !important;
 }
 
