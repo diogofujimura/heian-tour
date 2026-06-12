@@ -4544,17 +4544,9 @@ window.renderCalendario = async function() {
 
         if (idLower.startsWith('cal_exp_') || tLower.includes('experiência') || tLower.includes('experiencia') || titleLower.includes('disney') || titleLower.includes('universal') || titleLower.includes('teamlab') || titleLower.includes('sky') || titleLower.includes('museum') || titleLower.includes('ingresso') || titleLower.includes('atração') || titleLower.includes('atracao')) {
           tipoClass = 'event-type-experiencia';
-        } else if (tLower.includes('shinkansen') || titleLower.includes('shinkansen') || titleLower.includes('bullet train')) {
-          tipoClass = 'event-type-shinkansen';
-        } else if (tLower.includes('romancecar') || titleLower.includes('romancecar')) {
-          tipoClass = 'event-type-romancecar';
-        } else if (tLower.includes('trem') || titleLower.includes('trem')) {
-          tipoClass = 'event-type-trem';
-        } else if (tLower.includes('ônibus') || tLower.includes('onibus') || titleLower.includes('ônibus') || titleLower.includes('onibus')) {
-          tipoClass = 'event-type-onibus';
         } else if (tLower.includes('roteiro') || tLower.includes('guia') || tLower.includes('tour') || titleLower.includes('tour') || titleLower.includes('guiado') || titleLower.includes('clássica') || titleLower.includes('classica') || titleLower.includes('oeste') || titleLower.includes('moderna')) {
           tipoClass = 'event-type-roteiro';
-        } else if (tLower.includes('transfer') || titleLower.includes('transfer') || titleLower.includes('aeroporto') || titleLower.includes('narita') || titleLower.includes('haneda')) {
+        } else {
           tipoClass = 'event-type-transfer';
         }
         

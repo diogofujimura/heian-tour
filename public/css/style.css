@@ -2109,12 +2109,12 @@ html, body {
 
 .calendar-grid-container {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
-  min-width: 840px;
+  width: 100%;
 }
 
 .calendar-weekday-header {
@@ -2210,47 +2210,30 @@ html, body {
   filter: brightness(0.95);
 }
 
-/* Cores harmônicas e sólidas para tipos de serviços do Notion (estilo Google Calendar) */
+/* Cores harmônicas e sólidas para tipos de serviços, alinhadas com o calendário em lista */
 .event-type-roteiro {
-  background: #fdf2f2;
-  color: #b91c1c;
-  border-left: 4px solid #ef4444;
+  background: #fff5f5 !important;
+  color: #c53030 !important;
+  border: 1px solid #feb8b8 !important;
+  border-left: 4px solid #e53e3e !important;
 }
 
-.event-type-shinkansen {
-  background: #fef9e7;
-  color: #a16207;
-  border-left: 4px solid #eab308;
-}
-
-.event-type-romancecar {
-  background: #f8fafc;
-  color: #475569;
-  border-left: 4px solid #64748b;
-}
-
-.event-type-trem {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-left: 4px solid #3b82f6;
-}
-
-.event-type-onibus {
-  background: #fdf2f8;
-  color: #be185d;
-  border-left: 4px solid #ec4899;
+.event-type-shinkansen,
+.event-type-romancecar,
+.event-type-trem,
+.event-type-onibus,
+.event-type-transfer {
+  background: #ebf8ff !important;
+  color: #2b6cb0 !important;
+  border: 1px solid #bee3f8 !important;
+  border-left: 4px solid #3182ce !important;
 }
 
 .event-type-experiencia {
-  background: #faf5ff;
-  color: #6d28d9;
-  border-left: 4px solid #a855f7;
-}
-
-.event-type-transfer {
-  background: #fff7ed;
-  color: #c2410c;
-  border-left: 4px solid #f97316;
+  background: #fffdf0 !important;
+  color: #b7791f !important;
+  border: 1px solid #fef08a !important;
+  border-left: 4px solid #d69e2e !important;
 }
 
 /* Modal e Popover de Evento */
