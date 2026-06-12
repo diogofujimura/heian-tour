@@ -1380,7 +1380,15 @@ function renderTabelaAtracoes(filtro) {
   const tbody = document.querySelector('#tabelaAtracoes tbody');
   if(!tbody) return;
   const lista = filtro ? state.atracoesDB.filter(a=>[a['Nome da Atração'],a['Bairro'],a['Cidade']].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.atracoesDB;
-  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td>${a['Nome da Atração']}</td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao(${a.id})">✎</button> <button class="btn-icon" onclick="deletarAtracao(${a.id})">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td><div class="chip-atracao" style="display: inline-block;" data-id="${a['Nome da Atração'].replace(/"/g, '&quot;')}">${a['Nome da Atração']}</div></td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao(${a.id})">✎</button> <button class="btn-icon" onclick="deletarAtracao(${a.id})">✕</button></td></tr>`).join('');
+
+  // Adicionar listeners para o popover flutuante nos chips
+  tbody.querySelectorAll('.chip-atracao').forEach(chip => {
+    if (typeof showPopover === 'function' && typeof hidePopover === 'function') {
+      chip.addEventListener('mouseenter', showPopover);
+      chip.addEventListener('mouseleave', hidePopover);
+    }
+  });
 }
 function abrirModalAtracao(id) {
   const item = id ? state.atracoesDB.find(a=>a.id==id) : {};
