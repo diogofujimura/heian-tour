@@ -321,6 +321,12 @@ window.selecionarBlocoRoteiro = function(idx, eIdx, nomeRota) {
 function renderizarRoteiro(roteiroNome) {
   const timeline = document.getElementById('roteiroTimeline');
   if (!timeline) return;
+
+  const btnGerarRoteiro = document.getElementById('btnGerarRoteiro');
+  if (btnGerarRoteiro) {
+    btnGerarRoteiro.disabled = !roteiroNome;
+  }
+
   if (!roteiroNome) { timeline.innerHTML = '<div class="empty-state">Selecione um roteiro base acima para visualizar os dias.</div>'; return; }
   const rotasData = dbRotas[roteiroNome];
   if (!rotasData) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
