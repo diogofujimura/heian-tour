@@ -5912,6 +5912,7 @@ window.abrirModalCriarEventoCalendario = function() {
   if (modal) {
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
+    modal.classList.add('active');
   }
 };
 
@@ -5920,6 +5921,7 @@ window.fecharModalCriarEventoCalendario = function() {
   if (modal) {
     modal.style.display = 'none';
     modal.classList.add('hidden');
+    modal.classList.remove('active');
   }
 };
 
