@@ -1657,6 +1657,19 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
       colaboradoresMap[item.id] = nome;
     });
 
+    // 1b. Buscar todos os clientes do Notion para mapear os IDs para nomes
+    const clientesMap = {};
+    if (NOTION_CLIENTS_DB_ID) {
+      const clientesData = await queryAllNotion(NOTION_CLIENTS_DB_ID);
+      (clientesData.results || []).forEach(item => {
+        const p = item.properties;
+        const nameProp = p['Nome do Cliente'] || p['Name'] || p['Nome'];
+        const nome = nameProp?.title?.[0]?.plain_text || '';
+        if (nome) clientesMap[item.id] = nome;
+      });
+      console.log(`[Sync Agenda] Mapeados ${Object.keys(clientesMap).length} clientes do Notion.`);
+    }
+
     // 2. Buscar todos os eventos da Agenda do Notion (ativos/não arquivados)
     const agendaData = await queryAllNotion(NOTION_AGENDA_DB_ID);
     const notionEvents = agendaData.results || [];
@@ -1688,6 +1701,7 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
       
       const clientesRel = p['🎀 Clientes']?.relation || [];
       const clienteId = clientesRel[0]?.id || 'cliente_desconhecido';
+      const clienteNome = clientesMap[clienteId] || '';
 
       const cidade = p['Cidade']?.select?.name || '';
       const valorDiariaNotion = p['Valor diária do Guia']?.number || 0;
@@ -1716,6 +1730,8 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
         evLocal.titulo = titulo;
         evLocal.dataServico = dataServico;
         evLocal.clienteId = clienteId;
+        evLocal.clientes = [clienteId];
+        evLocal.clienteNome = clienteNome;
         evLocal.cidade = cidade;
         evLocal.assignee = assignee;
         
@@ -1742,6 +1758,8 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
           titulo,
           dataServico,
           clienteId,
+          clientes: [clienteId],
+          clienteNome,
           tipoServico,
           cidade,
           assignee,
