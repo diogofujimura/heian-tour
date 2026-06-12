@@ -1575,12 +1575,7 @@ function setupPreview() {
     renderPreview();
     document.getElementById('previewOverlay').classList.remove('hidden');
     setTimeout(()=>{
-      const nomeOrc = document.getElementById('orcNome').value || document.getElementById('clienteNome').value || 'sem nome';
-      const oldTitle = document.title;
-      document.title = ('Cotação ' + nomeOrc).replace(/[^a-zA-Z0-9À-ÿ _-]/g,'');
-      showPrintTip();
-      setTimeout(() => window.print(), 100);
-      setTimeout(()=>{ document.title = oldTitle; }, 1000);
+      triggerPrint();
     }, 400);
   });
   document.getElementById('btnClosePreview').addEventListener('click', () => {
@@ -1588,13 +1583,160 @@ function setupPreview() {
     document.body.style.overflow = '';
   });
   document.getElementById('btnPrintFromPreview').addEventListener('click', ()=>{
-    const nomeOrc = document.getElementById('orcNome').value || document.getElementById('clienteNome').value || 'sem nome';
+    triggerPrint();
+  });
+}
+
+function triggerPrint() {
+  const nomeOrc = document.getElementById('orcNome')?.value || document.getElementById('clienteNome')?.value || 'sem nome';
+  const cleanNome = ('Cotação ' + nomeOrc).replace(/[^a-zA-Z0-9À-ÿ _-]/g,'');
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+  if (isMobile) {
+    const previewContainer = document.getElementById('previewContainer');
+    if (!previewContainer) {
+      showToast('Erro ao obter pré-visualização.');
+      return;
+    }
+    const previewHtml = previewContainer.innerHTML;
+    
+    // Abrir uma janela/aba dedicada para impressão em dispositivos móveis
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Por favor, permita pop-ups para gerar o PDF.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${cleanNome}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="${window.location.origin}/css/style.css?v=premium_vis4">
+        <style>
+          /* Estilo premium da barra explicativa */
+          .mobile-print-bar {
+            background: #2C1A1D;
+            color: #fff;
+            padding: 16px 20px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            border-bottom: 2px solid #C4A35A;
+          }
+          .mobile-print-bar h3 {
+            margin: 0;
+            color: #E8D5A3;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+          }
+          .mobile-print-bar p {
+            margin: 0;
+            font-size: 12px;
+            color: #D3C3B3;
+            text-align: center;
+            line-height: 1.5;
+          }
+          .mobile-print-actions {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+          }
+          .mobile-print-btn {
+            flex: 1;
+            background: #6B1F2A;
+            color: #fff;
+            border: 1px solid #C4A35A;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+          }
+          .mobile-print-btn.btn-close {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+          }
+          .mobile-print-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+          }
+
+          /* Oculta a barra explicativa no print */
+          @media print {
+            .mobile-print-bar {
+              display: none !important;
+            }
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff !important;
+            }
+          }
+          
+          body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="mobile-print-bar">
+          <h3>Como gerar o PDF no Celular</h3>
+          <p>
+            1. Toque no botão <b>"Imprimir / Salvar"</b> abaixo.<br>
+            2. Se a tela de impressão não abrir ou abrir em branco, use a opção de <b>Compartilhar</b> do navegador (Safari ou Chrome) e escolha <b>"Salvar em Arquivos"</b>, <b>"Exportar como PDF"</b> ou <b>"Imprimir"</b>.
+          </p>
+          <div class="mobile-print-actions">
+            <button class="mobile-print-btn btn-close" onclick="window.close()">✕ Fechar</button>
+            <button class="mobile-print-btn" onclick="window.print()">🖨 Imprimir / Salvar</button>
+          </div>
+        </div>
+        <div id="previewOverlay" class="preview-overlay" style="display: block !important; position: static !important; background: white !important; height: auto !important; overflow: visible !important;">
+          <div id="previewContainer" class="preview-container">
+            ${previewHtml}
+          </div>
+        </div>
+        <script>
+          // Espera as fontes e estilos carregarem por completo para disparar o print nativo automaticamente
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 600);
+          };
+        <\/script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  } else {
+    // Desktop original
     const oldTitle = document.title;
-    document.title = ('Cotação ' + nomeOrc).replace(/[^a-zA-Z0-9À-ÿ _-]/g,'');
+    document.title = cleanNome;
     showPrintTip();
     setTimeout(() => window.print(), 100);
-    setTimeout(()=>{ document.title = oldTitle; }, 1000);
-  });
+    setTimeout(() => { document.title = oldTitle; }, 1000);
+  }
 }
 
 function renderPreview() {
