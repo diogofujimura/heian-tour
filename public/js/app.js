@@ -2683,6 +2683,23 @@ function renderEmailsForm() {
 window.rmEmail = function(id) { currentEditingEmails = currentEditingEmails.filter(e => e.id !== id); renderEmailsForm(); };
 window.updEmail = function(id, v) { const e = currentEditingEmails.find(x => x.id === id); if (e) e.email = v; };
 
+window.obterCoresStatus = function(status) {
+  const s = (status || 'Início/call de dúvidas').toLowerCase();
+  if (s.includes('dúvida') || s.includes('duvida')) return { color: '#787878', bg: 'rgba(120, 120, 120, 0.08)', border: 'rgba(120, 120, 120, 0.2)' };
+  if (s.includes('negociação') || s.includes('negociacao')) {
+    if (s.includes('aprovada')) return { color: '#0284c7', bg: 'rgba(2, 132, 199, 0.08)', border: 'rgba(2, 132, 199, 0.2)' };
+    return { color: '#64748b', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.2)' };
+  }
+  if (s.includes('rascunho')) return { color: '#db2777', bg: 'rgba(219, 39, 119, 0.08)', border: 'rgba(219, 39, 119, 0.2)' };
+  if (s.includes('versão final') || s.includes('versao final')) return { color: '#ea580c', bg: 'rgba(234, 88, 12, 0.08)', border: 'rgba(234, 88, 12, 0.2)' };
+  if (s.includes('viagem')) return { color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.08)', border: 'rgba(124, 58, 237, 0.2)' };
+  if (s.includes('cancelado')) return { color: '#dc2626', bg: 'rgba(220, 38, 38, 0.08)', border: 'rgba(220, 38, 38, 0.2)' };
+  if (s.includes('finalizados') || s.includes('finalizado')) return { color: '#16a34a', bg: 'rgba(22, 163, 74, 0.08)', border: 'rgba(22, 163, 74, 0.2)' };
+  if (s.includes('pós') || s.includes('pos')) return { color: '#b45309', bg: 'rgba(180, 83, 9, 0.08)', border: 'rgba(180, 83, 9, 0.2)' };
+  
+  return { color: '#9c8248', bg: 'rgba(196, 163, 90, 0.08)', border: 'rgba(196, 163, 90, 0.2)' };
+};
+
 async function loadClientesTabela() {
   const tbody = document.querySelector('#clientesTable tbody');
   if(tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Atualizando do Notion...</td></tr>';
@@ -2776,10 +2793,7 @@ function renderClientesTabela() {
   }
   
   clientesFiltrados.forEach(c => {
-    let statusColor = '#9c8248'; // aberto
-    if(c.status === 'Fechado') statusColor = '#6B1F2A';
-    else if(c.status === 'Cancelado') statusColor = '#806A6D';
-    
+    const coresStatus = window.obterCoresStatus(c.status);
     const isSelected = window.clienteAtualVisualizado === c.id ? 'selected' : '';
 
     const card = document.createElement('div');
@@ -2847,7 +2861,7 @@ function renderClientesTabela() {
         <span>${passageiros}</span>
       </div>
       <div class="list-card-meta" style="margin-top: 8px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="color:${statusColor}; font-weight:600; background: rgba(196,163,90,0.08); padding: 2px 6px; border-radius: 4px;">${c.status || 'Novo'}</span>
+        <span style="color:${coresStatus.color}; font-weight:600; background: ${coresStatus.bg}; border: 1px solid ${coresStatus.border}; padding: 2px 6px; border-radius: 4px;">${c.status || 'Novo'}</span>
       </div>
     `;
     listContainer.appendChild(card);
@@ -3726,12 +3740,7 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
   const container = document.getElementById('clientesPreviewContainer');
   if (!container) return;
 
-  let statusColor = '#9c8248';
-  if (cliente.status === 'Fechado' || cliente.status === 'Negociação Aprovada' || cliente.status === 'Finalizados') {
-    statusColor = '#6B1F2A';
-  } else if (cliente.status === 'Cancelado') {
-    statusColor = '#806A6D';
-  }
+  const coresStatus = window.obterCoresStatus(cliente.status);
 
   // Serializar coleções locais para a alternância rápida de abas
   const estadiasStr = encodeURIComponent(JSON.stringify(estadias));
@@ -3752,8 +3761,8 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
         ${avatarHTML}
         <div class="client-info-meta">
           <h2>${cliente.nome || 'Cliente sem nome'}</h2>
-          <span class="client-status-badge" style="color: ${statusColor}; background: rgba(196, 163, 90, 0.08); border: 1px solid rgba(196, 163, 90, 0.2);">
-            ${cliente.status || 'Novo'}
+          <span class="client-status-badge" style="color: ${coresStatus.color}; background: ${coresStatus.bg}; border: 1px solid ${coresStatus.border}; font-weight: 600; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase;">
+            ${cliente.status || 'Início/call de dúvidas'}
           </span>
         </div>
       </div>

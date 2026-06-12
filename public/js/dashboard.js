@@ -250,6 +250,11 @@ async function atualizarStatusClienteKanban(id, novoStatus) {
       window.renderClientesTabela();
     }
 
+    // Se a ficha desse cliente estiver aberta no momento, atualiza ela também!
+    if (window.clienteAtualVisualizado === id && typeof window.abrirDetalhesCliente === 'function') {
+      window.abrirDetalhesCliente(id);
+    }
+
     const select = document.getElementById('dashClienteSelect');
     if (select) {
       select.dataset.loadedCount = window.notionClients.length;
