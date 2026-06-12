@@ -1372,6 +1372,243 @@ app.get('/api/calendario/eventos', async (req, res) => {
   }
 });
 
+app.post('/api/calendario/eventos', async (req, res) => {
+  try {
+    const { titulo, tipoServico, dataServico, clienteId, cidade, valorDiaria, assigneeIds, observacoes, richData } = req.body;
+
+    if (!titulo || !tipoServico || !dataServico) {
+      return res.status(400).json({ error: 'Campos obrigatórios: titulo, tipoServico e dataServico.' });
+    }
+
+    const NOTION_AGENDA_DB_ID = process.env.NOTION_AGENDA_DB_ID;
+
+    // 1. Obter nome do cliente no Notion
+    let clienteNome = '';
+    if (NOTION_TOKEN && clienteId && clienteId !== 'cliente_desconhecido') {
+      try {
+        const response = await fetch(`https://api.notion.com/v1/pages/${clienteId}`, {
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28'
+          }
+        });
+        if (response.ok) {
+          const pageData = await response.json();
+          const p = pageData.properties;
+          const nameProp = p?.['Nome do Cliente'] || p?.['Name'] || p?.['Nome'];
+          clienteNome = nameProp?.title?.[0]?.plain_text || '';
+        }
+      } catch (e) {
+        console.error('Erro ao buscar nome do cliente no Notion para inserção:', e);
+      }
+    }
+
+    // 2. Mapear colaboradores designados
+    let assignee = [];
+    let colaboradoresMap = {};
+    if (NOTION_TOKEN && assigneeIds && assigneeIds.length > 0) {
+      try {
+        const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+        const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          (data.results || []).forEach(item => {
+            const p = item.properties;
+            const nameProp = p.Name || p.Nome;
+            colaboradoresMap[item.id] = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+          });
+          assignee = assigneeIds.map(uid => ({
+            id: uid,
+            name: colaboradoresMap[uid] || uid
+          }));
+        }
+      } catch (e) {
+        console.error('Erro ao mapear colaboradores no Notion:', e);
+      }
+    }
+
+    // 3. Montar descrição rica/observações para o Notion
+    let richTextObs = '';
+    if (observacoes) richTextObs += `${observacoes}\n\n`;
+
+    if (tipoServico === 'Transporte' && richData) {
+      richTextObs += `--- DETALHES DO TRANSPORTE ---\n`;
+      richTextObs += `Tipo: ${richData.tipoTransporte || '-'}\n`;
+      richTextObs += `Rota: ${richData.origem || '-'} ➔ ${richData.destino || '-'}\n`;
+      richTextObs += `Horário: ${richData.horario || '-'}\n`;
+      if (richData.linha) richTextObs += `Linha: ${richData.linha}\n`;
+      if (richData.categoria) richTextObs += `Assento/Categoria: ${richData.categoria}\n`;
+      if (richData.tempo) richTextObs += `Tempo/Duração: ${richData.tempo}\n`;
+      if (richData.adultos) richTextObs += `Passageiros: ${richData.adultos} Adultos\n`;
+      richTextObs += `Comprado por Heian: ${richData.compradoHeian ? 'Sim' : 'Não'}\n`;
+    } else if (tipoServico === 'Experiência' && richData) {
+      richTextObs += `--- DETALHES DA EXPERIÊNCIA ---\n`;
+      richTextObs += `Atração: ${richData.nomeExp || titulo}\n`;
+      richTextObs += `Horário Entrada: ${richData.horaPartida || '-'}\n`;
+      if (richData.adultos) richTextObs += `Passageiros: ${richData.adultos} Adultos\n`;
+      if (richData.localEncontro) richTextObs += `Ponto de Encontro: ${richData.localEncontro}\n`;
+      richTextObs += `Comprado por Heian: ${richData.compradoHeian ? 'Sim' : 'Não'}\n`;
+      if (richData.observacoes) richTextObs += `Notas: ${richData.observacoes}\n`;
+    } else if (tipoServico === 'Roteiro' && richData) {
+      richTextObs += `--- DETALHES DO ROTEIRO ---\n`;
+      if (richData.horaEncontro) richTextObs += `Hora de Encontro: ${richData.horaEncontro}\n`;
+      if (richData.localEncontro) richTextObs += `Local de Encontro: ${richData.localEncontro}\n`;
+      if (richData.duracaoTour) richTextObs += `Duração: ${richData.duracaoTour}\n`;
+    }
+
+    // 4. Cadastrar no Notion se configurado
+    let notionPageId = null;
+    if (NOTION_TOKEN && NOTION_AGENDA_DB_ID) {
+      try {
+        const properties = {
+          'Nome': {
+            title: [{ text: { content: titulo } }]
+          },
+          'Data do Tour': {
+            date: { start: dataServico }
+          }
+        };
+
+        if (clienteId && clienteId !== 'cliente_desconhecido') {
+          properties['🎀 Clientes'] = {
+            relation: [{ id: clienteId }]
+          };
+        }
+
+        if (cidade) {
+          properties['Cidade'] = {
+            select: { name: cidade }
+          };
+        }
+
+        if (tipoServico === 'Roteiro' && typeof valorDiaria === 'number') {
+          properties['Valor diária do Guia'] = {
+            number: valorDiaria
+          };
+        }
+
+        if (assigneeIds && assigneeIds.length > 0) {
+          properties['Responsável'] = {
+            relation: assigneeIds.map(uid => ({ id: uid }))
+          };
+        }
+
+        if (richTextObs) {
+          const cleanText = richTextObs.substring(0, 2000);
+          properties['Observações'] = {
+            rich_text: [{ text: { content: cleanText } }]
+          };
+        }
+
+        const response = await fetch('https://api.notion.com/v1/pages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            parent: { database_id: NOTION_AGENDA_DB_ID },
+            properties
+          })
+        });
+
+        if (response.ok) {
+          const pageData = await response.json();
+          notionPageId = pageData.id;
+          console.log(`[Nova OS] Criada com sucesso no Notion: ${notionPageId}`);
+        } else {
+          const errText = await response.text();
+          console.error('Erro na API do Notion ao cadastrar evento:', errText);
+        }
+      } catch (e) {
+        console.error('Erro na chamada da API do Notion ao cadastrar evento:', e);
+      }
+    }
+
+    // 5. Salvar na base local do Supabase
+    const newEventId = notionPageId || `cal_manual_${Date.now()}`;
+    const valorDiariaColab = {};
+    const pagoColab = {};
+    
+    if (assigneeIds && assigneeIds.length > 0) {
+      assigneeIds.forEach(uid => {
+        valorDiariaColab[uid] = tipoServico === 'Roteiro' ? (valorDiaria || 35000) : 0;
+        pagoColab[uid] = false;
+      });
+    }
+
+    const novoEvento = {
+      id: newEventId,
+      titulo,
+      tipoServico,
+      dataServico,
+      clienteId,
+      clientes: [clienteId],
+      clienteNome,
+      cidade,
+      assignee,
+      valorDiaria: tipoServico === 'Roteiro' ? (valorDiaria || null) : null,
+      pago: false,
+      valorDiariaColab,
+      pagoColab,
+      horaEncontro: tipoServico === 'Roteiro' ? (richData?.horaEncontro || null) : null,
+      localEncontro: tipoServico === 'Roteiro' ? (richData?.localEncontro || null) : (tipoServico === 'Experiência' ? (richData?.localEncontro || null) : null),
+      duracaoTour: tipoServico === 'Roteiro' ? (richData?.duracaoTour || null) : null,
+      rotas: [],
+      atracoes: [],
+      textos: observacoes ? [observacoes] : [],
+      transportInfo: tipoServico === 'Transporte' ? {
+        origem: richData?.origem || '',
+        destino: richData?.destino || '',
+        horario: richData?.horario || '',
+        tipoTransporte: richData?.tipoTransporte || '',
+        linha: richData?.linha || '',
+        categoria: richData?.categoria || '',
+        tempo: richData?.tempo || '',
+        adultos: richData?.adultos ? Number(richData.adultos) : null,
+        compradoHeian: richData?.compradoHeian !== false,
+        observacoes: observacoes || ''
+      } : null,
+      expInfo: tipoServico === 'Experiência' ? {
+        nomeExp: richData?.nomeExp || titulo,
+        horaPartida: richData?.horaPartida || '',
+        adultos: richData?.adultos ? Number(richData.adultos) : null,
+        compradoHeian: richData?.compradoHeian !== false,
+        observacoes: observacoes || ''
+      } : null
+    };
+
+    // Obter dados locais do Supabase
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    eventos.push(novoEvento);
+
+    const { error: updateErr } = await supabase.from('config').update({ data: eventos }).eq('id', 'calendario_eventos');
+    if (updateErr) {
+      throw new Error(`Erro ao atualizar Supabase: ${updateErr.message}`);
+    }
+
+    console.log(`[Nova OS] Evento adicionado localmente: ${newEventId}`);
+    res.json({ success: true, event: novoEvento });
+
+  } catch (error) {
+    console.error('Erro ao cadastrar evento manualmente:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.patch('/api/calendario/eventos/:id', async (req, res) => {
   try {
     const { id } = req.params;
