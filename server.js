@@ -1964,13 +1964,15 @@ app.get('/api/notion/contas', async (req, res) => {
     }
 
     const data = await response.json();
-    const contas = (data.results || []).map(item => {
-      const p = item.properties;
-      return {
-        id: item.id,
-        nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome'
-      };
-    });
+    const contas = (data.results || [])
+      .map(item => {
+        const p = item.properties;
+        return {
+          id: item.id,
+          nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome'
+        };
+      })
+      .filter(c => !c.nome.toLowerCase().includes('wise da mocreia') && !c.nome.toLowerCase().includes('wise da mocréia'));
 
     res.json(contas);
   } catch (error) {
@@ -2105,16 +2107,19 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
     });
     if (!contasRes.ok) throw new Error('Erro ao buscar contas no Notion');
     const contasData = await contasRes.json();
-    const contas = (contasData.results || []).map(item => {
-      const p = item.properties;
-      return {
-        id: item.id,
-        nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome',
-        saldoBRL: 0,
-        saldoJPY: 0,
-        saldoUSD: 0
-      };
-    });
+    const contas = (contasData.results || [])
+      .map(item => {
+        const p = item.properties;
+        return {
+          id: item.id,
+          nome: p['Nome']?.title?.map(t => t.plain_text).join('') || 'Sem Nome',
+          saldoBRL: 0,
+          saldoJPY: 0,
+          saldoUSD: 0,
+          movimentacoes: []
+        };
+      })
+      .filter(c => !c.nome.toLowerCase().includes('wise da mocreia') && !c.nome.toLowerCase().includes('wise da mocréia'));
 
     // Consultas paralelas
     const queryAllNotion = async (dbId) => {
@@ -2169,7 +2174,8 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
       const p = item.properties;
       const valorJPY = p['Valor (JPY)']?.number || 0;
       const moedaOriginal = p['Moeda Original']?.select?.name || 'JPY';
-      const descricao = p['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || '';
+      const descricao = p['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada sem nome';
+      const data = p['Data do pagamento']?.date?.start || '';
       const contasRel = p['💳 Contas']?.relation || [];
 
       const info = extrairInfoVal(descricao, valorJPY, moedaOriginal);
@@ -2180,6 +2186,16 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
           if (info.moeda === 'BRL') conta.saldoBRL += info.valor;
           else if (info.moeda === 'USD') conta.saldoUSD += info.valor;
           else conta.saldoJPY += info.valor;
+
+          conta.movimentacoes.push({
+            id: item.id,
+            tipo: 'entrada',
+            data,
+            descricao,
+            valorOriginal: info.valor,
+            moedaOriginal: info.moeda,
+            valorJPY
+          });
         }
       });
     });
@@ -2188,7 +2204,8 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
     (saidasData.results || []).forEach(item => {
       const p = item.properties;
       const valorJPY = p['Valor (JPY)']?.number || 0;
-      const descricao = p['Descrição']?.title?.map(t => t.plain_text).join('') || '';
+      const descricao = p['Descrição']?.title?.map(t => t.plain_text).join('') || 'Saída sem nome';
+      const data = p['Data de pagamento']?.date?.start || '';
       const contasRel = p['💳 Contas']?.relation || [];
 
       const info = extrairInfoVal(descricao, valorJPY, 'JPY');
@@ -2199,8 +2216,23 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
           if (info.moeda === 'BRL') conta.saldoBRL -= info.valor;
           else if (info.moeda === 'USD') conta.saldoUSD -= info.valor;
           else conta.saldoJPY -= info.valor;
+
+          conta.movimentacoes.push({
+            id: item.id,
+            tipo: 'saida',
+            data,
+            descricao,
+            valorOriginal: info.valor,
+            moedaOriginal: info.moeda,
+            valorJPY
+          });
         }
       });
+    });
+
+    // Ordenar movimentações de cada conta por data descrescente
+    contas.forEach(c => {
+      c.movimentacoes.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
     });
 
     res.json(contas);

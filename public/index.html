@@ -1177,6 +1177,56 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+<!-- ── MODAL DE VISÃO GERAL DE CONTA ────────────────────────────────────── -->
+<div id="modalVisaoGeralConta" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
+  <div class="event-modal-card" style="max-width: 850px; width: 95%; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column;">
+    
+    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
+      <div>
+        <h3 class="event-modal-title" id="modalVisaoGeralContaTitulo" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Extrato da Conta: -</h3>
+        <span style="font-size: 11px; color: var(--ink-lt);">Histórico de entradas e saídas do Notion</span>
+      </div>
+      <button class="event-modal-close" onclick="fecharModalVisaoGeralConta()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
+    </div>
+
+    <!-- Filtros e Balanço -->
+    <div style="display: flex; gap: 15px; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.02); padding: 12px 18px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; flex-shrink: 0;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 12px; font-weight: 600; color: var(--ink-mid);">Filtro por Período:</span>
+        <select id="modalVisaoGeralContaMesFiltro" class="search-input-modern" style="padding: 6px 12px; font-size: 12px; min-width: 150px; border-radius: 6px; border: 1px solid var(--border);" onchange="onFiltroMesVisaoGeralConta()">
+          <option value="">Todos os meses</option>
+        </select>
+      </div>
+      <div id="modalVisaoGeralContaBalancoWrapper" style="display: flex; gap: 14px; font-size: 12px;">
+        <!-- Balanço por Moeda Injetado via JS -->
+      </div>
+    </div>
+
+    <!-- Tabela de Movimentações -->
+    <div style="flex: 1; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 8px; background: white;">
+      <table class="data-table" id="tableModalVisaoGeralConta" style="width: 100%; border-collapse: collapse;">
+        <thead style="position: sticky; top: 0; background: var(--warm-white); z-index: 1;">
+          <tr>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Data</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Tipo</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Descrição</th>
+            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Valor Original</th>
+            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Valor (JPY)</th>
+            <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Injetado via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 12px;">
+      <button class="btn-primary" onclick="fecharModalVisaoGeralConta()" style="margin-top:0; padding:8px 16px; font-size:12px;">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/roteiros.js?v=20260611"></script>
 <script src="js/app.js?v=20260611"></script>
 <script src="js/sync_roteiro_cotacao.js?v=20260611"></script>

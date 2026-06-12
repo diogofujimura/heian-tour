@@ -697,6 +697,7 @@ async function carregarSaldosContas() {
     const res = await fetch('/api/dashboard/saldos-contas');
     if (!res.ok) throw new Error('Erro ao buscar saldos de contas');
     const contas = await res.json();
+    window.notionSaldosContas = contas;
 
     container.innerHTML = '';
     if (contas.length === 0) {
@@ -707,33 +708,50 @@ async function carregarSaldosContas() {
     contas.forEach(c => {
       const card = document.createElement('div');
       card.className = 'kpi-card';
+      card.style.cursor = 'pointer';
+      card.onclick = () => abrirVisaoGeralConta(c.id);
+
       Object.assign(card.style, {
         background: 'var(--warm-white)',
-        padding: '16px 20px',
-        borderRadius: '8px',
+        padding: '20px 24px',
+        borderRadius: '12px',
         border: '1px solid var(--border)',
         boxShadow: 'var(--shadow)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '8px',
+        transition: 'transform 0.2s, box-shadow 0.2s'
       });
+
+      card.onmouseover = () => { 
+        card.style.transform = 'translateY(-2px)'; 
+        card.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; 
+      };
+      card.onmouseout = () => { 
+        card.style.transform = 'none'; 
+        card.style.boxShadow = 'var(--shadow)'; 
+      };
 
       const title = document.createElement('h4');
       Object.assign(title.style, {
-        fontSize: '13px',
+        fontSize: '14px',
         color: 'var(--crimson)',
-        fontWeight: '600',
+        fontWeight: '700',
         margin: '0',
-        textTransform: 'uppercase'
+        textTransform: 'uppercase',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       });
-      title.textContent = c.nome;
+      title.innerHTML = `<span>💳 ${c.nome}</span> <span style="font-size:10px; color:var(--ink-lt); font-weight:500; text-transform:none;">Ver Extrato ➔</span>`;
       card.appendChild(title);
 
       const saldosWrapper = document.createElement('div');
       Object.assign(saldosWrapper.style, {
         display: 'flex',
         flexDirection: 'column',
-        gap: '4px'
+        gap: '4px',
+        marginTop: '6px'
       });
 
       const hasBRL = c.saldoBRL !== 0;
@@ -791,6 +809,88 @@ async function carregarSaldosContas() {
       }
 
       card.appendChild(saldosWrapper);
+
+      // Histórico de Movimentações (10 últimas)
+      const movSection = document.createElement('div');
+      Object.assign(movSection.style, {
+        marginTop: '12px',
+        borderTop: '1px dashed var(--border)',
+        paddingTop: '10px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px'
+      });
+
+      const movTitle = document.createElement('div');
+      Object.assign(movTitle.style, {
+        fontSize: '10px',
+        fontWeight: '700',
+        color: 'var(--ink-lt)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        marginBottom: '2px'
+      });
+      movTitle.textContent = 'Últimas Movimentações';
+      movSection.appendChild(movTitle);
+
+      const ultimas = c.movimentacoes.slice(0, 10);
+      if (ultimas.length === 0) {
+        const p = document.createElement('div');
+        Object.assign(p.style, {
+          fontSize: '11px',
+          color: 'var(--ink-lt)',
+          fontStyle: 'italic',
+          padding: '4px 0'
+        });
+        p.textContent = 'Sem movimentações recentes';
+        movSection.appendChild(p);
+      } else {
+        ultimas.forEach(m => {
+          const row = document.createElement('div');
+          Object.assign(row.style, {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '11px',
+            gap: '8px'
+          });
+
+          const left = document.createElement('div');
+          Object.assign(left.style, {
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: 'var(--ink-mid)',
+            flex: '1'
+          });
+          
+          const icon = m.tipo === 'entrada' ? '🟢' : '🔴';
+          const dtFormated = m.data ? m.data.substring(5, 10).split('-').reverse().join('/') : '--/--';
+          
+          left.innerHTML = `<span style="margin-right:4px;">${icon}</span><span style="font-weight:600; margin-right:4px;">[${dtFormated}]</span><span>${m.descricao}</span>`;
+          
+          const right = document.createElement('div');
+          Object.assign(right.style, {
+            fontFamily: 'var(--ff-num)',
+            fontWeight: '600',
+            color: m.tipo === 'entrada' ? '#2ecc71' : '#e74c3c',
+            whiteSpace: 'nowrap'
+          });
+
+          let valStr = '';
+          if (m.moedaOriginal === 'BRL') valStr = `R$ ${m.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          else if (m.moedaOriginal === 'USD') valStr = `$ ${m.valorOriginal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          else valStr = `¥ ${Math.round(m.valorOriginal).toLocaleString('en-US')}`;
+
+          right.textContent = `${m.tipo === 'entrada' ? '+' : '-'} ${valStr}`;
+
+          row.appendChild(left);
+          row.appendChild(right);
+          movSection.appendChild(row);
+        });
+      }
+
+      card.appendChild(movSection);
       container.appendChild(card);
     });
   } catch (err) {
@@ -962,3 +1062,171 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// --- Modal de Visão Geral e Extrato de Conta ---
+
+function abrirVisaoGeralConta(contaId) {
+  const conta = (window.notionSaldosContas || []).find(c => c.id === contaId);
+  if (!conta) return;
+
+  window.currentVisaoGeralContaId = contaId;
+
+  // Preencher título
+  document.getElementById('modalVisaoGeralContaTitulo').textContent = `Extrato da Conta: ${conta.nome}`;
+
+  // Preencher select de meses/anos com base nas movimentações
+  const selectFiltro = document.getElementById('modalVisaoGeralContaMesFiltro');
+  selectFiltro.innerHTML = '<option value="">Todos os meses</option>';
+
+  const periodosUnicos = new Set();
+  conta.movimentacoes.forEach(m => {
+    if (m.data && m.data.length >= 7) {
+      periodosUnicos.add(m.data.substring(0, 7)); // yyyy-mm
+    }
+  });
+
+  const periodosSorted = Array.from(periodosUnicos).sort().reverse();
+  const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+  periodosSorted.forEach(p => {
+    const parts = p.split('-');
+    const ano = parts[0];
+    const mesIndex = parseInt(parts[1]) - 1;
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = `${mesesNomes[mesIndex]} / ${ano}`;
+    selectFiltro.appendChild(opt);
+  });
+
+  // Chamar função de filtro inicial (Todos os meses)
+  onFiltroMesVisaoGeralConta();
+
+  // Exibir modal
+  const modal = document.getElementById('modalVisaoGeralConta');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+}
+
+function fecharModalVisaoGeralConta() {
+  const modal = document.getElementById('modalVisaoGeralConta');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+  window.currentVisaoGeralContaId = null;
+}
+
+function onFiltroMesVisaoGeralConta() {
+  const contaId = window.currentVisaoGeralContaId;
+  const conta = (window.notionSaldosContas || []).find(c => c.id === contaId);
+  if (!conta) return;
+
+  const periodo = document.getElementById('modalVisaoGeralContaMesFiltro').value; // yyyy-mm ou ""
+
+  // Filtrar
+  const filtradas = periodo
+    ? conta.movimentacoes.filter(m => m.data && m.data.startsWith(periodo))
+    : conta.movimentacoes;
+
+  // Calcular balanço do período filtrado
+  const balanco = {
+    JPY: { entradas: 0, saidas: 0 },
+    BRL: { entradas: 0, saidas: 0 },
+    USD: { entradas: 0, saidas: 0 }
+  };
+
+  filtradas.forEach(m => {
+    const moeda = m.moedaOriginal || 'JPY';
+    const val = Number(m.valorOriginal) || 0;
+    if (m.tipo === 'entrada') {
+      if (balanco[moeda]) balanco[moeda].entradas += val;
+    } else {
+      if (balanco[moeda]) balanco[moeda].saidas += val;
+    }
+  });
+
+  // Renderizar Balanço no display
+  const balancoWrapper = document.getElementById('modalVisaoGeralContaBalancoWrapper');
+  balancoWrapper.innerHTML = '';
+
+  const moedasAtivas = Object.keys(balanco).filter(moeda => balanco[moeda].entradas !== 0 || balanco[moeda].saidas !== 0);
+
+  if (moedasAtivas.length === 0) {
+    balancoWrapper.innerHTML = '<span style="color:var(--ink-lt); font-style:italic;">Sem movimentações no período selecionado.</span>';
+  } else {
+    moedasAtivas.forEach(moeda => {
+      const data = balanco[moeda];
+      const saldo = data.entradas - data.saidas;
+      
+      let symb = '¥';
+      let format = (v) => Math.round(v).toLocaleString('en-US');
+      
+      if (moeda === 'BRL') {
+        symb = 'R$';
+        format = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else if (moeda === 'USD') {
+        symb = '$';
+        format = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      const div = document.createElement('div');
+      Object.assign(div.style, {
+        background: 'rgba(255,255,255,0.8)',
+        padding: '6px 12px',
+        borderRadius: '6px',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '8px',
+        fontWeight: '500'
+      });
+
+      const spanEntradas = `<span style="color:#2ecc71;">Entradas: +${symb}${format(data.entradas)}</span>`;
+      const spanSaidas = `<span style="color:#e74c3c;">Saídas: -${symb}${format(data.saidas)}</span>`;
+      const spanSaldo = `<strong style="color:${saldo >= 0 ? '#2ecc71' : '#e74c3c'}">Balanço: ${saldo >= 0 ? '+' : ''}${symb}${format(saldo)}</strong>`;
+
+      div.innerHTML = `${spanEntradas} | ${spanSaidas} | ${spanSaldo}`;
+      balancoWrapper.appendChild(div);
+    });
+  }
+
+  // Preencher Tabela
+  const tbody = document.querySelector('#tableModalVisaoGeralConta tbody');
+  tbody.innerHTML = '';
+
+  if (filtradas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#888; font-style:italic;">Nenhuma movimentação para o período.</td></tr>';
+    return;
+  }
+
+  filtradas.forEach(m => {
+    const tr = document.createElement('tr');
+    
+    // Formatar data
+    let dateStr = '-';
+    if (m.data) {
+      const parts = m.data.split('-');
+      if (parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    const tipoLabel = m.tipo === 'entrada'
+      ? '<span style="background:rgba(46, 204, 113, 0.1); color:#2ecc71; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px;">🟢 Entrada</span>'
+      : '<span style="background:rgba(231, 76, 60, 0.1); color:#e74c3c; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px;">🔴 Saída</span>';
+
+    let valorOrigStr = '';
+    if (m.moedaOriginal === 'BRL') valorOrigStr = `R$ ${m.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    else if (m.moedaOriginal === 'USD') valorOrigStr = `$ ${m.valorOriginal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    else valorOrigStr = `¥ ${Math.round(m.valorOriginal).toLocaleString('en-US')}`;
+
+    const notionPageUrl = `https://notion.so/${m.id.replace(/-/g, '')}`;
+    const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);">🔗 Notion</a>`;
+
+    tr.innerHTML = `
+      <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${dateStr}</td>
+      <td style="padding: 10px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${tipoLabel}</td>
+      <td style="padding: 10px 12px; font-size: 12px; font-weight:500; border-bottom:1px solid rgba(0,0,0,0.04);">${m.descricao}</td>
+      <td style="padding: 10px 12px; text-align: right; font-family:var(--ff-num); font-size: 12px; font-weight:600; color:${m.tipo === 'entrada' ? '#2ecc71' : '#e74c3c'}; border-bottom:1px solid rgba(0,0,0,0.04);">${valorOrigStr}</td>
+      <td style="padding: 10px 12px; text-align: right; font-family:var(--ff-num); font-size: 12px; font-weight:600; border-bottom:1px solid rgba(0,0,0,0.04);">¥ ${Math.round(m.valorJPY).toLocaleString('en-US')}</td>
+      <td style="padding: 10px 12px; text-align: center; border-bottom:1px solid rgba(0,0,0,0.04);">${btnAcao}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
