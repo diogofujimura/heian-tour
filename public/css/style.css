@@ -806,6 +806,7 @@ html, body {
 
   /* Quebras de página super inteligentes (tabelas unidas, e rodapé em folha dedicada exclusiva) */
   .pdf-cover { page-break-after: avoid; break-after: avoid; }
+  .dia-card { page-break-inside: avoid !important; break-inside: avoid !important; }
   .pdf-section { page-break-inside: avoid; break-inside: avoid; }
   .pdf-section-header { page-break-after: avoid; break-after: avoid; }
   .pdf-table { page-break-inside: avoid; break-inside: avoid; }

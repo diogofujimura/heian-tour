@@ -1752,6 +1752,10 @@ function triggerPrint() {
               width: 100% !important;
               max-width: 100% !important;
             }
+            .dia-card {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
           }
         </style>
       </head>
