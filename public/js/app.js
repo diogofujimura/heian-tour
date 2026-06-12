@@ -1681,22 +1681,77 @@ function triggerPrint() {
             opacity: 0.9;
           }
 
-          /* Oculta a barra explicativa no print */
+          /* Estilos de visualização na tela do celular para permitir scroll nativo completo */
+          html, body {
+            overflow: auto !important;
+            height: auto !important;
+            min-height: 100% !important;
+            background: #E8E4DE !important;
+            margin: 0;
+            padding: 0;
+            -webkit-overflow-scrolling: touch;
+          }
+          #previewOverlay {
+            display: block !important;
+            position: relative !important;
+            z-index: 1 !important;
+            background: transparent !important;
+            height: auto !important;
+            overflow: visible !important;
+            inset: auto !important;
+            flex-direction: row !important;
+          }
+          #previewContainer {
+            display: block !important;
+            overflow: visible !important;
+            height: auto !important;
+            padding: 16px 12px !important;
+            background: transparent !important;
+            justify-content: normal !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+          }
+
+          /* Oculta a barra explicativa no print e garante quebra de páginas em múltiplos folhas no celular */
           @media print {
             .mobile-print-bar {
+              display: none !important;
+            }
+            body > * {
               display: none !important;
             }
             body {
               margin: 0 !important;
               padding: 0 !important;
               background: #fff !important;
+              overflow: visible !important;
+              height: auto !important;
             }
-          }
-          
-          body {
-            margin: 0;
-            padding: 0;
-            background: #fff;
+            #previewOverlay {
+              display: block !important;
+              position: relative !important; /* Permite a quebra de página */
+              top: auto !important;
+              left: auto !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              background: white !important;
+              z-index: auto !important;
+              inset: auto !important;
+            }
+            #previewContainer {
+              display: block !important;
+              position: relative !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              overflow: visible !important;
+              height: auto !important;
+              min-height: auto !important;
+              background: white !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
           }
         </style>
       </head>
