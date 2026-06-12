@@ -3149,6 +3149,13 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
             ? !!ev.pagoColab[colab.id]
             : false;
 
+          // Regra: Apenas listamos se for do tipo 'Roteiro' (Tour Guiado) OU se for qualquer outro tipo de serviço com diária > 0.
+          // Isso oculta itens como Shinkansen/Universal Studios com diária zerada.
+          const isRoteiro = ev.tipoServico && ev.tipoServico.toLowerCase() === 'roteiro';
+          if (!isRoteiro && valor <= 0) {
+            return;
+          }
+
           if (pago) {
             custoGuiasPago += valor;
           } else {
