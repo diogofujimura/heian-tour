@@ -543,10 +543,13 @@ window.addEventListener('unhandledrejection', function(e) {
               <span style="color:var(--ink-lt); font-weight:500;">Saldo a Receber:</span>
               <span id="cliFichaSaldoPagar" style="font-family:var(--ff-num); font-weight:600; color:#e74c3c">¥ 0</span>
             </div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px; align-items:center;">
               <span style="color:var(--ink-lt); font-weight:500;">Status do Pagamento:</span>
               <span id="cliFichaStatusPgto" style="font-weight:600; background:rgba(0,0,0,0.04); padding:2px 8px; border-radius:4px;">-</span>
             </div>
+            <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 10px; padding: 10px; width: 100%; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+              💵 Registrar Recebimento
+            </button>
           </div>
         </div>
       </div>
@@ -1230,6 +1233,65 @@ window.addEventListener('unhandledrejection', function(e) {
 
     <div style="display:flex; justify-content:flex-end; flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 12px;">
       <button class="btn-primary" onclick="fecharModalVisaoGeralConta()" style="margin-top:0; padding:8px 16px; font-size:12px;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL DE REGISTRAR ENTRADA ──────────────────────────────────────── -->
+<div id="modalRegistrarEntrada" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
+  <div class="event-modal-card" style="max-width: 450px; width: 95%;">
+    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
+      <div>
+        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Registrar Recebimento</h3>
+        <span style="font-size: 11px; color: var(--ink-lt);">Criar lançamento de Entrada no Notion</span>
+      </div>
+      <button class="event-modal-close" onclick="fecharModalRegistrarEntrada()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
+    </div>
+    
+    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Descrição da Entrada</label>
+        <input type="text" id="modalRegistrarEntradaDesc" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Pagamento da Entrada, Parcela 2, etc.">
+      </div>
+      
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1;">
+          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Moeda</label>
+          <select id="modalRegistrarEntradaMoeda" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" onchange="onMoedaChangeRegistrarEntrada()">
+            <option value="JPY">JPY (¥)</option>
+            <option value="BRL">BRL (R$)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>
+        
+        <div style="flex:1;">
+          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor Original</label>
+          <input type="number" id="modalRegistrarEntradaValor" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="0.00" onkeyup="onValorChangeRegistrarEntrada()" onchange="onValorChangeRegistrarEntrada()">
+        </div>
+      </div>
+
+      <!-- Preview de Conversão para JPY -->
+      <div id="modalRegistrarEntradaPreviewJPYWrapper" style="display: none; background: rgba(46, 204, 113, 0.08); border: 1px solid rgba(46, 204, 113, 0.2); padding: 10px 14px; border-radius: 6px; font-size: 12px; justify-content:space-between; align-items:center;">
+        <span style="color: var(--ink-mid); font-weight: 500;">Estimativa em JPY:</span>
+        <strong id="modalRegistrarEntradaPreviewJPY" style="color: #2ecc71; font-family: var(--ff-num); font-size: 14px;">¥ 0</strong>
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Conta Receptora</label>
+        <select id="modalRegistrarEntradaConta" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
+          <option value="">Carregando contas...</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data do Pagamento</label>
+        <input type="date" id="modalRegistrarEntradaData" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
+      <button class="btn-secondary" onclick="fecharModalRegistrarEntrada()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
+      <button class="btn-primary" id="btnConfirmarRegistrarEntrada" style="margin-top:0; padding:8px 16px; font-size:12px;">Confirmar Recebimento</button>
     </div>
   </div>
 </div>

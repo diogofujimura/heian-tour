@@ -2090,6 +2090,77 @@ app.post('/api/calendario/pagar-guia', async (req, res) => {
   }
 });
 
+app.post('/api/notion/registrar-entrada', async (req, res) => {
+  try {
+    const { clienteId, descricao, valorOriginal, moeda, contaId, data } = req.body;
+
+    if (!clienteId || !descricao || !valorOriginal || !moeda || !contaId) {
+      return res.status(400).json({ error: 'Parâmetros incompletos.' });
+    }
+
+    // 1. Obter taxas de câmbio
+    const appConfig = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    const valorOriginalNum = Number(valorOriginal) || 0;
+    let valorJPY = valorOriginalNum;
+    let descCambioText = '';
+
+    if (moeda === 'BRL') {
+      valorJPY = Math.round(valorOriginalNum / rateBRL);
+      descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${rateBRL.toFixed(6)}]`;
+    } else if (moeda === 'USD') {
+      valorJPY = Math.round(valorOriginalNum / rateUSD);
+      descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${rateUSD.toFixed(6)}]`;
+    } else {
+      descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
+    }
+
+    const descricaoCompleta = `${descricao}${descCambioText}`;
+
+    // 2. Criar página na base de Entradas do Notion
+    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+    
+    const properties = {
+      'Descrição da Entrada': { title: [{ text: { content: descricaoCompleta } }] },
+      'Valor (JPY)': { number: valorJPY },
+      'Data do pagamento': { date: { start: data || new Date().toISOString().substring(0, 10) } },
+      'Moeda Original': { select: { name: moeda } },
+      'Cliente (Relação)': { relation: [{ id: clienteId }] },
+      '💳 Contas': { relation: [{ id: contaId }] }
+    };
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_ENTRADAS_DB_ID },
+        properties
+      })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao criar entrada no Notion: ${errTxt}`);
+    }
+
+    const notionData = await notionRes.json();
+    res.json({ success: true, notionPageId: notionData.id, valorJPY });
+  } catch (error) {
+    console.error('Erro ao registrar entrada de pagamento:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/dashboard/saldos-contas', async (req, res) => {
   try {
     const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';

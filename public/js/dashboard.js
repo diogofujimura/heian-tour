@@ -1242,3 +1242,163 @@ function onFiltroMesVisaoGeralConta() {
     tbody.appendChild(tr);
   });
 }
+
+// --- Modal de Registrar Entrada / Recebimento de Cliente ---
+
+async function abrirModalRegistrarEntrada() {
+  const clienteId = document.getElementById('dashClienteSelect').value;
+  if (!clienteId) {
+    alert('Selecione um cliente primeiro.');
+    return;
+  }
+
+  // Preencher descrição padrão com o nome do cliente selecionado
+  const selectCli = document.getElementById('dashClienteSelect');
+  const clienteNome = selectCli.options[selectCli.selectedIndex].text;
+  document.getElementById('modalRegistrarEntradaDesc').value = `Pagamento - ${clienteNome}`;
+  
+  // Resetar outros campos
+  document.getElementById('modalRegistrarEntradaMoeda').value = 'JPY';
+  document.getElementById('modalRegistrarEntradaValor').value = '';
+  document.getElementById('modalRegistrarEntradaPreviewJPYWrapper').style.display = 'none';
+  document.getElementById('modalRegistrarEntradaData').value = new Date().toISOString().substring(0, 10);
+
+  // Carregar contas
+  const selectConta = document.getElementById('modalRegistrarEntradaConta');
+  selectConta.innerHTML = '<option value="">Selecione a conta receptora...</option>';
+
+  try {
+    const res = await fetch('/api/notion/contas');
+    if (!res.ok) throw new Error('Erro ao buscar contas');
+    const contas = await res.json();
+    
+    contas.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nome;
+      selectConta.appendChild(opt);
+    });
+  } catch (err) {
+    console.error(err);
+    selectConta.innerHTML = '<option value="">Erro ao carregar contas</option>';
+  }
+
+  // Exibir modal
+  const modal = document.getElementById('modalRegistrarEntrada');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+}
+
+function fecharModalRegistrarEntrada() {
+  const modal = document.getElementById('modalRegistrarEntrada');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+  modal.classList.remove('active');
+}
+
+function onMoedaChangeRegistrarEntrada() {
+  onValorChangeRegistrarEntrada();
+}
+
+function onValorChangeRegistrarEntrada() {
+  const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
+  const valorInput = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
+  const wrapper = document.getElementById('modalRegistrarEntradaPreviewJPYWrapper');
+  const previewText = document.getElementById('modalRegistrarEntradaPreviewJPY');
+
+  if (moeda === 'JPY' || valorInput === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  const rateBRL = parseFloat(state.config.cambio_jpy_brl) || 0.031670;
+  const rateUSD = parseFloat(state.config.cambio_jpy_usd) || 0.006280;
+
+  let estimadoJPY = 0;
+  if (moeda === 'BRL') {
+    estimadoJPY = Math.round(valorInput / rateBRL);
+  } else if (moeda === 'USD') {
+    estimadoJPY = Math.round(valorInput / rateUSD);
+  }
+
+  previewText.textContent = `¥ ${estimadoJPY.toLocaleString('en-US')}`;
+  wrapper.style.display = 'flex';
+}
+
+// Configurar o listener para confirmar o recebimento
+document.addEventListener('DOMContentLoaded', () => {
+  const btnConfirmar = document.getElementById('btnConfirmarRegistrarEntrada');
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener('click', async () => {
+      const clienteId = document.getElementById('dashClienteSelect').value;
+      const descricao = document.getElementById('modalRegistrarEntradaDesc').value.trim();
+      const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
+      const valorOriginal = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
+      const contaId = document.getElementById('modalRegistrarEntradaConta').value;
+      const data = document.getElementById('modalRegistrarEntradaData').value;
+
+      if (!clienteId) {
+        alert('Nenhum cliente selecionado.');
+        return;
+      }
+      if (!descricao) {
+        alert('Por favor, insira a descrição da entrada.');
+        return;
+      }
+      if (valorOriginal <= 0) {
+        alert('Por favor, insira un valor válido maior que zero.');
+        return;
+      }
+      if (!contaId) {
+        alert('Por favor, selecione a conta receptora.');
+        return;
+      }
+
+      const oldText = btnConfirmar.textContent;
+      btnConfirmar.disabled = true;
+      btnConfirmar.textContent = 'Gravando...';
+      document.body.style.cursor = 'wait';
+
+      try {
+        const response = await fetch('/api/notion/registrar-entrada', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clienteId,
+            descricao,
+            valorOriginal,
+            moeda,
+            contaId,
+            data
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Erro na requisição');
+        }
+
+        alert('Recebimento registrado com sucesso no Notion!');
+        fecharModalRegistrarEntrada();
+
+        // Recarregar os dados do cliente e os saldos/extrato de contabilidade
+        const clientId = document.getElementById('dashClienteSelect').value;
+        if (typeof selecionarClienteDashboard === 'function') {
+          await selecionarClienteDashboard(clientId);
+        }
+        if (typeof carregarSaldosContas === 'function') {
+          await carregarSaldosContas();
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao registrar recebimento: ' + err.message);
+      } finally {
+        document.body.style.cursor = 'default';
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = oldText;
+      }
+    });
+  }
+});
