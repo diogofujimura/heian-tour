@@ -28,6 +28,21 @@ async function renderDashboard() {
     await inicializarDashboardFinanceiro();
   }
 
+  // Busca a ordenação personalizada do Kanban do Supabase
+  if (window.kanbanOrdem === undefined) {
+    try {
+      const ordRes = await fetch('/api/config/kanban_ordem');
+      if (ordRes.ok) {
+        window.kanbanOrdem = await ordRes.json();
+      } else {
+        window.kanbanOrdem = {};
+      }
+    } catch(e) {
+      console.error('Erro ao carregar ordenação do Kanban:', e);
+      window.kanbanOrdem = {};
+    }
+  }
+
   // Popula o select de clientes para o Dashboard
   let clientes = window.notionClients || [];
 
@@ -67,6 +82,31 @@ async function renderDashboard() {
   await carregarSaldosContas();
 }
 
+async function salvarOrdemKanbanDOM() {
+  const ordem = {};
+  const colunas = document.querySelectorAll('.kanban-column');
+  colunas.forEach(col => {
+    const cardsContainer = col.querySelector('.kanban-cards-container');
+    if (!cardsContainer) return;
+    const status = cardsContainer.dataset.status;
+    const cards = col.querySelectorAll('.kanban-card');
+    const ids = Array.from(cards).map(card => card.dataset.id).filter(Boolean);
+    ordem[status] = ids;
+  });
+
+  window.kanbanOrdem = ordem;
+
+  try {
+    await fetch('/api/config/kanban_ordem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ordem)
+    });
+  } catch(e) {
+    console.error('Erro ao salvar ordenação do Kanban no Supabase:', e);
+  }
+}
+
 function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
@@ -77,6 +117,19 @@ function renderKanban() {
   KANBAN_STATUSES.forEach(statusConfig => {
     const colStatus = statusConfig.name;
     const colClients = clientes.filter(c => (c.status || 'Início/call de dúvidas').toLowerCase() === colStatus.toLowerCase());
+
+    // Ordenação personalizada vinda do Supabase
+    const ordemIds = window.kanbanOrdem && window.kanbanOrdem[colStatus] ? window.kanbanOrdem[colStatus] : [];
+    if (ordemIds.length > 0) {
+      colClients.sort((a, b) => {
+        const idxA = ordemIds.indexOf(a.id);
+        const idxB = ordemIds.indexOf(b.id);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      });
+    }
 
     const column = document.createElement('div');
     column.className = 'kanban-column';
@@ -124,6 +177,8 @@ function renderKanban() {
       const { id, fromStatus } = JSON.parse(clientStr);
       if (fromStatus.toLowerCase() !== colStatus.toLowerCase()) {
         await atualizarStatusClienteKanban(id, colStatus);
+      } else {
+        await salvarOrdemKanbanDOM();
       }
     });
 
@@ -156,6 +211,21 @@ function renderKanban() {
         card.addEventListener('dragend', () => {
           card.classList.remove('dragging');
           setTimeout(() => { isDraggingAction = false; }, 100);
+        });
+
+        // Reordenação dinâmica interativa no Desktop
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          const draggingCard = document.querySelector('.kanban-card.dragging');
+          if (draggingCard && draggingCard !== card) {
+            const bounding = card.getBoundingClientRect();
+            const offset = e.clientY - bounding.top - bounding.height / 2;
+            if (offset < 0) {
+              card.parentNode.insertBefore(draggingCard, card);
+            } else {
+              card.parentNode.insertBefore(draggingCard, card.nextSibling);
+            }
+          }
         });
 
         // Eventos de Toque (Mobile / Tablet Drag & Drop)
@@ -206,17 +276,35 @@ function renderKanban() {
 
           const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
           if (elementUnder) {
-            const container = elementUnder.closest('.kanban-cards-container');
-            if (container) {
-              if (activeContainer && activeContainer !== container) {
-                activeContainer.classList.remove('drag-over');
+            // Reordenação dinâmica por toque
+            const targetCard = elementUnder.closest('.kanban-card');
+            if (targetCard && targetCard !== card) {
+              const bounding = targetCard.getBoundingClientRect();
+              const offset = touch.clientY - bounding.top - bounding.height / 2;
+              if (offset < 0) {
+                targetCard.parentNode.insertBefore(card, targetCard);
+              } else {
+                targetCard.parentNode.insertBefore(card, targetCard.nextSibling);
               }
-              activeContainer = container;
-              activeContainer.classList.add('drag-over');
             } else {
-              if (activeContainer) {
-                activeContainer.classList.remove('drag-over');
-                activeContainer = null;
+              // Se está sobre o contêiner
+              const container = elementUnder.closest('.kanban-cards-container');
+              if (container) {
+                if (activeContainer && activeContainer !== container) {
+                  activeContainer.classList.remove('drag-over');
+                }
+                activeContainer = container;
+                activeContainer.classList.add('drag-over');
+
+                const cardsInCol = container.querySelectorAll('.kanban-card');
+                if (cardsInCol.length === 0) {
+                  container.appendChild(card);
+                }
+              } else {
+                if (activeContainer) {
+                  activeContainer.classList.remove('drag-over');
+                  activeContainer = null;
+                }
               }
             }
           }
@@ -238,6 +326,13 @@ function renderKanban() {
 
             if (targetStatus && fromStatus && targetStatus.toLowerCase() !== fromStatus.toLowerCase()) {
               await atualizarStatusClienteKanban(id, targetStatus);
+            } else {
+              await salvarOrdemKanbanDOM();
+            }
+          } else {
+            // Se soltou na mesma coluna por movimento sutil
+            if (isDraggingAction) {
+              await salvarOrdemKanbanDOM();
             }
           }
 
@@ -358,6 +453,7 @@ async function atualizarStatusClienteKanban(id, novoStatus) {
     }
 
     // 3. UI Sync
+    await salvarOrdemKanbanDOM();
     renderKanban();
     
     if (typeof window.renderClientesTabela === 'function') {

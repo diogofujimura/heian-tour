@@ -403,6 +403,31 @@ app.get('/api/transportes', async (req, res) => {
   }
 });
 
+// Rotas genéricas de Config
+app.get('/api/config/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase.from('config').select('data').eq('id', id).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : {});
+  } catch(e) {
+    console.error(`Error getting config ${req.params.id}:`, e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/config/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from('config').upsert({ id, data: req.body });
+    if (error) throw error;
+    res.json({success:true});
+  } catch(e) {
+    console.error(`Error saving config ${req.params.id}:`, e);
+    res.status(500).json({error: e.message});
+  }
+});
+
 app.post('/api/transportes', async (req, res) => {
   try {
     const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
