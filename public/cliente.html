@@ -1242,10 +1242,20 @@
       
       const fotoEl = document.getElementById('popFoto');
       if (fotoEl) {
+        fotoEl.onerror = function() {
+          const fallbackUrl = 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=320&h=180&q=80';
+          if (this.src !== fallbackUrl) {
+            this.src = fallbackUrl;
+          } else {
+            this.style.display = 'none';
+          }
+        };
+
         if (atracao && atracao['Foto (URL)']) {
           fotoEl.src = atracao['Foto (URL)'];
         } else {
-          fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(nome)}`;
+          const buscaNome = nome.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+          fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(buscaNome)}`;
         }
         fotoEl.style.display = 'block';
       }
