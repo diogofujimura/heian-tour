@@ -1156,7 +1156,8 @@ app.get('/api/notion/clientes', async (req, res) => {
       }
     });
 
-    res.json(clientes);
+    const clientesValidos = clientes.filter(c => c.nome && c.nome.trim() !== '');
+    res.json(clientesValidos);
   } catch (error) {
     console.error('Erro ao buscar clientes no Notion:', error);
       return res.status(500).json({ error: 'Erro ao buscar clientes no Notion', details: error.message });
