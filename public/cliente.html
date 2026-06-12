@@ -521,6 +521,59 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Chips de Atrações interativos */
+    .dia-atracoes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .chip-atracao { 
+      background: rgba(196,163,90,0.08); 
+      border: 1px solid rgba(196,163,90,0.18); 
+      padding: 6px 12px; 
+      border-radius: 12px; 
+      font-size: 12px; 
+      color: var(--ink-mid); 
+      font-weight: 500; 
+      cursor: pointer; 
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+      position: relative; 
+      display: inline-block;
+    }
+    .chip-atracao:hover { 
+      background: var(--accent); 
+      color: white; 
+      transform: translateY(-1px); 
+      box-shadow: 0 4px 12px rgba(217,119,6,0.15); 
+      border-color: var(--accent);
+    }
+    .chip-atracao.missing { border-style: dashed; opacity: 0.7; }
+    
+    /* Popover/Modal de Atração */
+    .atracao-popover { 
+      position: fixed; 
+      z-index: 9999; 
+      background: rgba(255, 255, 255, 0.95); 
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.8); 
+      border-radius: 12px; 
+      width: 320px; 
+      padding: 20px; 
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08); 
+      display: none; 
+      opacity: 0; 
+      transition: opacity 0.2s; 
+      pointer-events: none; 
+    }
+    .atracao-popover.visible { display: block; opacity: 1; }
+    .popover-bairro { font-size: 10px; text-transform: uppercase; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 4px; font-weight: 600; }
+    .popover-titulo { font-family: var(--ff-display); font-size: 19px; color: var(--primary); margin-bottom: 8px; font-weight: 600; }
+    .popover-desc { font-size: 12px; color: var(--ink-mid); line-height: 1.5; margin-bottom: 12px; }
+    .popover-preco { font-size: 13px; font-weight: 500; color: var(--ink); border-top: 1px solid rgba(142, 28, 28, 0.12); padding-top: 10px; display: flex; justify-content: space-between; }
+    .preco-brt { color: var(--accent); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -859,13 +912,13 @@
               } else if (el.tipo === 'sequencia') {
                 temConteudo = true;
                 const atrHtml = el.atracoesDoDia && el.atracoesDoDia.length > 0 
-                  ? `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                      ${el.atracoesDoDia.map(atr => `<span class="meta-badge" style="font-size: 11px; background: rgba(142, 28, 28, 0.08); color: var(--primary); font-weight: 500; border: none; padding: 3px 8px;">${atr}</span>`).join('')}
+                  ? `<div class="dia-atracoes">
+                      ${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}
                      </div>`
                   : '';
                 elementsHTML += `
-                  <div class="event-pill sequence" style="border-left-color: var(--primary); background: var(--primary-light); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 10px; width: 100%;">
-                    <div>📍 <strong>${el.nomeDaRota || 'Atividades recomendadas'}</strong></div>
+                  <div style="margin-bottom: 14px; width: 100%;">
+                    <div style="margin-bottom: 6px;">📍 <strong style="color: var(--primary);">${el.nomeDaRota || 'Atividades recomendadas'}</strong></div>
                     ${atrHtml}
                   </div>
                 `;
@@ -919,6 +972,11 @@
           `;
           timeline.appendChild(item);
         });
+
+        // Vincula eventos de hover aos chips
+        if (typeof attachChipEvents === 'function') {
+          setTimeout(attachChipEvents, 50);
+        }
       } else {
         timeline.innerHTML = '<div class="info-card" style="text-align:center; padding: 40px; color: var(--ink-mid);">Roteiro dia a dia ainda não sincronizado.</div>';
       }
@@ -1118,6 +1176,131 @@
         });
       } else {
         paymentsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--ink-light);">Nenhum pagamento registrado no momento.</td></tr>';
+      }
+    }
+
+    // --- LÓGICA DO POPOVER E CHIPS DE ATRAÇÃO NA ÁREA DO CLIENTE ---
+    let atracaoMap = new Map();
+
+    async function loadClientArea() {
+      // 1. Carregar banco de atrações local para os tooltips
+      try {
+        const resAtr = await fetch('/api/atracoes');
+        if (resAtr.ok) {
+          const dbAtracoes = await resAtr.json();
+          dbAtracoes.forEach(a => {
+            atracaoMap.set(a['Nome da Atração'].toLowerCase(), a);
+          });
+        }
+      } catch (err) {
+        console.error('Erro ao carregar banco de atrações:', err);
+      }
+
+      criarPopover();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientId = urlParams.get('id');
+      
+      if (!clientId) {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/public/client-data/${clientId}`);
+        if (!response.ok) {
+          throw new Error('Falha ao obter dados do cliente');
+        }
+        
+        const resData = await response.json();
+        if (!resData.success) {
+          throw new Error(resData.error || 'Erro desconhecido');
+        }
+
+        renderClientData(resData);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'block';
+      }
+    }
+
+    function criarChipAtracaoHTML(nomeAtracao) {
+      const match = atracaoMap.get(nomeAtracao.toLowerCase());
+      const isMissing = !match ? 'missing' : '';
+      return `<div class="chip-atracao ${isMissing}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}">${nomeAtracao}</div>`;
+    }
+
+    function showPopover(e) {
+      const chip = e.target;
+      const nome = chip.getAttribute('data-id');
+      const atracao = atracaoMap.get(nome.toLowerCase());
+      
+      const popover = document.getElementById('atracaoPopover');
+      if (!popover) return;
+      
+      if (atracao) {
+        document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
+        document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
+        document.getElementById('popDesc').textContent = (atracao['Descrição Detalhada'] || 'Visitação livre.').replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
+        let preco = atracao['Preço (Ingresso)'];
+        document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
+      } else {
+        document.getElementById('popBairro').textContent = 'Ponto de Interesse';
+        document.getElementById('popTitulo').textContent = nome;
+        document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
+        document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-light)">Sem dados</strong>`;
+      }
+
+      const rect = chip.getBoundingClientRect();
+      let topPos = rect.bottom + 8;
+      let leftPos = rect.left;
+      
+      if (topPos + 180 > window.innerHeight) {
+        topPos = rect.top - 180;
+      }
+      
+      if (leftPos + 320 > window.innerWidth) {
+        leftPos = window.innerWidth - 340;
+      }
+      if (leftPos < 10) leftPos = 10;
+
+      popover.style.top = topPos + 'px';
+      popover.style.left = leftPos + 'px';
+      popover.classList.add('visible');
+    }
+
+    function hidePopover() {
+      const popover = document.getElementById('atracaoPopover');
+      if (popover) popover.classList.remove('visible');
+    }
+
+    function attachChipEvents() {
+      document.querySelectorAll('.chip-atracao').forEach(chip => {
+        chip.removeEventListener('mouseenter', showPopover);
+        chip.removeEventListener('mouseleave', hidePopover);
+        chip.addEventListener('mouseenter', showPopover);
+        chip.addEventListener('mouseleave', hidePopover);
+      });
+    }
+
+    function criarPopover() {
+      let popover = document.getElementById('atracaoPopover');
+      if (!popover) {
+        popover = document.createElement('div');
+        popover.className = 'atracao-popover';
+        popover.id = 'atracaoPopover';
+        popover.innerHTML = `
+          <div class="popover-bairro" id="popBairro">Bairro</div>
+          <div class="popover-titulo" id="popTitulo">Nome da Atração</div>
+          <div class="popover-desc" id="popDesc">Descrição detalhada...</div>
+          <div class="popover-preco" id="popPreco">
+            <span>Preço:</span>
+            <strong class="preco-brt">Grátis</strong>
+          </div>
+        `;
+        document.body.appendChild(popover);
       }
     }
 
