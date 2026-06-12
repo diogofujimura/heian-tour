@@ -547,9 +547,14 @@ window.addEventListener('unhandledrejection', function(e) {
               <span style="color:var(--ink-lt); font-weight:500;">Status do Pagamento:</span>
               <span id="cliFichaStatusPgto" style="font-weight:600; background:rgba(0,0,0,0.04); padding:2px 8px; border-radius:4px;">-</span>
             </div>
-            <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 10px; padding: 10px; width: 100%; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
-              💵 Registrar Recebimento
-            </button>
+            <div style="display: flex; gap: 10px; margin-top: 10px; width: 100%;">
+              <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 0; padding: 10px; flex: 1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #2ecc71; border-color: #27ae60; font-size:12px;">
+                💵 Recebimento
+              </button>
+              <button class="btn-primary" id="btnFichaRegistrarSaida" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 10px; flex: 1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #e74c3c; border-color: #c0392b; font-size:12px;">
+                🔴 Registrar Saída
+              </button>
+            </div>
           </div>
         </div>
       </div>
