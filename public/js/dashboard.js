@@ -29,7 +29,6 @@ async function renderDashboard() {
   }
 
   // Popula o select de clientes para o Dashboard
-  const select = document.getElementById('dashClienteSelect');
   let clientes = window.notionClients || [];
 
   if (clientes.length === 0) {
