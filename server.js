@@ -2800,8 +2800,9 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
 
     // Processar Diárias dos Guias do Calendário Local
     let eventos = [];
-    if (calCfg && calCfg.data && Array.isArray(calCfg.data)) {
-      eventos = calCfg.data.filter(ev => ev.clienteId === clientId || (ev.clientes && ev.clientes.includes(clientId)));
+    if (calCfg && calCfg.data) {
+      const listaEventos = Array.isArray(calCfg.data.data) ? calCfg.data.data : (Array.isArray(calCfg.data) ? calCfg.data : []);
+      eventos = listaEventos.filter(ev => ev.clienteId === clientId || (ev.clientes && ev.clientes.includes(clientId)));
     }
 
     let custoGuiasPago = 0;
