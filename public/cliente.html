@@ -1242,7 +1242,11 @@
       
       const fotoEl = document.getElementById('popFoto');
       if (fotoEl) {
-        fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(nome)}`;
+        if (atracao && atracao['Foto (URL)']) {
+          fotoEl.src = atracao['Foto (URL)'];
+        } else {
+          fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(nome)}`;
+        }
         fotoEl.style.display = 'block';
       }
 

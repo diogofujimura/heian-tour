@@ -1391,6 +1391,7 @@ function abrirModalAtracao(id) {
       <div class="field"><label>Bairro</label><input id="m_a_bairro" value="${item['Bairro']||''}"></div>
       <div class="field full-width"><label>Nome da Atração</label><input id="m_a_nome" value="${item['Nome da Atração']||''}"></div>
       <div class="field full-width"><label>Preço (Texto livre)</label><input id="m_a_preco" value="${item['Preço (Ingresso)']||''}"></div>
+      <div class="field full-width"><label>Foto (URL da Imagem personalizada - Opcional)</label><input id="m_a_foto" placeholder="https://exemplo.com/imagem.jpg" value="${item['Foto (URL)']||''}"></div>
       <div class="field full-width"><label>Descrição Detalhada</label><textarea id="m_a_desc" rows="4">${item['Descrição Detalhada']||''}</textarea></div>
     </div>
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarAtracao(${id||'null'})">Salvar</button></div>`;
@@ -1403,7 +1404,7 @@ function abrirModalAtracao(id) {
   }
 }
 async function salvarAtracao(id){
-  const dados={'Cidade':v('m_a_cidade'),'Bairro':v('m_a_bairro'),'Nome da Atração':v('m_a_nome'),'Preço (Ingresso)':v('m_a_preco'),'Descrição Detalhada':v('m_a_desc').trim()};
+  const dados={'Cidade':v('m_a_cidade'),'Bairro':v('m_a_bairro'),'Nome da Atração':v('m_a_nome'),'Preço (Ingresso)':v('m_a_preco'),'Descrição Detalhada':v('m_a_desc').trim(),'Foto (URL)':v('m_a_foto').trim()};
   if(id){await fetch(`/api/atracoes/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});const i=state.atracoesDB.find(a=>a.id==id);if(i)Object.assign(i,dados);}
   else{const n=await fetch('/api/atracoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)}).then(r=>r.json());state.atracoesDB.push(n);}
   await loadDB();closeModal();
