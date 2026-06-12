@@ -1240,6 +1240,12 @@
       const popover = document.getElementById('atracaoPopover');
       if (!popover) return;
       
+      const fotoEl = document.getElementById('popFoto');
+      if (fotoEl) {
+        fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(nome)}`;
+        fotoEl.style.display = 'block';
+      }
+
       if (atracao) {
         document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
         document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
@@ -1257,8 +1263,8 @@
       let topPos = rect.bottom + 8;
       let leftPos = rect.left;
       
-      if (topPos + 180 > window.innerHeight) {
-        topPos = rect.top - 180;
+      if (topPos + 320 > window.innerHeight) {
+        topPos = rect.top - 330;
       }
       
       if (leftPos + 320 > window.innerWidth) {
@@ -1292,6 +1298,7 @@
         popover.className = 'atracao-popover';
         popover.id = 'atracaoPopover';
         popover.innerHTML = `
+          <img class="popover-foto" id="popFoto" src="" alt="Atração" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; display: none;">
           <div class="popover-bairro" id="popBairro">Bairro</div>
           <div class="popover-titulo" id="popTitulo">Nome da Atração</div>
           <div class="popover-desc" id="popDesc">Descrição detalhada...</div>

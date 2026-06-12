@@ -188,6 +188,7 @@ function criarPopover() {
   popover.className = 'atracao-popover';
   popover.id = 'atracaoPopover';
   popover.innerHTML = `
+    <img class="popover-foto" id="popFoto" src="" alt="Atração" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; display: none;">
     <div class="popover-bairro" id="popBairro">Bairro</div>
     <div class="popover-titulo" id="popTitulo">Nome da Atração</div>
     <div class="popover-desc" id="popDesc">Descrição detalhada...</div>
@@ -552,6 +553,12 @@ function showPopover(e) {
   const atracao = atracaoMap.get(nome.toLowerCase());
   
   const popover = document.getElementById('atracaoPopover');
+  const fotoEl = document.getElementById('popFoto');
+  
+  if (fotoEl) {
+    fotoEl.src = `https://loremflickr.com/320/180/japan,${encodeURIComponent(nome)}`;
+    fotoEl.style.display = 'block';
+  }
   
   if (atracao) {
     document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
@@ -575,8 +582,9 @@ function showPopover(e) {
   let topPos = rect.bottom + 8;
   let leftPos = rect.left;
   
-  if (topPos + 150 > window.innerHeight) {
-    topPos = rect.top - 160; // Abre pra cima se não couber embaixo
+  // Abre para cima se não couber embaixo (considerando a altura adicional da imagem)
+  if (topPos + 320 > window.innerHeight) {
+    topPos = rect.top - 330;
   }
 
   popover.style.top = topPos + 'px';
