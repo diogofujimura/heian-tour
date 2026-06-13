@@ -4528,11 +4528,23 @@ window.renderCalendario = async function() {
     const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
     const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
 
+    const hoje = new Date();
+    const hojeReset = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
     // Dias do Mês Anterior (células vazias/cinza)
     for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
       const diaNum = totalDiasMesAnterior - i;
+      let anoAnt = ano;
+      let mesAnt = mes - 1;
+      if (mesAnt < 0) {
+        mesAnt = 11;
+        anoAnt--;
+      }
+      const diaDataAnt = new Date(anoAnt, mesAnt, diaNum);
+      const isPastAnt = diaDataAnt < hojeReset;
+
       gridEl.innerHTML += `
-        <div class="calendar-cell other-month">
+        <div class="calendar-cell other-month ${isPastAnt ? 'past-day' : ''}">
           <span class="calendar-cell-num">${diaNum}</span>
           <div class="calendar-events-list"></div>
         </div>
@@ -4540,7 +4552,6 @@ window.renderCalendario = async function() {
     }
 
     // Dias do Mês Atual
-    const hoje = new Date();
     for (let dia = 1; dia <= totalDiasMes; dia++) {
       const dateKey = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
       const isToday = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === dia;
@@ -4570,8 +4581,11 @@ window.renderCalendario = async function() {
         `;
       }).join('');
 
+      const diaData = new Date(ano, mes, dia);
+      const isPast = diaData < hojeReset;
+
       gridEl.innerHTML += `
-        <div class="calendar-cell ${isToday ? 'today' : ''}">
+        <div class="calendar-cell ${isToday ? 'today' : ''} ${isPast ? 'past-day' : ''}">
           <span class="calendar-cell-num">${dia}</span>
           <div class="calendar-events-list">
             ${eventHTMLs(eventosHTML)}
@@ -4584,8 +4598,17 @@ window.renderCalendario = async function() {
     const totalCelulasAteAgora = primeiroDiaSemana + totalDiasMes;
     const celulasRestantes = (7 - (totalCelulasAteAgora % 7)) % 7;
     for (let dia = 1; dia <= celulasRestantes; dia++) {
+      let anoSeg = ano;
+      let mesSeg = mes + 1;
+      if (mesSeg > 11) {
+        mesSeg = 0;
+        anoSeg++;
+      }
+      const diaDataSeg = new Date(anoSeg, mesSeg, dia);
+      const isPastSeg = diaDataSeg < hojeReset;
+
       gridEl.innerHTML += `
-        <div class="calendar-cell other-month">
+        <div class="calendar-cell other-month ${isPastSeg ? 'past-day' : ''}">
           <span class="calendar-cell-num">${dia}</span>
           <div class="calendar-events-list"></div>
         </div>
@@ -4620,8 +4643,10 @@ window.renderCalendario = async function() {
       const diaSemana = diasSemana[dateObj.getDay()];
       const dataFormatada = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
 
+      const isPast = dateObj < hojeReset;
+
       let diaRowHTML = `
-        <div class="calendar-list-day-row">
+        <div class="calendar-list-day-row ${isPast ? 'past-day' : ''}">
           <!-- Coluna da Esquerda: Informações do Dia -->
           <div class="calendar-list-day-header">
             <div class="calendar-list-day-date">

@@ -2618,3 +2618,9 @@ html, body {
   align-items: center;
   gap: 4px;
 }
+
+/* Dias passados monocromáticos no calendário */
+.calendar-cell.past-day,
+.calendar-list-day-row.past-day {
+  filter: grayscale(1) opacity(0.55);
+}
