@@ -4436,6 +4436,233 @@ async function navegarMesCalendario(direcao) {
   await renderCalendario();
 }
 
+function gerarEventCardHTML(ev, simplificado = false) {
+  // Obter nome do cliente (com fallback)
+  let clienteNomeStr = ev.clienteNome || '';
+  if (!clienteNomeStr) {
+    if (ev.clientes && ev.clientes.length > 0) {
+      const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === ev.clientes[0]) : null;
+      clienteNomeStr = cli ? cli.nome : 'Cliente Vinculado';
+    } else {
+      clienteNomeStr = 'Nenhum cliente';
+    }
+  }
+
+  // Obter cidade (com fallback)
+  let cidadeStr = ev.cidade || '';
+  if (!cidadeStr) {
+    const clientNotionId = ev.clientes && ev.clientes.length > 0 ? ev.clientes[0] : null;
+    let roteiroCliente = null;
+    if (clientNotionId && typeof dbRotas !== 'undefined') {
+      roteiroCliente = Object.values(dbRotas).find(rot => rot.notionClienteId === clientNotionId);
+    }
+    if (roteiroCliente && roteiroCliente.cliente?.dataInicio) {
+      const parseDateUTC = (dateStr) => {
+        const [yy, mm, dd] = dateStr.split('-').map(Number);
+        return new Date(Date.UTC(yy, mm - 1, dd));
+      };
+      const diffDays = Math.round((parseDateUTC(ev.dataServico) - parseDateUTC(roteiroCliente.cliente.dataInicio)) / (1000 * 60 * 60 * 24));
+      if (roteiroCliente.dias && roteiroCliente.dias[diffDays]) {
+        const diaRoteiro = roteiroCliente.dias[diffDays];
+        const sequencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'sequencia');
+        if (sequencias.length > 0) {
+          cidadeStr = sequencias[0].cidade || '';
+        }
+      }
+    }
+    if (!cidadeStr) cidadeStr = 'Japão';
+  }
+
+  // Colaboradores (Guias) - Lógica de renderização dinâmica de rodapé
+  let footerGuiaHTML = '';
+  if (simplificado) {
+    const guiasNomes = ev.assignee && ev.assignee.length > 0 ? ev.assignee.map(a => a.name).join(', ') : 'Nenhum guia designado';
+    footerGuiaHTML = `
+      <div style="border-top:1px solid var(--border); padding-top:4.2px; font-size:8.2px; color:var(--ink-mid); display:flex; align-items:center; gap:4px;">
+        <span style="color:var(--ink-lt);">👤 Guia:</span> <strong>${guiasNomes}</strong>
+      </div>
+    `;
+  } else {
+    if (ev.assignee && ev.assignee.length > 1) {
+      const chips = ev.assignee.map(a => 
+        `<span class="colab-card-chip" style="background:rgba(107,31,42,0.06); color:var(--crimson); font-size:8px; font-weight:700; padding:1px 5px; border-radius:4px; display:inline-flex; align-items:center; gap:2px; border:1px solid rgba(107,31,42,0.12);">
+          👤 ${a.name}
+        </span>`
+      ).join('');
+      
+      footerGuiaHTML = `
+        <div style="border-top:1px solid var(--border); padding-top:4px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:4px;" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
+          <div style="display:flex; flex-wrap:wrap; gap:2px; align-items:center; max-width:85%; overflow:hidden;">
+            ${chips}
+          </div>
+          <span style="font-size:9px; color:var(--ink-lt); cursor:pointer; text-decoration:underline; font-weight:600; white-space:nowrap; padding:1px 4px;">Editar</span>
+        </div>
+      `;
+    } else {
+      const guiaIdAtual = ev.assignee && ev.assignee.length > 0 ? ev.assignee[0].id : '';
+      const optionsColaboradores = calColaboradores.map(col => {
+        return `<option value="${col.id}" ${col.id === guiaIdAtual ? 'selected' : ''}>👤 ${col.name}</option>`;
+      }).join('');
+      
+      footerGuiaHTML = `
+        <div style="border-top:1px solid var(--border); padding-top:4px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:4px;" onclick="event.stopPropagation();">
+          <div style="display:flex; align-items:center; gap:4px; flex-grow:1;">
+            <span style="font-size:8px; font-weight:600; color:var(--ink-mid); white-space:nowrap;">👤 Guia:</span>
+            <select onchange="atualizarGuiaRapidoLista('${ev.id}', this)" class="calendar-card-select" style="flex-grow:1; max-width:110px;">
+              <option value="">Nenhum guia designado</option>
+              ${optionsColaboradores}
+            </select>
+          </div>
+          <button class="btn-secondary" style="margin:0; padding:1px 4px; font-size:8px; height:18px; line-height:1; border-radius:3px; border-color:var(--border);" onclick="abrirCalendarioEventModal('${ev.id}')" title="Designar múltiplos colaboradores">
+            ➕
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  // Badges e Cores
+  let badgeBg = 'rgba(107,31,42,0.06)';
+  let badgeColor = 'var(--crimson)';
+  const tLower = ev.tipoServico ? ev.tipoServico.toLowerCase() : '';
+  
+  if (tLower.includes('shinkansen') || tLower.includes('romancecar') || tLower.includes('trem') || tLower.includes('ônibus') || tLower.includes('onibus') || tLower.includes('transfer') || tLower.includes('transporte')) {
+    badgeBg = 'rgba(196,163,90,0.08)';
+    badgeColor = 'var(--gold-dk)';
+  } else if (tLower.includes('experiência') || tLower.includes('experiencia')) {
+    badgeBg = 'rgba(135,75,45,0.06)';
+    badgeColor = '#7a3e20';
+  }
+
+  // Determinar classe do card para cores específicas de borda/background
+  let tipoClassSuffix = 'transporte';
+  if (tLower.includes('roteiro')) {
+    tipoClassSuffix = 'tour';
+  } else if (tLower.includes('experiência') || tLower.includes('experiencia')) {
+    tipoClassSuffix = 'experiencia';
+  } else {
+    tipoClassSuffix = 'transporte';
+  }
+
+  const meetingTime = ev.horaEncontro || '-';
+
+  // Se for simplificado (popover), removemos o onclick do card para não atrapalhar no hover
+  const clickAttr = simplificado ? '' : `onclick="abrirCalendarioEventModal('${ev.id}')"`;
+
+  return `
+    <div class="calendar-list-event-card card-type-${tipoClassSuffix}" ${clickAttr} style="${simplificado ? 'box-shadow:none; border:none; background:transparent; padding:0; margin:0;' : ''}">
+      <!-- Parte Superior do Card -->
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+          <span class="compact-card-status" style="background:${badgeBg}; color:${badgeColor}; font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600;">
+            ${ev.tipoServico || 'Serviço'}
+          </span>
+          <span style="font-size:9px; font-weight:700; color:var(--ink-mid);">
+            🕒 ${meetingTime}
+          </span>
+        </div>
+        <h4 style="margin:1px 0 0 0; font-family:var(--ff-display); font-size:11px; font-weight:700; color:var(--ink-dk); line-height:1.3;">
+          ${ev.titulo}
+        </h4>
+        <div style="display:flex; flex-direction:column; gap:1px; margin-top:1px; font-size:9px; color:var(--ink-mid);">
+          <div>
+            <span style="color:var(--ink-lt);">Cliente:</span> <strong>${clienteNomeStr}</strong>
+          </div>
+          <div>
+            <span style="color:var(--ink-lt);">Cidade:</span> <strong>${cidadeStr}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parte Inferior do Card: Guia -->
+      ${footerGuiaHTML}
+    </div>
+  `;
+}
+
+function criarEventPopover() {
+  let popover = document.getElementById('calendarioEventPopover');
+  if (!popover) {
+    popover = document.createElement('div');
+    popover.id = 'calendarioEventPopover';
+    popover.className = 'calendar-event-popover';
+    popover.style.display = 'none';
+    document.body.appendChild(popover);
+  }
+}
+
+function showEventPopover(e, eventId) {
+  const badge = e.currentTarget;
+  const ev = calEventos.find(item => item.id === eventId);
+  if (!ev) return;
+
+  criarEventPopover();
+  const popover = document.getElementById('calendarioEventPopover');
+  if (!popover) return;
+
+  // Injetar o HTML do card simplificado
+  popover.innerHTML = gerarEventCardHTML(ev, true);
+
+  // Posicionar
+  const rect = badge.getBoundingClientRect();
+  let topPos = rect.bottom + 8;
+  let leftPos = rect.left;
+
+  // Ajustar se passar da altura ou largura da tela
+  if (topPos + 180 > window.innerHeight) {
+    topPos = rect.top - 190;
+  }
+  if (leftPos + 300 > window.innerWidth) {
+    leftPos = window.innerWidth - 320;
+  }
+  if (leftPos < 10) leftPos = 10;
+
+  popover.style.top = topPos + 'px';
+  popover.style.left = leftPos + 'px';
+  popover.style.display = 'block';
+  // Forçar reflow para ativar transição de opacidade
+  popover.offsetHeight; 
+  popover.classList.add('visible');
+}
+
+function hideEventPopover() {
+  const popover = document.getElementById('calendarioEventPopover');
+  if (popover) {
+    popover.classList.remove('visible');
+    popover.style.display = 'none';
+  }
+}
+
+async function atualizarDataEvento(eventId, novaData) {
+  showToast('Atualizando data do serviço...');
+  try {
+    const res = await fetch(`/api/calendario/eventos/${eventId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ dataServico: novaData })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Falha ao atualizar data no servidor');
+    }
+    
+    // Atualizar no cache local de eventos
+    const evIndex = calEventos.findIndex(e => e.id === eventId);
+    if (evIndex > -1) {
+      calEventos[evIndex].dataServico = novaData;
+    }
+    
+    showToast('Data atualizada com sucesso!');
+    await renderCalendario(); // Re-renderizar calendário
+  } catch (err) {
+    console.error('Erro ao mover evento:', err);
+    alert('Erro ao alterar data do evento: ' + err.message);
+    await renderCalendario(); // Resetar visual em caso de erro
+  }
+}
+
 window.renderCalendario = async function() {
   const titleEl = document.getElementById('calendarMonthYearTitle');
   const gridEl = document.getElementById('calendarioGrid');
@@ -4575,7 +4802,7 @@ window.renderCalendario = async function() {
         
         const guiaText = ev.assignee.length > 0 ? ` [👤 ${ev.assignee.map(a => a.name).join(', ')}]` : '';
         return `
-          <div class="calendar-event-badge calendar-event-item ${tipoClass}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
+          <div class="calendar-event-badge calendar-event-item ${tipoClass} draggable-event" draggable="true" data-event-id="${ev.id}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
             ${ev.titulo}${guiaText}
           </div>
         `;
@@ -4585,7 +4812,7 @@ window.renderCalendario = async function() {
       const isPast = diaData < hojeReset;
 
       gridEl.innerHTML += `
-        <div class="calendar-cell ${isToday ? 'today' : ''} ${isPast ? 'past-day' : ''}">
+        <div class="calendar-cell drop-zone-cell ${isToday ? 'today' : ''} ${isPast ? 'past-day' : ''}" data-date="${dateKey}">
           <span class="calendar-cell-num">${dia}</span>
           <div class="calendar-events-list">
             ${eventHTMLs(eventosHTML)}
@@ -4614,6 +4841,46 @@ window.renderCalendario = async function() {
         </div>
       `;
     }
+
+    // Adicionar listeners do Popover nas badges da grade
+    gridEl.querySelectorAll('.calendar-event-badge').forEach(badge => {
+      badge.addEventListener('mouseenter', (e) => {
+        const evId = badge.getAttribute('data-event-id');
+        showEventPopover(e, evId);
+      });
+      badge.addEventListener('mouseleave', hideEventPopover);
+    });
+
+    // Configurar listeners de Drag & Drop nas badges
+    gridEl.querySelectorAll('.draggable-event').forEach(badge => {
+      badge.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', badge.getAttribute('data-event-id'));
+        badge.classList.add('dragging');
+        hideEventPopover(); // Ocultar o popover no início do arraste
+      });
+      badge.addEventListener('dragend', () => {
+        badge.classList.remove('dragging');
+      });
+    });
+
+    // Configurar drop zones nas células de dia
+    gridEl.querySelectorAll('.drop-zone-cell').forEach(cell => {
+      cell.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        cell.classList.add('drag-over');
+      });
+      cell.addEventListener('dragleave', () => {
+        cell.classList.remove('drag-over');
+      });
+      cell.addEventListener('drop', async (e) => {
+        cell.classList.remove('drag-over');
+        const eventId = e.dataTransfer.getData('text/plain');
+        const novaData = cell.getAttribute('data-date');
+        if (eventId && novaData) {
+          await atualizarDataEvento(eventId, novaData);
+        }
+      });
+    });
   } else {
     // VISUALIZAÇÃO EM LISTA
     if (!listEl) return;
@@ -4665,135 +4932,7 @@ window.renderCalendario = async function() {
       `;
 
       evs.forEach(ev => {
-        // Obter nome do cliente (com fallback)
-        let clienteNomeStr = ev.clienteNome || '';
-        if (!clienteNomeStr) {
-          if (ev.clientes && ev.clientes.length > 0) {
-            const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === ev.clientes[0]) : null;
-            clienteNomeStr = cli ? cli.nome : 'Cliente Vinculado';
-          } else {
-            clienteNomeStr = 'Nenhum cliente';
-          }
-        }
-
-        // Obter cidade (com fallback)
-        let cidadeStr = ev.cidade || '';
-        if (!cidadeStr) {
-          const clientNotionId = ev.clientes && ev.clientes.length > 0 ? ev.clientes[0] : null;
-          let roteiroCliente = null;
-          if (clientNotionId && typeof dbRotas !== 'undefined') {
-            roteiroCliente = Object.values(dbRotas).find(rot => rot.notionClienteId === clientNotionId);
-          }
-          if (roteiroCliente && roteiroCliente.cliente?.dataInicio) {
-            const parseDateUTC = (dateStr) => {
-              const [yy, mm, dd] = dateStr.split('-').map(Number);
-              return new Date(Date.UTC(yy, mm - 1, dd));
-            };
-            const diffDays = Math.round((parseDateUTC(ev.dataServico) - parseDateUTC(roteiroCliente.cliente.dataInicio)) / (1000 * 60 * 60 * 24));
-            if (roteiroCliente.dias && roteiroCliente.dias[diffDays]) {
-              const diaRoteiro = roteiroCliente.dias[diffDays];
-              const sequencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'sequencia');
-              if (sequencias.length > 0) {
-                cidadeStr = sequencias[0].cidade || '';
-              }
-            }
-          }
-          if (!cidadeStr) cidadeStr = 'Japão';
-        }
-
-        // Colaboradores (Guias) - Lógica de renderização dinâmica de rodapé
-        let footerGuiaHTML = '';
-        if (ev.assignee && ev.assignee.length > 1) {
-          const chips = ev.assignee.map(a => 
-            `<span class="colab-card-chip" style="background:rgba(107,31,42,0.06); color:var(--crimson); font-size:8px; font-weight:700; padding:1px 5px; border-radius:4px; display:inline-flex; align-items:center; gap:2px; border:1px solid rgba(107,31,42,0.12);">
-              👤 ${a.name}
-            </span>`
-          ).join('');
-          
-          footerGuiaHTML = `
-            <div style="border-top:1px solid var(--border); padding-top:4px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:4px;" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
-              <div style="display:flex; flex-wrap:wrap; gap:2px; align-items:center; max-width:85%; overflow:hidden;">
-                ${chips}
-              </div>
-              <span style="font-size:9px; color:var(--ink-lt); cursor:pointer; text-decoration:underline; font-weight:600; white-space:nowrap; padding:1px 4px;">Editar</span>
-            </div>
-          `;
-        } else {
-          const guiaIdAtual = ev.assignee && ev.assignee.length > 0 ? ev.assignee[0].id : '';
-          const optionsColaboradores = calColaboradores.map(col => {
-            return `<option value="${col.id}" ${col.id === guiaIdAtual ? 'selected' : ''}>👤 ${col.name}</option>`;
-          }).join('');
-          
-          footerGuiaHTML = `
-            <div style="border-top:1px solid var(--border); padding-top:4px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:4px;" onclick="event.stopPropagation();">
-              <div style="display:flex; align-items:center; gap:4px; flex-grow:1;">
-                <span style="font-size:8px; font-weight:600; color:var(--ink-mid); white-space:nowrap;">👤 Guia:</span>
-                <select onchange="atualizarGuiaRapidoLista('${ev.id}', this)" class="calendar-card-select" style="flex-grow:1; max-width:110px;">
-                  <option value="">Nenhum guia designado</option>
-                  ${optionsColaboradores}
-                </select>
-              </div>
-              <button class="btn-secondary" style="margin:0; padding:1px 4px; font-size:8px; height:18px; line-height:1; border-radius:3px; border-color:var(--border);" onclick="abrirCalendarioEventModal('${ev.id}')" title="Designar múltiplos colaboradores">
-                ➕
-              </button>
-            </div>
-          `;
-        }
-
-        // Badges e Cores
-        let badgeBg = 'rgba(107,31,42,0.06)';
-        let badgeColor = 'var(--crimson)';
-        const tLower = ev.tipoServico.toLowerCase();
-        
-        if (tLower.includes('shinkansen') || tLower.includes('romancecar') || tLower.includes('trem') || tLower.includes('ônibus') || tLower.includes('onibus') || tLower.includes('transfer') || tLower.includes('transporte')) {
-          badgeBg = 'rgba(196,163,90,0.08)';
-          badgeColor = 'var(--gold-dk)';
-        } else if (tLower.includes('experiência') || tLower.includes('experiencia')) {
-          badgeBg = 'rgba(135,75,45,0.06)';
-          badgeColor = '#7a3e20';
-        }
-
-        // Determinar classe do card para cores específicas de borda/background
-        let tipoClassSuffix = 'transporte';
-        if (tLower.includes('roteiro')) {
-          tipoClassSuffix = 'tour';
-        } else if (tLower.includes('experiência') || tLower.includes('experiencia')) {
-          tipoClassSuffix = 'experiencia';
-        } else {
-          tipoClassSuffix = 'transporte';
-        }
-
-        const meetingTime = ev.horaEncontro || '-';
-
-        diaRowHTML += `
-          <div class="calendar-list-event-card card-type-${tipoClassSuffix}" onclick="abrirCalendarioEventModal('${ev.id}')">
-            <!-- Parte Superior do Card -->
-            <div style="display:flex; flex-direction:column; gap:3px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-                <span class="compact-card-status" style="background:${badgeBg}; color:${badgeColor}; font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600;">
-                  ${ev.tipoServico}
-                </span>
-                <span style="font-size:9px; font-weight:700; color:var(--ink-mid);">
-                  🕒 ${meetingTime}
-                </span>
-              </div>
-              <h4 style="margin:1px 0 0 0; font-family:var(--ff-display); font-size:11px; font-weight:700; color:var(--ink-dk); line-height:1.3;">
-                ${ev.titulo}
-              </h4>
-              <div style="display:flex; flex-direction:column; gap:1px; margin-top:1px; font-size:9px; color:var(--ink-mid);">
-                <div>
-                  <span style="color:var(--ink-lt);">Cliente:</span> <strong>${clienteNomeStr}</strong>
-                </div>
-                <div>
-                  <span style="color:var(--ink-lt);">Cidade:</span> <strong>${cidadeStr}</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- Parte Inferior do Card: Guia -->
-            ${footerGuiaHTML}
-          </div>
-        `;
+        diaRowHTML += gerarEventCardHTML(ev);
       });
 
       diaRowHTML += `

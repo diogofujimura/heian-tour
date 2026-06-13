@@ -2624,3 +2624,45 @@ html, body {
 .calendar-list-day-row.past-day {
   filter: grayscale(1) opacity(0.55);
 }
+
+/* Popover de eventos detalhados na grade */
+.calendar-event-popover {
+  position: fixed;
+  z-index: 99999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  width: 250px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  display: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none; /* Evita que o popover interfira no mouseleave */
+}
+.calendar-event-popover.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Drag & Drop no Calendário */
+.draggable-event {
+  cursor: grab;
+  user-select: none;
+}
+.draggable-event:active {
+  cursor: grabbing;
+}
+.draggable-event.dragging {
+  opacity: 0.35;
+}
+.drop-zone-cell {
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.drop-zone-cell.drag-over {
+  background-color: rgba(196, 163, 90, 0.08) !important;
+  border: 2px dashed var(--gold) !important;
+  box-shadow: inset 0 0 8px rgba(196, 163, 90, 0.15);
+}
