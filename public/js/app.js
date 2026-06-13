@@ -4521,15 +4521,15 @@ window.renderCalendario = async function() {
   }
 
   // 6. Desenhar baseado no modo selecionado
+  const hoje = new Date();
+  const hojeReset = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
   if (calViewMode === 'grid') {
     gridEl.innerHTML = '';
 
     const primeiroDiaSemana = new Date(ano, mes, 1).getDay(); // 0 (Dom) a 6 (Sáb)
     const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
     const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
-
-    const hoje = new Date();
-    const hojeReset = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
 
     // Dias do Mês Anterior (células vazias/cinza)
     for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
