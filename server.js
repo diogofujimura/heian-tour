@@ -67,6 +67,98 @@ async function obterColaboradoresEmails() {
   return colaboradoresMap;
 }
 
+// Helper para gerar o link do Google Agenda convertendo horário JST para UTC
+function gerarLinkGoogleAgenda(evento, horaStr) {
+  try {
+    const dataStr = evento.dataServico; // YYYY-MM-DD
+    if (!dataStr) return '';
+    const [ano, mes, dia] = dataStr.split('-').map(Number);
+    let hora = 9;
+    let min = 0;
+    if (horaStr && typeof horaStr === 'string' && horaStr.includes(':')) {
+      const parts = horaStr.split(':');
+      hora = parseInt(parts[0], 10) || 9;
+      min = parseInt(parts[1], 10) || 0;
+    }
+
+    // Converter para UTC sabendo que a hora do evento é JST (UTC+9)
+    const dataInicioUTC = new Date(Date.UTC(ano, mes - 1, dia, hora - 9, min, 0));
+    
+    // Determinar a duração padrão (em milissegundos)
+    let duracaoMs = 8 * 60 * 60 * 1000; // 8 horas padrão para Roteiro
+    if (evento.tipoServico === 'Experiência') {
+      duracaoMs = 2 * 60 * 60 * 1000; // 2 horas
+    } else if (evento.tipoServico === 'Transporte') {
+      if (evento.transportInfo && evento.transportInfo.tempo) {
+        const tempoStr = evento.transportInfo.tempo.toLowerCase();
+        const matchHoras = tempoStr.match(/(\d+)\s*(?:hora|h)/);
+        if (matchHoras) {
+          const h = parseInt(matchHoras[1], 10);
+          duracaoMs = h * 60 * 60 * 1000;
+        } else {
+          duracaoMs = 2 * 60 * 60 * 1000; // 2h fallback
+        }
+      } else {
+        duracaoMs = 2 * 60 * 60 * 1000; // 2h fallback
+      }
+    } else if (evento.tipoServico === 'Roteiro') {
+      if (evento.duracaoTour) {
+        const duracaoStr = evento.duracaoTour.toLowerCase();
+        const matchHoras = duracaoStr.match(/(\d+)\s*(?:hora|h)/);
+        if (matchHoras) {
+          const h = parseInt(matchHoras[1], 10);
+          duracaoMs = h * 60 * 60 * 1000;
+        }
+      }
+    }
+
+    const dataFimUTC = new Date(dataInicioUTC.getTime() + duracaoMs);
+
+    const formatarDataGoogle = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const datesParam = `${formatarDataGoogle(dataInicioUTC)}/${formatarDataGoogle(dataFimUTC)}`;
+    const textParam = encodeURIComponent(`[Heian Tour] ${evento.titulo}`);
+    
+    // Montar descrição detalhada
+    let desc = `Tipo de Serviço: ${evento.tipoServico}\n`;
+    desc += `Horário de Encontro JST: ${horaStr}\n`;
+    desc += `Ponto de Encontro: ${evento.localEncontro || 'Não informado'}\n`;
+    if (evento.clienteNome) {
+      desc += `Cliente: ${evento.clienteNome}\n`;
+    }
+    
+    if (evento.tipoServico === 'Transporte' && evento.transportInfo) {
+      const t = evento.transportInfo;
+      desc += `\nRota: ${t.origem || '-'} ➔ ${t.destino || '-'}\n`;
+      desc += `Tipo de Transporte: ${t.tipoTransporte || '-'}\n`;
+      if (t.linha) desc += `Linha: ${t.linha}\n`;
+      if (t.categoria) desc += `Assento/Categoria: ${t.categoria}\n`;
+      if (t.tempo) desc += `Duração: ${t.tempo}\n`;
+    } else if (evento.tipoServico === 'Experiência' && evento.expInfo) {
+      const e = evento.expInfo;
+      desc += `\nExperiência: ${e.nomeExp || evento.titulo}\n`;
+      if (e.horaPartida) desc += `Horário de Entrada: ${e.horaPartida}\n`;
+    } else if (evento.tipoServico === 'Roteiro') {
+      desc += `\nDuração: ${evento.duracaoTour || 'Dia inteiro'}\n`;
+    }
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${textParam}&dates=${datesParam}&details=${detailsParam}&location=${locationParam}`;
+  } catch (error) {
+    console.error('[Google Calendar] Erro ao gerar link:', error);
+    return '';
+  }
+}
+
+// Helper para formatar data YYYY-MM-DD para DD/MM
+function formatarDataAssunto(dataStr) {
+  if (!dataStr || !dataStr.includes('-')) return '';
+  const parts = dataStr.split('-');
+  if (parts.length < 3) return '';
+  return `${parts[2]}/${parts[1]}`;
+}
+
 // Função para disparar os e-mails
 async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) {
   if (process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'true') {
@@ -76,18 +168,21 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
   let assunto = '';
   let tituloEmail = '';
   let subtituloEmail = '';
-  let corDestaque = '#8b0000'; // Vermelho Heian Premium
+  let corDestaque = '#89232D'; // Vermelho Heian Oficial (Exato da Logo)
+
+  const dataFormatada = formatarDataAssunto(evento.dataServico);
+  const dataPrefixo = dataFormatada ? `${dataFormatada} - ` : '';
 
   if (tipo === 'cadastro') {
-    assunto = `[Heian Tour] Nova atividade designada: ${evento.titulo}`;
+    assunto = `[Heian Tour] Nova atividade designada: ${dataPrefixo}${evento.titulo}`;
     tituloEmail = 'Nova Atividade Designada';
     subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, você foi designado para uma nova atividade no calendário da Heian Tour.`;
   } else if (tipo === '24h') {
-    assunto = `[Heian Tour] Lembrete 24h: ${evento.titulo}`;
+    assunto = `[Heian Tour] Lembrete 24h: ${dataPrefixo}${evento.titulo}`;
     tituloEmail = 'Lembrete de Atividade (24 horas)';
     subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, este é um lembrete automático de que você tem uma atividade amanhã.`;
   } else if (tipo === '1h') {
-    assunto = `[Heian Tour] Lembrete 1h: ${evento.titulo}`;
+    assunto = `[Heian Tour] Lembrete 1h: ${dataPrefixo}${evento.titulo}`;
     tituloEmail = 'Lembrete de Atividade (1 hora)';
     subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, sua atividade inicia em aproximadamente 1 hora!`;
     corDestaque = '#d35400'; // Laranja para urgência
@@ -126,21 +221,28 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
     `;
   }
 
-  const observacoesText = evento.textos && evento.textos.length > 0 ? evento.textos.join('\n') : '';
+  // Gerar o link do Google Agenda
+  const linkGoogleAgenda = gerarLinkGoogleAgenda(evento, hora);
 
   const html = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background-color: #ffffff;">
-      <!-- Cabeçalho -->
-      <div style="background: linear-gradient(135deg, ${corDestaque} 0%, #1a1a1a 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">HEIAN TOUR</h1>
-        <p style="margin: 5px 0 0 0; font-size: 14px; color: #f0f0f0; opacity: 0.9;">${tituloEmail}</p>
-      </div>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: #ffffff;">
+      <!-- Cabeçalho com Barra Premium -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #89232D; border: 0;">
+        <tr>
+          <td style="padding: 20px 0 20px 25px; text-align: left; vertical-align: middle; width: 50%;">
+            <img src="cid:logo_heian" alt="Heian Tour" style="max-height: 80px; width: auto; max-width: 100%; display: block; object-fit: contain;">
+          </td>
+          <td style="padding: 20px 25px 20px 0; text-align: right; vertical-align: middle; width: 50%;">
+            <p style="margin: 0; font-size: 13px; color: #f0f0f0; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">${tituloEmail}</p>
+          </td>
+        </tr>
+      </table>
       
       <!-- Conteúdo Principal -->
-      <div style="padding: 25px 30px; color: #333333; line-height: 1.6;">
-        <p style="font-size: 16px; margin-top: 0; color: #1a1a1a;">${subtituloEmail}</p>
+      <div style="padding: 30px 35px; color: #333333; line-height: 1.6;">
+        <p style="font-size: 15px; margin-top: 0; color: #444444;">${subtituloEmail}</p>
         
-        <div style="background-color: #f9f9f9; border-left: 4px solid ${corDestaque}; padding: 15px; border-radius: 4px; margin: 20px 0;">
+        <div style="background-color: #fafafa; border-left: 4px solid ${corDestaque}; padding: 18px; border-radius: 4px; margin: 20px 0; border-top: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
           <h3 style="margin-top: 0; color: #1a1a1a; font-size: 16px; border-bottom: 1px solid #eef0f2; padding-bottom: 8px;">Detalhes do Serviço</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
@@ -181,10 +283,12 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
         </div>
         ` : ''}
         
-        ${observacoesText ? `
-        <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
-          <h4 style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 15px;">Observações / Notas</h4>
-          <p style="background-color: #fff9f0; padding: 12px; border-radius: 6px; border: 1px dashed #fcd3a1; font-size: 13px; white-space: pre-line; margin: 0; color: #5c3e10; line-height: 1.5;">${observacoesText}</p>
+        ${linkGoogleAgenda ? `
+        <!-- Botão Adicionar ao Google Agenda -->
+        <div style="margin: 30px 0 25px 0; text-align: center;">
+          <a href="${linkGoogleAgenda}" target="_blank" style="background-color: #89232D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+            📅 Adicionar ao Google Agenda
+          </a>
         </div>
         ` : ''}
         
@@ -204,7 +308,14 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
     from: `"Heian Tour" <${process.env.GMAIL_USER}>`,
     to: email,
     subject: assunto,
-    html: html
+    html: html,
+    attachments: [
+      {
+        filename: 'logo.png',
+        path: 'c:/Users/User/Documents/heian-quote/public/assets/logo.png',
+        cid: 'logo_heian'
+      }
+    ]
   };
 
   try {
@@ -258,14 +369,13 @@ async function processarNotificacoesEmail() {
       }
 
       // 2. Evitar e-mails retroativos de cadastro para eventos futuros que já existiam no calendário.
-      // Se a chave emails_cadastro_enviados não existe, inicializamos marcando todos os guias
-      // atuais como "já notificados" silenciosamente.
+      // Se a chave emails_cadastro_enviados não existe, inicializamos como array vazia
+      // para permitir o envio para novos eventos.
       if (!evento.emails_cadastro_enviados) {
-        evento.emails_cadastro_enviados = evento.assignee.map(colab => colab.id);
+        evento.emails_cadastro_enviados = [];
         evento.emails_24h_enviados = [];
         evento.emails_1h_enviados = [];
         houveAlteracao = true;
-        continue;
       }
 
       // Garantir existência das arrays de controle
