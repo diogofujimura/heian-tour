@@ -69,6 +69,10 @@ async function obterColaboradoresEmails() {
 
 // Função para disparar os e-mails
 async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) {
+  if (process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'true') {
+    console.log(`[Email] Envio de notificação [${tipo}] para ${email} ignorado (Desativado no .env)`);
+    return false;
+  }
   let assunto = '';
   let tituloEmail = '';
   let subtituloEmail = '';
