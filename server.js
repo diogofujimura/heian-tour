@@ -163,6 +163,74 @@ function formatarDataAssunto(dataStr) {
   return `${parts[2]}/${parts[1]}`;
 }
 
+// Helper para formatar data YYYY-MM-DD para formato extenso PT-BR (ex: 14 de Junho de 2026)
+function formatarDataExtenso(dataStr) {
+  if (!dataStr || !dataStr.includes('-')) return dataStr || '';
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const parts = dataStr.split('-');
+  if (parts.length < 3) return dataStr;
+  const dia = parseInt(parts[2], 10);
+  const mesIndex = parseInt(parts[1], 10) - 1;
+  const ano = parts[0];
+  const nomeMes = meses[mesIndex] || '';
+  // Adicionar dia da semana
+  const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const dateObj = new Date(parseInt(ano), mesIndex, dia);
+  const nomeDia = diasSemana[dateObj.getDay()] || '';
+  return `${nomeDia}, ${dia} de ${nomeMes} de ${ano}`;
+}
+
+// Helper para buscar o hotel do cliente com base na data do serviço
+async function buscarHotelPorData(evento) {
+  try {
+    // 1. Tentar buscar via roteiroNome (mais preciso)
+    if (evento.roteiroNome) {
+      const { data: rotData } = await supabase.from('roteiros').select('data').eq('nome', evento.roteiroNome).single();
+      if (rotData && rotData.data) {
+        const roteiro = rotData.data;
+        const estadias = roteiro.estadias || [];
+        if (estadias.length > 0 && evento.dataServico) {
+          // Encontrar a estadia que cobre a data do serviço
+          for (const est of estadias) {
+            if (est.dataInicio && est.dataFim && est.hotel) {
+              if (evento.dataServico >= est.dataInicio && evento.dataServico <= est.dataFim) {
+                return { hotel: est.hotel, cidade: est.cidade || '' };
+              }
+            }
+          }
+          // Fallback: retornar a primeira estadia que tenha hotel
+          const comHotel = estadias.find(e => e.hotel);
+          if (comHotel) return { hotel: comHotel.hotel, cidade: comHotel.cidade || '' };
+        }
+      }
+    }
+
+    // 2. Tentar buscar via clienteId nos dados locais do cliente
+    if (evento.clienteId && evento.clienteId !== 'cliente_desconhecido') {
+      const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', evento.clienteId).single();
+      if (localData && localData.data) {
+        const estadias = localData.data.estadias || [];
+        if (estadias.length > 0 && evento.dataServico) {
+          for (const est of estadias) {
+            if (est.dataInicio && est.dataFim && est.hotel) {
+              if (evento.dataServico >= est.dataInicio && evento.dataServico <= est.dataFim) {
+                return { hotel: est.hotel, cidade: est.cidade || '' };
+              }
+            }
+          }
+          const comHotel = estadias.find(e => e.hotel);
+          if (comHotel) return { hotel: comHotel.hotel, cidade: comHotel.cidade || '' };
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('[Hotel Lookup] Erro ao buscar hotel:', err.message);
+    return null;
+  }
+}
+
 // Função para disparar os e-mails
 async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) {
   if (process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'true') {
@@ -228,16 +296,48 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
   // Gerar o link do Google Agenda
   const linkGoogleAgenda = gerarLinkGoogleAgenda(evento, hora);
 
+  // Formatar data por extenso
+  const dataExtenso = formatarDataExtenso(evento.dataServico);
+
+  // Buscar hotel do cliente para a data do serviço
+  let hotelInfo = null;
+  try {
+    hotelInfo = await buscarHotelPorData(evento);
+  } catch (e) {
+    console.error('[Email] Erro ao buscar hotel:', e.message);
+  }
+
+  // Montar linha do hotel com link do Google Maps
+  let hotelHtml = '';
+  if (hotelInfo && hotelInfo.hotel) {
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelInfo.hotel + (hotelInfo.cidade ? ', ' + hotelInfo.cidade + ', Japan' : ', Japan'))}`;
+    hotelHtml = `
+            <tr>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; vertical-align: top;">Hotel:</td>
+              <td style="padding: 6px 0; font-size: 14px;">
+                <a href="${googleMapsUrl}" target="_blank" style="color: #89232D; text-decoration: underline; font-weight: 500;">${hotelInfo.hotel}</a>
+                ${hotelInfo.cidade ? `<span style="color: #888; font-size: 12px;"> (${hotelInfo.cidade})</span>` : ''}
+              </td>
+            </tr>
+    `;
+  }
+
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: #ffffff;">
-      <!-- Cabeçalho com Barra Premium -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #89232D; border: 0;">
+      <!-- Cabeçalho com Barra Premium (anti-dark-mode) -->
+      <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse; border: 0;">
         <tr>
-          <td style="padding: 20px 0 20px 25px; text-align: left; vertical-align: middle; width: 50%;">
-            <img src="cid:logo_heian" alt="Heian Tour" style="max-height: 80px; width: auto; max-width: 100%; display: block; object-fit: contain;">
-          </td>
-          <td style="padding: 20px 25px 20px 0; text-align: right; vertical-align: middle; width: 50%;">
-            <p style="margin: 0; font-size: 13px; color: #f0f0f0; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">${tituloEmail}</p>
+          <td bgcolor="#89232D" style="background-color: #89232D !important; background: #89232D !important; padding: 0;">
+            <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 20px 0 20px 25px; text-align: left; vertical-align: middle; width: 50%; background-color: #89232D !important;">
+                  <img src="cid:logo_heian" alt="Heian Tour" style="max-height: 80px; width: auto; max-width: 100%; display: block; object-fit: contain;">
+                </td>
+                <td style="padding: 20px 25px 20px 0; text-align: right; vertical-align: middle; width: 50%; background-color: #89232D !important;">
+                  <p style="margin: 0; font-size: 13px; color: #f0f0f0; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">${tituloEmail}</p>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
@@ -250,28 +350,29 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
           <h3 style="margin-top: 0; color: #1a1a1a; font-size: 16px; border-bottom: 1px solid #eef0f2; padding-bottom: 8px;">Detalhes do Serviço</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 6px 0; width: 120px; font-weight: 600; color: #666; font-size: 14px;">Atividade:</td>
+              <td style="padding: 6px 0; padding-right: 12px; width: 130px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Atividade:</td>
               <td style="padding: 6px 0; font-weight: 500; font-size: 14px; color: #1a1a1a;">${evento.titulo}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Tipo:</td>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Tipo:</td>
               <td style="padding: 6px 0; font-size: 14px;">${evento.tipoServico}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Data:</td>
-              <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a; font-size: 14px;">${evento.dataServico}</td>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">📅 Data:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a; font-size: 15px;">${dataExtenso}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Hora Encontro:</td>
-              <td style="padding: 6px 0; font-weight: bold; color: ${corDestaque}; font-size: 14px;">${hora}</td>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">⏰ Hora:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: ${corDestaque}; font-size: 15px;">${hora}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Encontro:</td>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Encontro:</td>
               <td style="padding: 6px 0; font-size: 14px;">${pontoEncontro}</td>
             </tr>
+            ${hotelHtml}
             ${evento.clienteNome ? `
             <tr>
-              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Cliente:</td>
+              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Cliente:</td>
               <td style="padding: 6px 0; font-size: 14px;">${evento.clienteNome}</td>
             </tr>
             ` : ''}
