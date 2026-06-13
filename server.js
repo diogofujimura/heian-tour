@@ -144,6 +144,10 @@ function gerarLinkGoogleAgenda(evento, horaStr) {
       desc += `\nDuração: ${evento.duracaoTour || 'Dia inteiro'}\n`;
     }
 
+    desc += `\nGerado automaticamente por Heian Tour. Tenha um excelente trabalho!`;
+    const detailsParam = encodeURIComponent(desc);
+    const locationParam = encodeURIComponent(evento.localEncontro || '');
+
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${textParam}&dates=${datesParam}&details=${detailsParam}&location=${locationParam}`;
   } catch (error) {
     console.error('[Google Calendar] Erro ao gerar link:', error);
