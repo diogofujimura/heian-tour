@@ -245,14 +245,30 @@ async function processarNotificacoesEmail() {
 
     let houveAlteracao = false;
     const agora = Date.now();
+    const hojeStr = new Date().toISOString().substring(0, 10);
 
     for (let evento of eventos) {
       if (!evento.assignee || !Array.isArray(evento.assignee) || evento.assignee.length === 0) {
         continue;
       }
 
+      // 1. Evitar e-mails retroativos para datas que já passaram
+      if (!evento.dataServico || evento.dataServico < hojeStr) {
+        continue;
+      }
+
+      // 2. Evitar e-mails retroativos de cadastro para eventos futuros que já existiam no calendário.
+      // Se a chave emails_cadastro_enviados não existe, inicializamos marcando todos os guias
+      // atuais como "já notificados" silenciosamente.
+      if (!evento.emails_cadastro_enviados) {
+        evento.emails_cadastro_enviados = evento.assignee.map(colab => colab.id);
+        evento.emails_24h_enviados = [];
+        evento.emails_1h_enviados = [];
+        houveAlteracao = true;
+        continue;
+      }
+
       // Garantir existência das arrays de controle
-      if (!evento.emails_cadastro_enviados) evento.emails_cadastro_enviados = [];
       if (!evento.emails_24h_enviados) evento.emails_24h_enviados = [];
       if (!evento.emails_1h_enviados) evento.emails_1h_enviados = [];
 
