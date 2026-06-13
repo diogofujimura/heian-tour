@@ -14,6 +14,7 @@
     "express-basic-auth": "^1.2.1",
     "jsdom": "^29.1.1",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.11",
     "pdf-parse": "^2.4.5"
   }
 }

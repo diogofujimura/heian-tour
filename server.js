@@ -11,6 +11,331 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const nodemailer = require('nodemailer');
+
+// Configuração do transporter do Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS
+  }
+});
+
+// Helper para converter string de data/hora do serviço em objeto Date
+function obterDataHoraServico(dataStr, horaStr) {
+  if (!dataStr) return new Date();
+  const [ano, mes, dia] = dataStr.split('-').map(Number);
+  let hora = 9;
+  let min = 0;
+  if (horaStr && typeof horaStr === 'string' && horaStr.includes(':')) {
+    const parts = horaStr.split(':');
+    hora = parseInt(parts[0], 10) || 9;
+    min = parseInt(parts[1], 10) || 0;
+  }
+  return new Date(ano, mes - 1, dia, hora, min, 0, 0);
+}
+
+// Função para obter emails de colaboradores no Notion
+async function obterColaboradoresEmails() {
+  const colaboradoresMap = {};
+  if (!NOTION_TOKEN) return colaboradoresMap;
+  try {
+    const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
+    const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      (data.results || []).forEach(item => {
+        const nameProp = item.properties.Name || item.properties.Nome;
+        const name = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+        const email = item.properties.Email?.email || '';
+        if (email) {
+          colaboradoresMap[item.id] = { name, email: email.trim() };
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[Email Init] Erro ao carregar colaboradores do Notion:', e);
+  }
+  return colaboradoresMap;
+}
+
+// Função para disparar os e-mails
+async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) {
+  let assunto = '';
+  let tituloEmail = '';
+  let subtituloEmail = '';
+  let corDestaque = '#8b0000'; // Vermelho Heian Premium
+
+  if (tipo === 'cadastro') {
+    assunto = `[Heian Tour] Nova atividade designada: ${evento.titulo}`;
+    tituloEmail = 'Nova Atividade Designada';
+    subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, você foi designado para uma nova atividade no calendário da Heian Tour.`;
+  } else if (tipo === '24h') {
+    assunto = `[Heian Tour] Lembrete 24h: ${evento.titulo}`;
+    tituloEmail = 'Lembrete de Atividade (24 horas)';
+    subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, este é um lembrete automático de que você tem uma atividade amanhã.`;
+  } else if (tipo === '1h') {
+    assunto = `[Heian Tour] Lembrete 1h: ${evento.titulo}`;
+    tituloEmail = 'Lembrete de Atividade (1 hora)';
+    subtituloEmail = `Olá <strong>${nomeColaborador}</strong>, sua atividade inicia em aproximadamente 1 hora!`;
+    corDestaque = '#d35400'; // Laranja para urgência
+  }
+
+  let hora = '09:00';
+  if (evento.tipoServico === 'Roteiro') {
+    hora = evento.horaEncontro || '09:00';
+  } else if (evento.tipoServico === 'Experiência') {
+    hora = evento.expInfo?.horaPartida || 'Padrão';
+  } else if (evento.tipoServico === 'Transporte') {
+    hora = evento.transportInfo?.horario || 'Padrão';
+  }
+
+  let pontoEncontro = evento.localEncontro || 'Não informado';
+
+  let detalhesExtras = '';
+  if (evento.tipoServico === 'Transporte' && evento.transportInfo) {
+    const t = evento.transportInfo;
+    detalhesExtras = `
+      <p style="margin: 5px 0;"><strong>Rota:</strong> ${t.origem || '-'} ➔ ${t.destino || '-'}</p>
+      <p style="margin: 5px 0;"><strong>Tipo de Transporte:</strong> ${t.tipoTransporte || '-'}</p>
+      ${t.linha ? `<p style="margin: 5px 0;"><strong>Linha:</strong> ${t.linha}</p>` : ''}
+      ${t.categoria ? `<p style="margin: 5px 0;"><strong>Assento/Categoria:</strong> ${t.categoria}</p>` : ''}
+      ${t.tempo ? `<p style="margin: 5px 0;"><strong>Duração da viagem:</strong> ${t.tempo}</p>` : ''}
+    `;
+  } else if (evento.tipoServico === 'Experiência' && evento.expInfo) {
+    const e = evento.expInfo;
+    detalhesExtras = `
+      <p style="margin: 5px 0;"><strong>Experiência:</strong> ${e.nomeExp || evento.titulo}</p>
+      <p style="margin: 5px 0;"><strong>Horário de Entrada:</strong> ${e.horaPartida || '-'}</p>
+    `;
+  } else if (evento.tipoServico === 'Roteiro') {
+    detalhesExtras = `
+      <p style="margin: 5px 0;"><strong>Duração Estimada:</strong> ${evento.duracaoTour || 'Dia inteiro'}</p>
+    `;
+  }
+
+  const observacoesText = evento.textos && evento.textos.length > 0 ? evento.textos.join('\n') : '';
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background-color: #ffffff;">
+      <!-- Cabeçalho -->
+      <div style="background: linear-gradient(135deg, ${corDestaque} 0%, #1a1a1a 100%); padding: 30px 20px; text-align: center; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">HEIAN TOUR</h1>
+        <p style="margin: 5px 0 0 0; font-size: 14px; color: #f0f0f0; opacity: 0.9;">${tituloEmail}</p>
+      </div>
+      
+      <!-- Conteúdo Principal -->
+      <div style="padding: 25px 30px; color: #333333; line-height: 1.6;">
+        <p style="font-size: 16px; margin-top: 0; color: #1a1a1a;">${subtituloEmail}</p>
+        
+        <div style="background-color: #f9f9f9; border-left: 4px solid ${corDestaque}; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #1a1a1a; font-size: 16px; border-bottom: 1px solid #eef0f2; padding-bottom: 8px;">Detalhes do Serviço</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; width: 120px; font-weight: 600; color: #666; font-size: 14px;">Atividade:</td>
+              <td style="padding: 6px 0; font-weight: 500; font-size: 14px; color: #1a1a1a;">${evento.titulo}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Tipo:</td>
+              <td style="padding: 6px 0; font-size: 14px;">${evento.tipoServico}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Data:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a; font-size: 14px;">${evento.dataServico}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Hora Encontro:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: ${corDestaque}; font-size: 14px;">${hora}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Encontro:</td>
+              <td style="padding: 6px 0; font-size: 14px;">${pontoEncontro}</td>
+            </tr>
+            ${evento.clienteNome ? `
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #666; font-size: 14px;">Cliente:</td>
+              <td style="padding: 6px 0; font-size: 14px;">${evento.clienteNome}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+        
+        ${detalhesExtras ? `
+        <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
+          <h4 style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 15px;">Informações Complementares</h4>
+          <div style="font-size: 14px; color: #444;">
+            ${detalhesExtras}
+          </div>
+        </div>
+        ` : ''}
+        
+        ${observacoesText ? `
+        <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
+          <h4 style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 15px;">Observações / Notas</h4>
+          <p style="background-color: #fff9f0; padding: 12px; border-radius: 6px; border: 1px dashed #fcd3a1; font-size: 13px; white-space: pre-line; margin: 0; color: #5c3e10; line-height: 1.5;">${observacoesText}</p>
+        </div>
+        ` : ''}
+        
+        <p style="margin-top: 25px; font-size: 14px;">Por favor, confirme a visualização desta atividade acessando o calendário no painel administrativo.</p>
+        <p style="margin-bottom: 0; font-size: 14px;">Desejamos um excelente serviço!</p>
+      </div>
+      
+      <!-- Rodapé -->
+      <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 11px; color: #777777; border-top: 1px solid #eef0f2;">
+        <p style="margin: 0 0 5px 0;"><strong>Heian Tour Operadora de Turismo Japão</strong></p>
+        <p style="margin: 0;">Este é um e-mail de notificação automática. Por favor, não responda diretamente a esta mensagem.</p>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"Heian Tour" <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: assunto,
+    html: html
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[Email] Notificação [${tipo}] enviada com sucesso para ${email}. MsgID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error(`[Email] Falha ao enviar notificação [${tipo}] para ${email}:`, error);
+    return false;
+  }
+}
+
+// Função unificada para processar todas as notificações pendentes
+async function processarNotificacoesEmail() {
+  console.log('[Email Job] Iniciando verificação de notificações de eventos...');
+  try {
+    const colabs = await obterColaboradoresEmails();
+    if (Object.keys(colabs).length === 0) {
+      console.log('[Email Job] Nenhum colaborador com e-mail cadastrado ou Notion indisponível.');
+      return;
+    }
+
+    const { data: calCfg, error: calErr } = await supabase.from('config').select('data').eq('id', 'calendario_eventos').single();
+    if (calErr) {
+      console.error('[Email Job] Erro ao buscar eventos do Supabase:', calErr);
+      return;
+    }
+
+    let eventos = [];
+    if (calCfg && calCfg.data) {
+      eventos = Array.isArray(calCfg.data) ? calCfg.data : [];
+    }
+
+    if (eventos.length === 0) {
+      console.log('[Email Job] Nenhum evento encontrado.');
+      return;
+    }
+
+    let houveAlteracao = false;
+    const agora = Date.now();
+
+    for (let evento of eventos) {
+      if (!evento.assignee || !Array.isArray(evento.assignee) || evento.assignee.length === 0) {
+        continue;
+      }
+
+      // Garantir existência das arrays de controle
+      if (!evento.emails_cadastro_enviados) evento.emails_cadastro_enviados = [];
+      if (!evento.emails_24h_enviados) evento.emails_24h_enviados = [];
+      if (!evento.emails_1h_enviados) evento.emails_1h_enviados = [];
+
+      // Calcular horário do serviço
+      let horaEncontroStr = '09:00';
+      if (evento.tipoServico === 'Roteiro') {
+        horaEncontroStr = evento.horaEncontro || '09:00';
+      } else if (evento.tipoServico === 'Experiência') {
+        horaEncontroStr = evento.expInfo?.horaPartida || '09:00';
+      } else if (evento.tipoServico === 'Transporte') {
+        horaEncontroStr = evento.transportInfo?.horario || '09:00';
+      }
+
+      const dataHoraServico = obterDataHoraServico(evento.dataServico, horaEncontroStr);
+      const tempoAteServicoMs = dataHoraServico.getTime() - agora;
+
+      for (let colab of evento.assignee) {
+        const colabInfo = colabs[colab.id];
+        if (!colabInfo || !colabInfo.email) {
+          continue;
+        }
+
+        // 1. Enviar e-mail de nova designação (Cadastro)
+        if (!evento.emails_cadastro_enviados.includes(colab.id)) {
+          const enviado = await enviarEmailColaborador({
+            email: colabInfo.email,
+            nomeColaborador: colabInfo.name,
+            evento: evento,
+            tipo: 'cadastro'
+          });
+          if (enviado) {
+            evento.emails_cadastro_enviados.push(colab.id);
+            houveAlteracao = true;
+          }
+        }
+
+        // 2. Enviar e-mail lembrete de 24h
+        if (tempoAteServicoMs > 0 && tempoAteServicoMs <= 24 * 60 * 60 * 1000) {
+          if (!evento.emails_24h_enviados.includes(colab.id)) {
+            const enviado = await enviarEmailColaborador({
+              email: colabInfo.email,
+              nomeColaborador: colabInfo.name,
+              evento: evento,
+              tipo: '24h'
+            });
+            if (enviado) {
+              evento.emails_24h_enviados.push(colab.id);
+              houveAlteracao = true;
+            }
+          }
+        }
+
+        // 3. Enviar e-mail lembrete de 1h
+        if (tempoAteServicoMs > 0 && tempoAteServicoMs <= 1 * 60 * 60 * 1000) {
+          if (!evento.emails_1h_enviados.includes(colab.id)) {
+            const enviado = await enviarEmailColaborador({
+              email: colabInfo.email,
+              nomeColaborador: colabInfo.name,
+              evento: evento,
+              tipo: '1h'
+            });
+            if (enviado) {
+              evento.emails_1h_enviados.push(colab.id);
+              houveAlteracao = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (houveAlteracao) {
+      console.log('[Email Job] Salvando novo histórico de envios no Supabase...');
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'calendario_eventos', data: eventos });
+      if (upsertErr) {
+        console.error('[Email Job] Erro ao salvar alterações no Supabase:', upsertErr);
+      } else {
+        console.log('[Email Job] Histórico atualizado com sucesso.');
+      }
+    } else {
+      console.log('[Email Job] Nenhuma notificação enviada.');
+    }
+
+  } catch (error) {
+    console.error('[Email Job] Erro no processamento de e-mails:', error);
+  }
+}
+
 const app = express();
 const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'database.json');
@@ -1671,6 +1996,9 @@ app.post('/api/calendario/eventos', async (req, res) => {
     console.log(`[Nova OS] Evento adicionado localmente: ${newEventId}`);
     res.json({ success: true, event: novoEvento });
 
+    // Disparar envio de e-mails em background
+    processarNotificacoesEmail().catch(err => console.error('[Email Trigger] Erro ao processar e-mails pós-cadastro:', err));
+
   } catch (error) {
     console.error('Erro ao cadastrar evento manualmente:', error);
     res.status(500).json({ error: error.message });
@@ -1797,9 +2125,27 @@ app.patch('/api/calendario/eventos/:id', async (req, res) => {
           }
         }
 
+        // Limpar histórico de envios de e-mails para colaboradores removidos
+        if (assigneeIds !== undefined) {
+          if (newEv.emails_cadastro_enviados) {
+            newEv.emails_cadastro_enviados = newEv.emails_cadastro_enviados.filter(uid => assigneeIds.includes(uid));
+          }
+          if (newEv.emails_24h_enviados) {
+            newEv.emails_24h_enviados = newEv.emails_24h_enviados.filter(uid => assigneeIds.includes(uid));
+          }
+          if (newEv.emails_1h_enviados) {
+            newEv.emails_1h_enviados = newEv.emails_1h_enviados.filter(uid => assigneeIds.includes(uid));
+          }
+        }
+
         // Outros campos globais
         if (dataServico !== undefined) {
-          newEv.dataServico = dataServico;
+          if (dataServico !== newEv.dataServico) {
+            newEv.dataServico = dataServico;
+            // Se a data mudou, resetar envio dos lembretes de 24h e 1h para disparar novamente de acordo com a nova data
+            newEv.emails_24h_enviados = [];
+            newEv.emails_1h_enviados = [];
+          }
         }
         if (valorDiaria !== undefined && assigneeIds === undefined && !colaboradorId) {
           newEv.valorDiaria = valorDiaria === null ? null : Number(valorDiaria);
@@ -1872,6 +2218,9 @@ app.patch('/api/calendario/eventos/:id', async (req, res) => {
       }
 
       res.json({ success: true, id });
+
+      // Disparar envio de e-mails em background para novas atribuições ou alterações
+      processarNotificacoesEmail().catch(err => console.error('[Email Trigger] Erro ao processar e-mails pós-PATCH:', err));
     } else {
       res.status(404).json({ error: 'Evento não encontrado' });
     }
@@ -2057,6 +2406,24 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
       let evLocal = novosEventosLocais.find(ev => ev.id === id);
 
       if (evLocal) {
+        // Se a data do serviço mudou no Notion, resetar os históricos de lembretes
+        if (evLocal.dataServico !== dataServico) {
+          evLocal.emails_24h_enviados = [];
+          evLocal.emails_1h_enviados = [];
+        }
+
+        // Limpar do histórico de envios os colaboradores que foram removidos
+        const activeIds = assignee.map(a => a.id);
+        if (evLocal.emails_cadastro_enviados) {
+          evLocal.emails_cadastro_enviados = evLocal.emails_cadastro_enviados.filter(uid => activeIds.includes(uid));
+        }
+        if (evLocal.emails_24h_enviados) {
+          evLocal.emails_24h_enviados = evLocal.emails_24h_enviados.filter(uid => activeIds.includes(uid));
+        }
+        if (evLocal.emails_1h_enviados) {
+          evLocal.emails_1h_enviados = evLocal.emails_1h_enviados.filter(uid => activeIds.includes(uid));
+        }
+
         // Atualiza campos
         evLocal.titulo = titulo;
         evLocal.dataServico = dataServico;
@@ -2107,6 +2474,9 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
     if (upsertErr) throw upsertErr;
 
     res.json({ success: true, count: notionEvents.length });
+
+    // Disparar envio de e-mails em background para novas designações sincronizadas do Notion
+    processarNotificacoesEmail().catch(err => console.error('[Email Trigger] Erro ao processar e-mails pós-sincronismo Notion:', err));
   } catch (error) {
     console.error('Erro ao sincronizar do Notion para o calendário local:', error);
     res.status(500).json({ error: error.message });
@@ -2449,6 +2819,9 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
     if (upsertErr) throw upsertErr;
 
     res.json({ success: true, count: novasTarefas.length });
+
+    // Disparar envio de e-mails em background para novas atividades criadas a partir do roteiro
+    processarNotificacoesEmail().catch(err => console.error('[Email Trigger] Erro ao processar e-mails pós-sincronismo Roteiro:', err));
   } catch (error) {
     console.error('Erro ao sincronizar roteiro com calendário local:', error);
     res.status(500).json({ error: error.message });
@@ -3495,4 +3868,15 @@ app.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   const cmd = process.platform === 'darwin' ? `open ${url}` : `start ${url}`;
   exec(cmd);
+
+  // Inicializa o agendador de lembretes e notificações de e-mails
+  console.log('[Email Init] Inicializando agendador de notificações automáticas por e-mail...');
+  setTimeout(() => {
+    processarNotificacoesEmail().catch(err => console.error('[Email Init] Erro na varredura inicial de e-mails:', err));
+  }, 5000);
+
+  // Executa a cada 10 minutos (10 * 60 * 1000 ms)
+  setInterval(() => {
+    processarNotificacoesEmail().catch(err => console.error('[Email Job] Erro no job recorrente de e-mails:', err));
+  }, 10 * 60 * 1000);
 });
