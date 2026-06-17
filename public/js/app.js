@@ -5840,11 +5840,11 @@ window.filtrarDashColaborador = function() {
           <tr style="border-bottom:1px solid var(--border); transition: background 0.15s;">
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${dataFormatada}</td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${ev.clienteNome || 'Cliente'}</td>
-            <td style="padding:12px 16px; font-size:12px;">
+            <td style="padding:12px 16px; font-size:12px;" class="colab-servico-popover" data-id="${ev.id}">
               <span class="compact-card-status" style="font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600; background:rgba(0,0,0,0.04); color:var(--ink-mid);">
                 ${ev.tipoServico}
               </span>
-              <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk);">${ev.titulo}</strong>
+              <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk); cursor:pointer;">${ev.titulo}</strong>
             </td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">🕒 ${ev.horaEncontro || '-'}</td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">${localStr}</td>
@@ -5947,11 +5947,11 @@ window.filtrarDashColaborador = function() {
         <tr style="border-bottom:1px solid var(--border); transition: background 0.15s;">
           <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${dataFormatada}</td>
           <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${ev.clienteNome || 'Cliente'}</td>
-          <td style="padding:12px 16px; font-size:12px;">
+          <td style="padding:12px 16px; font-size:12px;" class="colab-servico-popover" data-id="${ev.id}">
             <span class="compact-card-status" style="font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600; background:rgba(0,0,0,0.04); color:var(--ink-mid);">
               ${ev.tipoServico}
             </span>
-            <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk);">${ev.titulo}</strong>
+            <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk); cursor:pointer;">${ev.titulo}</strong>
           </td>
           <td style="padding:12px 16px; font-size:12px;">
             <input type="number" id="diaria_input_${ev.id}" class="search-input-modern" style="width:100px; padding:4px 8px; font-size:12px; margin:0;" value="${valor}">
@@ -5970,6 +5970,20 @@ window.filtrarDashColaborador = function() {
         </tr>
       `;
     }).join('');
+
+    // Adicionar listeners para o popover flutuante nos serviços
+    tbodyFinanceiro.querySelectorAll('.colab-servico-popover').forEach(el => {
+      el.addEventListener('mouseenter', (e) => showEventPopover(e, el.getAttribute('data-id')));
+      el.addEventListener('mouseleave', hideEventPopover);
+    });
+  }
+  
+  // Adicionar listeners para o popover flutuante nos serviços da tabela de escala também
+  if (tbodyEscala) {
+    tbodyEscala.querySelectorAll('.colab-servico-popover').forEach(el => {
+      el.addEventListener('mouseenter', (e) => showEventPopover(e, el.getAttribute('data-id')));
+      el.addEventListener('mouseleave', hideEventPopover);
+    });
   }
 };
 
