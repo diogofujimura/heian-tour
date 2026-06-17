@@ -57,7 +57,7 @@ html, body {
   -webkit-backdrop-filter: blur(20px);
   display: flex; 
   flex-direction: column; 
-  padding: 0 0 24px; 
+  padding: 0 0 16px; /* Reduzido de 24px para 16px para desesmagar o botão */
   z-index: 100; 
   border-right: 1px solid var(--border); 
   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.01); 
@@ -98,10 +98,10 @@ html, body {
   display: flex; 
   align-items: center; 
   gap: 10px; 
-  padding: 10px 20px; 
+  padding: 8px 20px; /* Reduzido o padding vertical de 10px para 8px */
   color: var(--ink-mid); 
   text-decoration: none; 
-  font-size: 11px; 
+  font-size: 10px; /* Reduzido o tamanho da fonte de 11px para 10px */
   font-weight: 500; 
   letter-spacing: 0.08em; 
   text-transform: uppercase; 
