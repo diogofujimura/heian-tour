@@ -1,3 +1,4 @@
+// GitHub Actions FTP Auto-Deploy Configured
 require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
