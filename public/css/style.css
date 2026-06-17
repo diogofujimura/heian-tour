@@ -1009,6 +1009,17 @@ html, body {
   border-color: var(--gold);
 }
 .chip-atracao.missing { border-style: dashed; opacity: 0.7; }
+.chip-atracao.fechada { 
+  border: 1px dashed var(--crimson) !important; 
+  background: rgba(107,31,42,0.06) !important; 
+  color: var(--crimson) !important; 
+}
+.chip-atracao.fechada:hover {
+  background: var(--crimson) !important;
+  border-color: var(--crimson) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(107,31,42,0.15); 
+}
 /* Popover/Modal de Atração */
 .atracao-popover { 
   position: fixed; 

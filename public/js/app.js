@@ -1392,6 +1392,19 @@ function renderTabelaAtracoes(filtro) {
 }
 function abrirModalAtracao(id) {
   const item = id ? state.atracoesDB.find(a=>a.id==id) : {};
+  
+  const diasS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const diasVal = [1, 2, 3, 4, 5, 6, 0];
+  const diasFechados = item.diasFechados || [];
+  
+  const checkboxesHTML = diasS.map((diaNome, idx) => {
+    const val = diasVal[idx];
+    const checked = diasFechados.includes(val) ? 'checked' : '';
+    return `<label style="display:inline-flex; align-items:center; margin-right:12px; font-weight:normal; cursor:pointer;">
+              <input type="checkbox" name="m_a_dias_fechados" value="${val}" ${checked} style="margin-right:4px;"> ${diaNome}
+            </label>`;
+  }).join('');
+
   document.getElementById('modalContent').innerHTML = `
     <h3 class="modal-title">${id?'Editar':'Nova'} Atração</h3>
     <div class="form-grid">
@@ -1401,6 +1414,16 @@ function abrirModalAtracao(id) {
       <div class="field full-width"><label>Preço (Texto livre)</label><input id="m_a_preco" value="${item['Preço (Ingresso)']||''}"></div>
       <div class="field full-width"><label>Foto (URL da Imagem personalizada - Opcional)</label><input id="m_a_foto" placeholder="https://exemplo.com/imagem.jpg" value="${item['Foto (URL)']||''}"></div>
       <div class="field full-width"><label>Descrição Detalhada</label><textarea id="m_a_desc" rows="4">${item['Descrição Detalhada']||''}</textarea></div>
+      
+      <div class="field full-width" style="margin-top:8px;">
+        <label>Dias Fechados (Recorrente)</label>
+        <div style="display:flex; flex-wrap:wrap; margin-top:4px; gap:4px;">
+          ${checkboxesHTML}
+        </div>
+      </div>
+      <div class="field"><label>Manutenção/Reforma (Início)</label><input type="date" id="m_a_manut_inicio" value="${item.manutencaoInicio||''}"></div>
+      <div class="field"><label>Manutenção/Reforma (Fim)</label><input type="date" id="m_a_manut_fim" value="${item.manutencaoFim||''}"></div>
+      <div class="field full-width"><label>Motivo da Manutenção/Reforma</label><input type="text" id="m_a_manut_motivo" placeholder="Ex: Reforma de verão, pintura, etc." value="${item.manutencaoMotivo||''}"></div>
     </div>
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarAtracao(${id||'null'})">Salvar</button></div>`;
   openModal();
@@ -1412,7 +1435,24 @@ function abrirModalAtracao(id) {
   }
 }
 async function salvarAtracao(id){
-  const dados={'Cidade':v('m_a_cidade'),'Bairro':v('m_a_bairro'),'Nome da Atração':v('m_a_nome'),'Preço (Ingresso)':v('m_a_preco'),'Descrição Detalhada':v('m_a_desc').trim(),'Foto (URL)':v('m_a_foto').trim()};
+  const checkboxes = document.querySelectorAll('input[name="m_a_dias_fechados"]:checked');
+  const diasFechados = Array.from(checkboxes).map(cb => parseInt(cb.value));
+  const manutencaoInicio = document.getElementById('m_a_manut_inicio').value;
+  const manutencaoFim = document.getElementById('m_a_manut_fim').value;
+  const manutencaoMotivo = document.getElementById('m_a_manut_motivo').value.trim();
+
+  const dados={
+    'Cidade':v('m_a_cidade'),
+    'Bairro':v('m_a_bairro'),
+    'Nome da Atração':v('m_a_nome'),
+    'Preço (Ingresso)':v('m_a_preco'),
+    'Descrição Detalhada':v('m_a_desc').trim(),
+    'Foto (URL)':v('m_a_foto').trim(),
+    'diasFechados': diasFechados,
+    'manutencaoInicio': manutencaoInicio,
+    'manutencaoFim': manutencaoFim,
+    'manutencaoMotivo': manutencaoMotivo
+  };
   if(id){await fetch(`/api/atracoes/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});const i=state.atracoesDB.find(a=>a.id==id);if(i)Object.assign(i,dados);}
   else{const n=await fetch('/api/atracoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)}).then(r=>r.json());state.atracoesDB.push(n);}
   await loadDB();closeModal();

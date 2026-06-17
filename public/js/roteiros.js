@@ -7,6 +7,48 @@ window.formatPeriodo = function(d1, d2) {
     return f1 || f2;
 };
 
+window.verificarFuncionamentoAtracao = function(nome, dataStr) {
+  if (!dataStr || !nome) return { fechado: false };
+  
+  if (typeof state === 'undefined' || !state.atracoesDB) return { fechado: false };
+  
+  const nomeLower = nome.trim().toLowerCase();
+  const atracao = state.atracoesDB.find(a => (a['Nome da Atração'] || '').trim().toLowerCase() === nomeLower);
+  if (!atracao) return { fechado: false };
+  
+  // 1) Checagem de Manutenção/Reforma
+  if (atracao.manutencaoInicio && atracao.manutencaoFim) {
+    if (dataStr >= atracao.manutencaoInicio && dataStr <= atracao.manutencaoFim) {
+      return { 
+        fechado: true, 
+        tipoBloqueio: 'manutencao', 
+        motivo: atracao.manutencaoMotivo || 'Fechado para manutenção/reforma',
+        inicio: atracao.manutencaoInicio,
+        fim: atracao.manutencaoFim
+      };
+    }
+  }
+  
+  // 2) Checagem de Dia da Semana Recorrente
+  if (atracao.diasFechados && Array.isArray(atracao.diasFechados) && atracao.diasFechados.length > 0) {
+    const [yy, mm, dd] = dataStr.split('-').map(Number);
+    const dateObj = new Date(yy, mm - 1, dd);
+    const dayOfWeek = dateObj.getDay(); // 0 = Dom, 1 = Seg, etc.
+    
+    if (atracao.diasFechados.includes(dayOfWeek)) {
+      const diasSemanaNomes = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return {
+        fechado: true,
+        tipoBloqueio: 'semanal',
+        diaSemanaNome: diasSemanaNomes[dayOfWeek]
+      };
+    }
+  }
+  
+  return { fechado: false };
+};
+
+
 
 let _autoSaveRoteiroTimer = null;
 window.autoSaveRoteiro = function() {
@@ -310,11 +352,34 @@ window.selecionarBlocoRoteiro = function(idx, eIdx, nomeRota) {
       atracoesParaAdicionar = Array.isArray(rotaEncontrada.atracoesDoDia)
         ? rotaEncontrada.atracoesDoDia
         : rotaEncontrada.atracoesDoDia.split(',').map(s => s.trim()).filter(Boolean);
-}
+    }
   }
 
   if (atracoesParaAdicionar && atracoesParaAdicionar.length > 0) {
     roteiroEmEdicao.dias[idx].elementos[eIdx].atracoesDoDia = [...atracoesParaAdicionar];
+    
+    // Validação em lote das atrações adicionadas
+    const dia = roteiroEmEdicao.dias[idx];
+    if (dia && dia.data) {
+      const fechadas = [];
+      atracoesParaAdicionar.forEach(atr => {
+        const chk = window.verificarFuncionamentoAtracao(atr, dia.data);
+        if (chk.fechado) {
+          if (chk.tipoBloqueio === 'semanal') {
+            fechadas.push(`- ${atr} (costuma fechar às ${chk.diaSemanaNome.toLowerCase()}s)`);
+          } else if (chk.tipoBloqueio === 'manutencao') {
+            fechadas.push(`- ${atr} (em manutenção: ${chk.motivo})`);
+          }
+        }
+      });
+      
+      if (fechadas.length > 0) {
+        setTimeout(() => {
+          alert(`Aviso: Algumas das atrações adicionadas nesta rota podem estar fechadas no dia agendado:\n\n${fechadas.join('\n')}\n\nElas foram adicionadas ao roteiro, mas estarão destacadas com o ícone de aviso ⚠️.`);
+        }, 100);
+      }
+    }
+    
     renderEditDias();
   }
 };;
@@ -1233,15 +1298,34 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
           </div>
         `;
       } else if (el.tipo === 'sequencia') {
-        const atracoesHtml = el.atracoesDoDia.map((atr, aIdx) => 
-          `<div class="chip-atracao ${!atracaoMap.has(atr.toLowerCase()) ? 'missing' : ''}"
+        const atracoesHtml = el.atracoesDoDia.map((atr, aIdx) => {
+          const chk = window.verificarFuncionamentoAtracao(atr, dia.data);
+          let extraClass = '';
+          let warnTitle = '';
+          let warnIcon = '';
+          
+          if (chk.fechado) {
+            extraClass = ' fechada';
+            if (chk.tipoBloqueio === 'semanal') {
+              warnIcon = '⚠️ ';
+              warnTitle = ` (fecha às ${chk.diaSemanaNome.toLowerCase()}s)`;
+            } else if (chk.tipoBloqueio === 'manutencao') {
+              warnIcon = '⚠️ ';
+              warnTitle = ` (manutenção: ${chk.motivo})`;
+            }
+          }
+          
+          const missingClass = !atracaoMap.has(atr.toLowerCase()) ? 'missing' : '';
+          
+          return `<div class="chip-atracao ${missingClass}${extraClass}"
+                title="${atr}${warnTitle}"
                 draggable="true" 
                 ondragstart="dragStartAtracao(event, ${idx}, ${eIdx}, ${aIdx})"
                 ondragover="dragOverAtracao(event)"
                 ondrop="dropAtracao(event, ${idx}, ${eIdx}, ${aIdx})">
-            <span style="cursor:grab; margin-right:4px; opacity:0.5; user-select:none">⋮⋮</span>${atr}<span style="margin-left:8px; cursor:pointer; color:#ff4444" onclick="delAtracaoBloco(${idx}, ${eIdx}, ${aIdx})">✕</span>
-          </div>`
-        ).join('');
+            <span style="cursor:grab; margin-right:4px; opacity:0.5; user-select:none">⋮⋮</span>${warnIcon}${atr}${warnTitle}<span style="margin-left:8px; cursor:pointer; color:#ff4444" onclick="delAtracaoBloco(${idx}, ${eIdx}, ${aIdx})">✕</span>
+          </div>`;
+        }).join('');
         elementosHtml += `
           <div style="border-left: 2px solid var(--gold); padding-left: 12px; margin-bottom: 16px; padding-top:8px; padding-bottom:8px">
             <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
@@ -1749,6 +1833,24 @@ window.updElementoEdit = function(idx, eIdx, campo, valor) {
 
 window.addAtracaoBloco = function(idx, eIdx, nome) {
   if(!nome.trim()) return;
+  
+  const dia = roteiroEmEdicao.dias[idx];
+  if (dia && dia.data) {
+    const chk = window.verificarFuncionamentoAtracao(nome.trim(), dia.data);
+    if (chk.fechado) {
+      let msg = '';
+      if (chk.tipoBloqueio === 'semanal') {
+        msg = `Aviso: A atração "${nome.trim()}" costuma estar FECHADA às ${chk.diaSemanaNome.toLowerCase()}s.\n\nDeseja adicionar mesmo assim?`;
+      } else if (chk.tipoBloqueio === 'manutencao') {
+        msg = `Aviso: A atração "${nome.trim()}" estará em manutenção/reforma de ${chk.inicio} a ${chk.fim} (${chk.motivo}).\n\nDeseja adicionar mesmo assim?`;
+      }
+      
+      if (!confirm(msg)) {
+        return;
+      }
+    }
+  }
+  
   roteiroEmEdicao.dias[idx].elementos[eIdx].atracoesDoDia.push(nome.trim());
   if(typeof renderEditDias === 'function') renderEditDias();
 };
