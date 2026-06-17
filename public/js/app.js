@@ -1380,7 +1380,7 @@ function renderTabelaAtracoes(filtro) {
   const tbody = document.querySelector('#tabelaAtracoes tbody');
   if(!tbody) return;
   const lista = filtro ? state.atracoesDB.filter(a=>[a['Nome da Atração'],a['Bairro'],a['Cidade']].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.atracoesDB;
-  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td><div class="chip-atracao" style="display: inline-block;" data-id="${a['Nome da Atração'].replace(/"/g, '&quot;')}">${a['Nome da Atração']}</div></td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao(${a.id})">✎</button> <button class="btn-icon" onclick="deletarAtracao(${a.id})">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td><div class="chip-atracao" style="display: inline-block;" data-id="${a['Nome da Atração'].replace(/"/g, '&quot;')}">${a['Nome da Atração']}</div></td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')">✎</button> <button class="btn-icon" onclick="deletarAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')">✕</button></td></tr>`).join('');
 
   // Adicionar listeners para o popover flutuante nos chips
   tbody.querySelectorAll('.chip-atracao').forEach(chip => {
@@ -1390,8 +1390,10 @@ function renderTabelaAtracoes(filtro) {
     }
   });
 }
-function abrirModalAtracao(id) {
-  const item = id ? state.atracoesDB.find(a=>a.id==id) : {};
+function abrirModalAtracao(idOrName) {
+  const item = idOrName 
+    ? (state.atracoesDB.find(a=>a['Nome da Atração'] === idOrName) || state.atracoesDB.find(a=>a.id == idOrName) || {})
+    : {};
   
   const diasS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const diasVal = [1, 2, 3, 4, 5, 6, 0];
@@ -1405,8 +1407,10 @@ function abrirModalAtracao(id) {
             </label>`;
   }).join('');
 
+  const salvarParam = idOrName ? `'${idOrName.replace(/'/g, "\\'")}'` : 'null';
+
   document.getElementById('modalContent').innerHTML = `
-    <h3 class="modal-title">${id?'Editar':'Nova'} Atração</h3>
+    <h3 class="modal-title">${idOrName?'Editar':'Nova'} Atração</h3>
     <div class="form-grid">
       <div class="field"><label>Cidade</label><input id="m_a_cidade" value="${item['Cidade']||''}"></div>
       <div class="field"><label>Bairro</label><input id="m_a_bairro" value="${item['Bairro']||''}"></div>
@@ -1425,7 +1429,7 @@ function abrirModalAtracao(id) {
       <div class="field"><label>Manutenção/Reforma (Fim)</label><input type="date" id="m_a_manut_fim" value="${item.manutencaoFim||''}"></div>
       <div class="field full-width"><label>Motivo da Manutenção/Reforma</label><input type="text" id="m_a_manut_motivo" placeholder="Ex: Reforma de verão, pintura, etc." value="${item.manutencaoMotivo||''}"></div>
     </div>
-    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarAtracao(${id||'null'})">Salvar</button></div>`;
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarAtracao(${salvarParam})">Salvar</button></div>`;
   openModal();
   
   // Clean up any stray HTML tags if the user accidentally saved with Quill previously
@@ -1434,7 +1438,7 @@ function abrirModalAtracao(id) {
     descEl.value = descEl.value.replace(/<[^>]*>?/gm, '').trim();
   }
 }
-async function salvarAtracao(id){
+async function salvarAtracao(idOrName){
   const checkboxes = document.querySelectorAll('input[name="m_a_dias_fechados"]:checked');
   const diasFechados = Array.from(checkboxes).map(cb => parseInt(cb.value));
   const manutencaoInicio = document.getElementById('m_a_manut_inicio').value;
@@ -1453,16 +1457,22 @@ async function salvarAtracao(id){
     'manutencaoFim': manutencaoFim,
     'manutencaoMotivo': manutencaoMotivo
   };
-  if(id){await fetch(`/api/atracoes/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});const i=state.atracoesDB.find(a=>a.id==id);if(i)Object.assign(i,dados);}
+  if(idOrName){
+    const encodeId = typeof idOrName === 'string' ? encodeURIComponent(idOrName) : idOrName;
+    await fetch(`/api/atracoes/${encodeId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
+    const i=state.atracoesDB.find(a=>a['Nome da Atração'] === idOrName || a.id == idOrName);
+    if(i)Object.assign(i,dados);
+  }
   else{const n=await fetch('/api/atracoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)}).then(r=>r.json());state.atracoesDB.push(n);}
   await loadDB();closeModal();
   // Se estivermos na aba de roteiros, atualiza lá também
   if (typeof carregarBases === 'function') await carregarBases();
 }
-async function deletarAtracao(id){
+async function deletarAtracao(idOrName){
   if(!confirm('Remover atração?'))return;
-  await fetch(`/api/atracoes/${id}`,{method:'DELETE'});
-  state.atracoesDB=state.atracoesDB.filter(a=>a.id!=id);
+  const encodeId = typeof idOrName === 'string' ? encodeURIComponent(idOrName) : idOrName;
+  await fetch(`/api/atracoes/${encodeId}`,{method:'DELETE'});
+  state.atracoesDB=state.atracoesDB.filter(a=>a.id!=idOrName && a['Nome da Atração']!==idOrName);
   renderTabelaAtracoes();
   if (typeof carregarBases === 'function') await carregarBases();
 }
