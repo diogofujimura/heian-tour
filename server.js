@@ -86,9 +86,9 @@ function gerarLinkGoogleAgenda(evento, horaStr) {
     
     // Determinar a duração padrão (em milissegundos)
     let duracaoMs = 8 * 60 * 60 * 1000; // 8 horas padrão para Roteiro
-    if (evento.tipoServico === 'Experiência') {
+    if (evento.tipoServico === 'Experiência' || evento.expInfo) {
       duracaoMs = 2 * 60 * 60 * 1000; // 2 horas
-    } else if (evento.tipoServico === 'Transporte') {
+    } else if (evento.tipoServico === 'Transporte' || evento.transportInfo) {
       if (evento.transportInfo && evento.transportInfo.tempo) {
         const tempoStr = evento.transportInfo.tempo.toLowerCase();
         const matchHoras = tempoStr.match(/(\d+)\s*(?:hora|h)/);
@@ -129,14 +129,14 @@ function gerarLinkGoogleAgenda(evento, horaStr) {
       desc += `Cliente: ${evento.clienteNome}\n`;
     }
     
-    if (evento.tipoServico === 'Transporte' && evento.transportInfo) {
+    if (evento.transportInfo) {
       const t = evento.transportInfo;
       desc += `\nRota: ${t.origem || '-'} ➔ ${t.destino || '-'}\n`;
       desc += `Tipo de Transporte: ${t.tipoTransporte || '-'}\n`;
       if (t.linha) desc += `Linha: ${t.linha}\n`;
       if (t.categoria) desc += `Assento/Categoria: ${t.categoria}\n`;
       if (t.tempo) desc += `Duração: ${t.tempo}\n`;
-    } else if (evento.tipoServico === 'Experiência' && evento.expInfo) {
+    } else if (evento.expInfo) {
       const e = evento.expInfo;
       desc += `\nExperiência: ${e.nomeExp || evento.titulo}\n`;
       if (e.horaPartida) desc += `Horário de Entrada: ${e.horaPartida}\n`;
@@ -260,19 +260,19 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
     corDestaque = '#d35400'; // Laranja para urgência
   }
 
-  let hora = '09:00';
+  let hora = evento.horaEncontro || '09:00';
   if (evento.tipoServico === 'Roteiro') {
     hora = evento.horaEncontro || '09:00';
-  } else if (evento.tipoServico === 'Experiência') {
-    hora = evento.expInfo?.horaPartida || 'Padrão';
-  } else if (evento.tipoServico === 'Transporte') {
-    hora = evento.transportInfo?.horario || 'Padrão';
+  } else if (evento.tipoServico === 'Experiência' || evento.expInfo) {
+    hora = evento.expInfo?.horaPartida || evento.horaEncontro || 'Padrão';
+  } else if (evento.tipoServico === 'Transporte' || evento.transportInfo) {
+    hora = evento.transportInfo?.horario || evento.horaEncontro || 'Padrão';
   }
 
   let pontoEncontro = evento.localEncontro || 'Não informado';
 
   let detalhesExtras = '';
-  if (evento.tipoServico === 'Transporte' && evento.transportInfo) {
+  if (evento.transportInfo) {
     const t = evento.transportInfo;
     detalhesExtras = `
       <p style="margin: 5px 0;"><strong>Rota:</strong> ${t.origem || '-'} ➔ ${t.destino || '-'}</p>
@@ -281,7 +281,7 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
       ${t.categoria ? `<p style="margin: 5px 0;"><strong>Assento/Categoria:</strong> ${t.categoria}</p>` : ''}
       ${t.tempo ? `<p style="margin: 5px 0;"><strong>Duração da viagem:</strong> ${t.tempo}</p>` : ''}
     `;
-  } else if (evento.tipoServico === 'Experiência' && evento.expInfo) {
+  } else if (evento.expInfo) {
     const e = evento.expInfo;
     detalhesExtras = `
       <p style="margin: 5px 0;"><strong>Experiência:</strong> ${e.nomeExp || evento.titulo}</p>
@@ -488,13 +488,13 @@ async function processarNotificacoesEmail() {
       if (!evento.emails_1h_enviados) evento.emails_1h_enviados = [];
 
       // Calcular horário do serviço
-      let horaEncontroStr = '09:00';
+      let horaEncontroStr = evento.horaEncontro || '09:00';
       if (evento.tipoServico === 'Roteiro') {
         horaEncontroStr = evento.horaEncontro || '09:00';
-      } else if (evento.tipoServico === 'Experiência') {
-        horaEncontroStr = evento.expInfo?.horaPartida || '09:00';
-      } else if (evento.tipoServico === 'Transporte') {
-        horaEncontroStr = evento.transportInfo?.horario || '09:00';
+      } else if (evento.tipoServico === 'Experiência' || evento.expInfo) {
+        horaEncontroStr = evento.expInfo?.horaPartida || evento.horaEncontro || '09:00';
+      } else if (evento.tipoServico === 'Transporte' || evento.transportInfo) {
+        horaEncontroStr = evento.transportInfo?.horario || evento.horaEncontro || '09:00';
       }
 
       const dataHoraServico = obterDataHoraServico(evento.dataServico, horaEncontroStr);
