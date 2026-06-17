@@ -2066,7 +2066,7 @@ function closeModal() { document.getElementById('modalOverlay').classList.add('h
 function fmt(n) { return Math.round(n||0).toLocaleString('pt-BR'); }
 function fmtUSD(n) { return (n||0).toLocaleString('en-US',{style:'currency',currency:'USD'}); }
 function v(id) { return document.getElementById(id)?.value||''; }
-function fmtDataBR(str) { if(!str) return '—'; const [y,m,d]=str.split('-'); return `${d}/${m}/${y}`; }
+function fmtDataBR(str) { if(!str) return '—'; const clean = str.includes('T') ? str.split('T')[0] : str; const parts = clean.split('-'); if(parts.length < 3) return str; const [y,m,d]=parts; return `${d}/${m}/${y}`; }
 function fmtDate(iso) { if(!iso) return '—'; return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function showPrintTip() {
   const old = document.getElementById('printTip');
@@ -5091,8 +5091,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
   }
 
   // Data formatada
-  const dateParts = ev.dataServico.split('-');
-  document.getElementById('calEventModalData').innerText = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+  document.getElementById('calEventModalData').innerText = fmtDataBR(ev.dataServico);
 
   // Nome do cliente
   const cliNameEl = document.getElementById('calEventModalCliente');
@@ -5732,7 +5731,8 @@ window.selecionarColaboradorDashboard = async function(id) {
     const periodos = new Set();
     toursColab.forEach(ev => {
       if (ev.dataServico) {
-        const [y, m] = ev.dataServico.split('-');
+        const cleanDate = ev.dataServico.includes('T') ? ev.dataServico.split('T')[0] : ev.dataServico;
+        const [y, m] = cleanDate.split('-');
         periodos.add(`${y}-${m}`);
       }
     });
@@ -5793,7 +5793,8 @@ window.filtrarDashColaborador = function() {
   if (periodSelected !== 'all') {
     tours = tours.filter(ev => {
       if (!ev.dataServico) return false;
-      const [y, m] = ev.dataServico.split('-');
+      const cleanDate = ev.dataServico.includes('T') ? ev.dataServico.split('T')[0] : ev.dataServico;
+      const [y, m] = cleanDate.split('-');
       return `${y}-${m}` === periodSelected;
     });
   }
@@ -5814,8 +5815,7 @@ window.filtrarDashColaborador = function() {
       `;
     } else {
       tbodyEscala.innerHTML = tours.map(ev => {
-        const [y, m, d] = ev.dataServico.split('-');
-        const dataFormatada = `${d}/${m}/${y}`;
+        const dataFormatada = fmtDataBR(ev.dataServico);
         
         let localStr = ev.localEncontro || '-';
         if (!localStr && ev.cidade) localStr = ev.cidade;
@@ -5925,8 +5925,7 @@ window.filtrarDashColaborador = function() {
         isPago = ev.pago === true;
       }
       
-      const [y, m, d] = ev.dataServico.split('-');
-      const dataFormatada = `${d}/${m}/${y}`;
+      const dataFormatada = fmtDataBR(ev.dataServico);
       
       return `
         <tr style="border-bottom:1px solid var(--border); transition: background 0.15s;">
@@ -6028,8 +6027,7 @@ window.enviarLembreteTrabalho = function(eventoId, meio = 'email') {
   const emailGuia = colab && colab.email ? colab.email : '';
   const whatsappGuia = colab && colab.whatsapp ? colab.whatsapp.replace(/\D/g, '') : '';
   
-  const [y, m, d] = ev.dataServico.split('-');
-  const dataFormatada = `${d}/${m}/${y}`;
+  const dataFormatada = fmtDataBR(ev.dataServico);
   
   let localStr = ev.localEncontro || '-';
   if (!localStr && ev.cidade) localStr = ev.cidade;
