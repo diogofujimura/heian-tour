@@ -630,7 +630,7 @@ async function processarNotificacoesEmail() {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'database.json');
 const defaultData = { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
 
