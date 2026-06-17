@@ -313,9 +313,9 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelInfo.hotel + (hotelInfo.cidade ? ', ' + hotelInfo.cidade + ', Japan' : ', Japan'))}`;
     hotelHtml = `
             <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; vertical-align: top;">Hotel:</td>
-              <td style="padding: 6px 0; font-size: 14px;">
-                <a href="${googleMapsUrl}" target="_blank" style="color: #89232D; text-decoration: underline; font-weight: 500;">${hotelInfo.hotel}</a>
+              <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; vertical-align: top;">Hotel:</td>
+              <td class="value-text" style="padding: 6px 0; font-size: 14px;">
+                <a class="hotel-link" href="${googleMapsUrl}" target="_blank" style="color: #89232D; text-decoration: underline; font-weight: 500;">${hotelInfo.hotel}</a>
                 ${hotelInfo.cidade ? `<span style="color: #888; font-size: 12px;"> (${hotelInfo.cidade})</span>` : ''}
               </td>
             </tr>
@@ -323,90 +323,148 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
   }
 
   const html = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: #ffffff;">
-      <!-- Cabeçalho com Barra Premium (anti-dark-mode) -->
-      <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse; border: 0;">
-        <tr>
-          <td bgcolor="#89232D" style="background-color: #89232D !important; background: #89232D !important; padding: 0;">
-            <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 20px 0 20px 25px; text-align: left; vertical-align: middle; width: 50%; background-color: #89232D !important;">
-                  <img src="cid:logo_heian" alt="Heian Tour" style="max-height: 80px; width: auto; max-width: 100%; display: block; object-fit: contain;">
-                </td>
-                <td style="padding: 20px 25px 20px 0; text-align: right; vertical-align: middle; width: 50%; background-color: #89232D !important;">
-                  <p style="margin: 0; font-size: 13px; color: #f0f0f0; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">${tituloEmail}</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-      
-      <!-- Conteúdo Principal -->
-      <div style="padding: 30px 35px; color: #333333; line-height: 1.6;">
-        <p style="font-size: 15px; margin-top: 0; color: #444444;">${subtituloEmail}</p>
-        
-        <div style="background-color: #fafafa; border-left: 4px solid ${corDestaque}; padding: 18px; border-radius: 4px; margin: 20px 0; border-top: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
-          <h3 style="margin-top: 0; color: #1a1a1a; font-size: 16px; border-bottom: 1px solid #eef0f2; padding-bottom: 8px;">Detalhes do Serviço</h3>
-          <table style="width: 100%; border-collapse: collapse;">
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>${assunto}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    /* Estilos nativos para clientes de e-mail que suportam media queries de tema */
+    @media (prefers-color-scheme: dark) {
+      .email-body {
+        background-color: #121212 !important;
+        color: #ffffff !important;
+      }
+      .email-card {
+        background-color: #1e1e1e !important;
+        color: #e0e0e0 !important;
+        border-color: #333333 !important;
+      }
+      .card-details {
+        background-color: #2a2a2a !important;
+        border-color: #444444 !important;
+      }
+      .anti-dark-bg {
+        background-color: #89232D !important;
+        background-image: linear-gradient(#89232D, #89232D) !important;
+      }
+      .anti-dark-text {
+        color: #ffffff !important;
+      }
+      .hotel-link {
+        color: #ff6b7a !important;
+      }
+      .label-text {
+        color: #aaaaaa !important;
+      }
+      .value-text {
+        color: #ffffff !important;
+      }
+      /* Forçar cores de parágrafo e cabeçalhos no modo escuro */
+      p, td, h3, h4, span {
+        color: #e0e0e0 !important;
+      }
+      a {
+        color: #ff6b7a !important;
+      }
+    }
+  </style>
+</head>
+<body class="email-body" style="margin: 0; padding: 0; background-color: #f9f9f9; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+  <div class="email-card" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 30px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: #ffffff; color: #333333;">
+    <!-- Cabeçalho com Barra Premium (anti-dark-mode) -->
+    <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse; border: 0;">
+      <tr>
+        <td class="anti-dark-bg" bgcolor="#89232D" style="background-color: #89232D !important; background-image: linear-gradient(#89232D, #89232D) !important; padding: 0;">
+          <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 6px 0; padding-right: 12px; width: 130px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Atividade:</td>
-              <td style="padding: 6px 0; font-weight: 500; font-size: 14px; color: #1a1a1a;">${evento.titulo}</td>
+              <td class="anti-dark-bg" style="padding: 10px 0 10px 25px; text-align: left; vertical-align: middle; width: 55%; background-color: #89232D !important; background-image: linear-gradient(#89232D, #89232D) !important;">
+                <img src="cid:logo_heian" alt="Heian Tour" style="height: 72px; width: auto; max-width: 100%; display: block; object-fit: contain;">
+              </td>
+              <td class="anti-dark-bg" style="padding: 10px 25px 10px 0; text-align: right; vertical-align: middle; width: 45%; background-color: #89232D !important; background-image: linear-gradient(#89232D, #89232D) !important;">
+                <p class="anti-dark-text" style="margin: 0; font-size: 13px; color: #f0f0f0; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">${tituloEmail}</p>
+              </td>
             </tr>
-            <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Tipo:</td>
-              <td style="padding: 6px 0; font-size: 14px;">${evento.tipoServico}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">📅 Data:</td>
-              <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a; font-size: 15px;">${dataExtenso}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">⏰ Hora:</td>
-              <td style="padding: 6px 0; font-weight: bold; color: ${corDestaque}; font-size: 15px;">${hora}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Encontro:</td>
-              <td style="padding: 6px 0; font-size: 14px;">${pontoEncontro}</td>
-            </tr>
-            ${hotelHtml}
-            ${evento.clienteNome ? `
-            <tr>
-              <td style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Cliente:</td>
-              <td style="padding: 6px 0; font-size: 14px;">${evento.clienteNome}</td>
-            </tr>
-            ` : ''}
           </table>
-        </div>
-        
-        ${detalhesExtras ? `
-        <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
-          <h4 style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 15px;">Informações Complementares</h4>
-          <div style="font-size: 14px; color: #444;">
-            ${detalhesExtras}
-          </div>
-        </div>
-        ` : ''}
-        
-        ${linkGoogleAgenda ? `
-        <!-- Botão Adicionar ao Google Agenda -->
-        <div style="margin: 30px 0 25px 0; text-align: center;">
-          <a href="${linkGoogleAgenda}" target="_blank" style="background-color: #89232D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
-            📅 Adicionar ao Google Agenda
-          </a>
-        </div>
-        ` : ''}
-        
-        <p style="margin-top: 25px; font-size: 14px;">Por favor, confirme a visualização desta atividade acessando o calendário no painel administrativo.</p>
-        <p style="margin-bottom: 0; font-size: 14px;">Desejamos um excelente serviço!</p>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- Conteúdo Principal -->
+    <div style="padding: 30px 35px; color: #333333; line-height: 1.6;">
+      <p style="font-size: 15px; margin-top: 0; color: #444444;">${subtituloEmail}</p>
+      
+      <div class="card-details" style="background-color: #fafafa; border-left: 4px solid ${corDestaque}; padding: 18px; border-radius: 4px; margin: 20px 0; border-top: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
+        <h3 style="margin-top: 0; color: #1a1a1a; font-size: 16px; border-bottom: 1px solid #eef0f2; padding-bottom: 8px;">Detalhes do Serviço</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; width: 130px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Atividade:</td>
+            <td class="value-text" style="padding: 6px 0; font-weight: 500; font-size: 14px; color: #1a1a1a;">${evento.titulo}</td>
+          </tr>
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Tipo:</td>
+            <td class="value-text" style="padding: 6px 0; font-size: 14px;">${evento.tipoServico}</td>
+          </tr>
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">📅 Data:</td>
+            <td class="value-text" style="padding: 6px 0; font-weight: bold; color: #1a1a1a; font-size: 15px;">${dataExtenso}</td>
+          </tr>
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">⏰ Hora:</td>
+            <td class="value-text" style="padding: 6px 0; font-weight: bold; color: ${corDestaque}; font-size: 15px;">${hora}</td>
+          </tr>
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Encontro:</td>
+            <td class="value-text" style="padding: 6px 0; font-size: 14px;">${pontoEncontro}</td>
+          </tr>
+          ${hotelHtml}
+          ${evento.clienteNome ? `
+          <tr>
+            <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; white-space: nowrap;">Cliente:</td>
+            <td class="value-text" style="padding: 6px 0; font-size: 14px;">${evento.clienteNome}</td>
+          </tr>
+          ` : ''}
+        </table>
       </div>
       
-      <!-- Rodapé -->
-      <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 11px; color: #777777; border-top: 1px solid #eef0f2;">
-        <p style="margin: 0 0 5px 0;"><strong>Heian Tour Operadora de Turismo Japão</strong></p>
-        <p style="margin: 0;">Este é um e-mail de notificação automática. Por favor, não responda diretamente a esta mensagem.</p>
+      ${detalhesExtras ? `
+      <div style="margin: 20px 0; border-top: 1px solid #eee; padding-top: 15px;">
+        <h4 class="value-text" style="margin: 0 0 10px 0; color: #1a1a1a; font-size: 15px;">Informações Complementares</h4>
+        <div style="font-size: 14px; color: #444;">
+          ${detalhesExtras}
+        </div>
       </div>
+      ` : ''}
+      
+      ${linkGoogleAgenda ? `
+      <!-- Botão Adicionar ao Google Agenda -->
+      <div style="margin: 30px 0 25px 0; text-align: center;">
+        <a href="${linkGoogleAgenda}" target="_blank" style="background-color: #89232D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+          📅 Adicionar ao Google Agenda
+        </a>
+      </div>
+      ` : ''}
+      
+      <p style="margin-top: 25px; font-size: 14px;">Por favor, confirme a visualização desta atividade acessando o calendário no painel administrativo.</p>
+      <p style="margin-bottom: 0; font-size: 14px;">Desejamos um excelente serviço!</p>
     </div>
+    
+    <!-- Rodapé -->
+    <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 11px; color: #777777; border-top: 1px solid #eef0f2;">
+      <p style="margin: 0 0 5px 0;"><strong>Heian Tour Operadora de Turismo Japão</strong></p>
+      <p style="margin: 0;">Este é um e-mail de notificação automática. Por favor, não responda diretamente a esta mensagem.</p>
+    </div>
+  </div>
+</body>
+</html>
   `;
 
   const mailOptions = {
