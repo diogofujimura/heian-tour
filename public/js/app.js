@@ -5491,6 +5491,9 @@ async function salvarAtribuicaoGuia() {
     
     fecharCalendarioEventModal();
     renderCalendario(); // Recarregar
+    if (typeof filtrarDashColaborador === 'function') {
+      filtrarDashColaborador();
+    }
   } catch (err) {
     console.error(err);
     alert('Erro ao atualizar guias e diária. Tente novamente.');
@@ -5530,6 +5533,9 @@ window.deletarEventoCalendario = async function() {
     
     fecharCalendarioEventModal();
     renderCalendario(); // Re-renderizar calendário
+    if (typeof filtrarDashColaborador === 'function') {
+      filtrarDashColaborador();
+    }
     alert('Dia excluído com sucesso do calendário e arquivado no Notion!');
   } catch (err) {
     console.error(err);
@@ -5840,11 +5846,11 @@ window.filtrarDashColaborador = function() {
           <tr style="border-bottom:1px solid var(--border); transition: background 0.15s;">
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${dataFormatada}</td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${ev.clienteNome || 'Cliente'}</td>
-            <td style="padding:12px 16px; font-size:12px;" class="colab-servico-popover" data-id="${ev.id}">
+            <td style="padding:12px 16px; font-size:12px; cursor:pointer;" class="colab-servico-popover" data-id="${ev.id}" onclick="abrirCalendarioEventModal('${ev.id}')">
               <span class="compact-card-status" style="font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600; background:rgba(0,0,0,0.04); color:var(--ink-mid);">
                 ${ev.tipoServico}
               </span>
-              <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk); cursor:pointer;">${ev.titulo}</strong>
+              <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk);">${ev.titulo}</strong>
             </td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">🕒 ${ev.horaEncontro || '-'}</td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">${localStr}</td>
@@ -5947,11 +5953,11 @@ window.filtrarDashColaborador = function() {
         <tr style="border-bottom:1px solid var(--border); transition: background 0.15s;">
           <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${dataFormatada}</td>
           <td style="padding:12px 16px; font-size:12px; color:var(--ink-dk); font-weight:600;">${ev.clienteNome || 'Cliente'}</td>
-          <td style="padding:12px 16px; font-size:12px;" class="colab-servico-popover" data-id="${ev.id}">
+          <td style="padding:12px 16px; font-size:12px; cursor:pointer;" class="colab-servico-popover" data-id="${ev.id}" onclick="abrirCalendarioEventModal('${ev.id}')">
             <span class="compact-card-status" style="font-size:8px; text-transform:uppercase; padding:1px 4px; border-radius:3px; font-weight:600; background:rgba(0,0,0,0.04); color:var(--ink-mid);">
               ${ev.tipoServico}
             </span>
-            <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk); cursor:pointer;">${ev.titulo}</strong>
+            <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk);">${ev.titulo}</strong>
           </td>
           <td style="padding:12px 16px; font-size:12px;">
             <input type="number" id="diaria_input_${ev.id}" class="search-input-modern" style="width:100px; padding:4px 8px; font-size:12px; margin:0;" value="${valor}">
