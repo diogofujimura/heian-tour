@@ -1522,16 +1522,23 @@ app.post('/api/sync', async (req, res) => {
         const headerVals = headerCells.map(cellVal).map(v => v.toLowerCase());
 
         const getIdx = (keywords, defaultVal) => {
-          const idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
+          let idx = headerVals.findIndex(h => keywords.some(k => h === k));
+          if (idx >= 0) return idx;
+          idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
           return idx >= 0 ? idx : defaultVal;
         };
 
         const idxCidade = getIdx(['cidade', 'city', 'local'], 0);
         const idxBairro = getIdx(['bairro', 'neighborhood', 'região', 'regiao', 'zona'], 1);
-        const idxNome = getIdx(['nome', 'atração', 'atracao', 'name', 'título', 'titulo'], 2);
-        const idxDescricao = getIdx(['descrição', 'descricao', 'detalhes', 'detalhada', 'description', 'sobre'], 3);
-        const idxPreco = getIdx(['preço', 'preco', 'ingresso', 'valor', 'price', 'custo'], 4);
+        const idxNome = getIdx(['nome da atração', 'nome da atracao', 'nome', 'atração', 'atracao', 'name', 'título', 'titulo'], 2);
+        const idxDescricao = getIdx(['descrição detalhada', 'descricao detalhada', 'descrição', 'descricao', 'detalhes', 'description', 'sobre'], 3);
+        const idxPreco = getIdx(['preço (ingresso)', 'preco (ingresso)', 'preço', 'preco', 'ingresso', 'valor', 'price', 'custo'], 4);
         const idxOrigem = getIdx(['origem', 'source', 'casal'], 5);
+        const idxDiasFechados = getIdx(['diasfechados', 'dias fechados', 'fechados', 'fechado'], 5);
+        const idxId = getIdx(['id', 'id_atracao', 'idatracao'], 6);
+        const idxManutencaoInicio = getIdx(['manutencaoinicio', 'manutencao_inicio', 'manutenção início', 'manutencao inicio'], 7);
+        const idxManutencaoFim = getIdx(['manutencaofim', 'manutencao_fim', 'manutenção fim', 'manutencao fim'], 8);
+        const idxManutencaoMotivo = getIdx(['manutencaomotivo', 'manutencao_motivo', 'motivo', 'manutencao motivo'], 9);
 
         const dataRows = foundHeader ? rows.slice(headerIdx + 1) : rows;
 
@@ -1540,13 +1547,43 @@ app.post('/api/sync', async (req, res) => {
             const c = r.c || [];
             const nome = cellVal(c[idxNome]);
             if (!nome) return null;
+            
+            let diasFechados = [];
+            const rawDias = cellVal(c[idxDiasFechados]);
+            if (rawDias) {
+              try {
+                const parsed = JSON.parse(rawDias);
+                if (Array.isArray(parsed)) {
+                  diasFechados = parsed.map(Number).filter(n => !isNaN(n));
+                } else {
+                  const parsedNum = Number(parsed);
+                  if (!isNaN(parsedNum) && rawDias.trim() !== '') {
+                    diasFechados = [parsedNum];
+                  }
+                }
+              } catch (e) {
+                if (rawDias.includes(',')) {
+                  diasFechados = rawDias.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+                } else {
+                  const valNum = parseInt(rawDias.trim(), 10);
+                  if (!isNaN(valNum)) {
+                    diasFechados = [valNum];
+                  }
+                }
+              }
+            }
+
             return {
-              id: cellVal(c[6]) || (i + 1),
+              id: cellVal(c[idxId]) || cellVal(c[6]) || String(i + 1),
               Cidade: cellVal(c[idxCidade]) || 'Geral',
               Bairro: cellVal(c[idxBairro]) || '',
               'Nome da Atração': nome,
               'Descrição Detalhada': (cellVal(c[idxDescricao]) || '').replace(/<[^>]*>?/gm, '').trim(),
               'Preço (Ingresso)': cellVal(c[idxPreco]) || 'Gratuito',
+              diasFechados: diasFechados,
+              manutencaoInicio: cellVal(c[idxManutencaoInicio]) || '',
+              manutencaoFim: cellVal(c[idxManutencaoFim]) || '',
+              manutencaoMotivo: cellVal(c[idxManutencaoMotivo]) || '',
               Origem: cellVal(c[idxOrigem]) || 'Google Sheets'
             };
           })
@@ -3891,6 +3928,7 @@ app.get('/api/public/client-data/:clientId', async (req, res) => {
             return cleanEl;
           });
           return {
+            data: d.data,
             cidade: d.cidade,
             tourGuiado: d.tourGuiado,
             elementos: sanitizedElements

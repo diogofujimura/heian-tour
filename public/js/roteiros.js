@@ -7,13 +7,86 @@ window.formatPeriodo = function(d1, d2) {
     return f1 || f2;
 };
 
+window.normalizarNome = function(nome) {
+  if (!nome) return '';
+  return nome.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/museum/g, 'museu')
+    .replace(/tokyo/g, 'toquio')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+window.verificarSimilaridade = function(nome1, nome2, taxaMinima = 0.75) {
+  const n1 = window.normalizarNome(nome1);
+  const n2 = window.normalizarNome(nome2);
+  
+  if (n1 === n2) return true;
+  
+  const palavras1 = n1.split(' ').filter(Boolean);
+  const palavras2 = n2.split(' ').filter(Boolean);
+  
+  if (palavras1.length === 0 || palavras2.length === 0) return false;
+  
+  const todas1em2 = palavras1.every(p => palavras2.includes(p));
+  const todas2em1 = palavras2.every(p => palavras1.includes(p));
+  
+  if (todas1em2 && todas2em1) return true;
+  
+  const ignorar = ['de', 'do', 'da', 'o', 'a', 'e', 'em'];
+  const p1Filtradas = palavras1.filter(p => !ignorar.includes(p));
+  const p2Filtradas = palavras2.filter(p => !ignorar.includes(p));
+  
+  if (p1Filtradas.length > 0 && p2Filtradas.length > 0) {
+    const intersec = p1Filtradas.filter(p => p2Filtradas.includes(p));
+    const taxa1 = intersec.length / p1Filtradas.length;
+    const taxa2 = intersec.length / p2Filtradas.length;
+    if (taxa1 >= taxaMinima || taxa2 >= taxaMinima) return true;
+  }
+  
+  return false;
+};
+
+window.buscarAtracaoNoMapa = function(nome) {
+  if (!nome) return null;
+  if (typeof atracaoMap === 'undefined') return null;
+  const nomeLower = nome.toLowerCase().trim();
+  if (atracaoMap.has(nomeLower)) {
+    return atracaoMap.get(nomeLower);
+  }
+  
+  // 1º passo: Match perfeito de palavras (100%, ordem indiferente)
+  let match = Array.from(atracaoMap.values()).find(a => window.verificarSimilaridade(a['Nome da Atração'], nome, 1.0));
+  
+  // 2º passo: Match parcial (75%)
+  if (!match) {
+    match = Array.from(atracaoMap.values()).find(a => window.verificarSimilaridade(a['Nome da Atração'], nome, 0.75));
+  }
+  
+  return match;
+};
+
 window.verificarFuncionamentoAtracao = function(nome, dataStr) {
   if (!dataStr || !nome) return { fechado: false };
   
-  if (typeof state === 'undefined' || !state.atracoesDB) return { fechado: false };
+  let list = [];
+  if (typeof state !== 'undefined' && state.atracoesDB) {
+    list = state.atracoesDB;
+  } else if (typeof dbAtracoes !== 'undefined') {
+    list = dbAtracoes;
+  }
   
-  const nomeLower = nome.trim().toLowerCase();
-  const atracao = state.atracoesDB.find(a => (a['Nome da Atração'] || '').trim().toLowerCase() === nomeLower);
+  if (!list || list.length === 0) return { fechado: false };
+  
+  // 1º passo: Match perfeito de palavras (100%, ordem indiferente)
+  let atracao = list.find(a => window.verificarSimilaridade(a['Nome da Atração'], nome, 1.0));
+  
+  // 2º passo: Match parcial (75%)
+  if (!atracao) {
+    atracao = list.find(a => window.verificarSimilaridade(a['Nome da Atração'], nome, 0.75));
+  }
+  
   if (!atracao) return { fechado: false };
   
   // 1) Checagem de Manutenção/Reforma
@@ -237,6 +310,10 @@ function criarPopover() {
     <div class="popover-preco" id="popPreco">
       <span>Preço:</span>
       <strong class="preco-brt">Grátis</strong>
+    </div>
+    <div class="popover-funcionamento" id="popFuncionamento" style="display:none; margin-top:8px; font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(107,31,42,0.06); border:1px solid rgba(107,31,42,0.12); color:var(--crimson);">
+      <span style="font-weight:700;">⚠️ Funcionamento:</span>
+      <span id="popFuncionamentoTexto"></span>
     </div>
   `;
   document.body.appendChild(popover);
@@ -606,7 +683,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
 }
 
 function criarChipAtracaoHTML(nomeAtracao) {
-  const match = atracaoMap.get(nomeAtracao.toLowerCase());
+  const match = window.buscarAtracaoNoMapa(nomeAtracao);
   const isMissing = !match ? 'missing' : '';
   // Guarda o nome real no data-id para recuperar depois
   return `<div class="chip-atracao ${isMissing}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}">${nomeAtracao}</div>`;
@@ -615,7 +692,7 @@ function criarChipAtracaoHTML(nomeAtracao) {
 function showPopover(e) {
   const chip = e.target;
   const nome = chip.getAttribute('data-id');
-  const atracao = atracaoMap.get(nome.toLowerCase());
+  const atracao = window.buscarAtracaoNoMapa(nome);
   
   const popover = document.getElementById('atracaoPopover');
   const fotoEl = document.getElementById('popFoto');
@@ -639,18 +716,46 @@ function showPopover(e) {
     fotoEl.style.display = 'block';
   }
   
+  const popFunc = document.getElementById('popFuncionamento');
+  const popFuncTxt = document.getElementById('popFuncionamentoTexto');
+  
   if (atracao) {
     document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
     document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
     document.getElementById('popDesc').textContent = (atracao['Descrição Detalhada'] || 'Visitação livre.').replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
     let preco = atracao['Preço (Ingresso)'];
     document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
+    
+    // Validar fechamento recorrente e manutenção para o popover
+    let alertas = [];
+    
+    // 1) Dias fechados semanais
+    if (atracao.diasFechados && Array.isArray(atracao.diasFechados) && atracao.diasFechados.length > 0) {
+      const diasSemanaNomes = ["Domingos", "Segundas-feiras", "Terças-feiras", "Quartas-feiras", "Quintas-feiras", "Sextas-feiras", "Sábados"];
+      const nomesFechados = atracao.diasFechados.map(d => diasSemanaNomes[d]);
+      alertas.push(`Fecha às ${nomesFechados.join(' e ')}`);
+    }
+    
+    // 2) Período de manutenção
+    if (atracao.manutencaoInicio && atracao.manutencaoFim) {
+      const formataDataSimples = (dStr) => dStr.split('-').reverse().slice(0, 2).join('/');
+      const motivoStr = atracao.manutencaoMotivo ? ` (${atracao.manutencaoMotivo})` : '';
+      alertas.push(`Manutenção de ${formataDataSimples(atracao.manutencaoInicio)} a ${formataDataSimples(atracao.manutencaoFim)}${motivoStr}`);
+    }
+    
+    if (alertas.length > 0 && popFunc && popFuncTxt) {
+      popFuncTxt.textContent = alertas.join(' | ');
+      popFunc.style.display = 'block';
+    } else if (popFunc) {
+      popFunc.style.display = 'none';
+    }
   } else {
     // Fallback para atrações que estão na rota mas não têm cadastro detalhado
     document.getElementById('popBairro').textContent = 'Ponto de Interesse';
     document.getElementById('popTitulo').textContent = nome;
     document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
     document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-lt)">Sem dados</strong>`;
+    if (popFunc) popFunc.style.display = 'none';
   }
 
   // Calcular posição do popover (flutuando perto do mouse).
@@ -661,9 +766,9 @@ function showPopover(e) {
   let topPos = rect.bottom + 8;
   let leftPos = rect.left;
   
-  // Abre para cima se não couber embaixo (considerando a altura adicional da imagem)
-  if (topPos + 320 > window.innerHeight) {
-    topPos = rect.top - 330;
+  // Abre para cima se não couber embaixo (considerando a altura adicional da imagem e do bloco de funcionamento)
+  if (topPos + 350 > window.innerHeight) {
+    topPos = rect.top - 360;
   }
 
   popover.style.top = topPos + 'px';
@@ -809,7 +914,7 @@ window.novoRoteiro = function() {
             if (incluirDesc && el.atracoesDoDia) {
               atracoesHTML = '<div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:8px; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px;">';
               el.atracoesDoDia.forEach((atrNome, idxAtr) => {
-                const atr = atracaoMap ? atracaoMap.get(atrNome.toLowerCase()) : null;
+                const atr = window.buscarAtracaoNoMapa(atrNome);
                 let desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
                 desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
                 const bairro = atr ? (atr['Bairro'] || '') : '';
@@ -1315,7 +1420,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
             }
           }
           
-          const missingClass = !atracaoMap.has(atr.toLowerCase()) ? 'missing' : '';
+          const missingClass = !window.buscarAtracaoNoMapa(atr) ? 'missing' : '';
           
           return `<div class="chip-atracao ${missingClass}${extraClass}"
                 title="${atr}${warnTitle}"

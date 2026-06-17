@@ -550,6 +550,17 @@
       border-color: var(--accent);
     }
     .chip-atracao.missing { border-style: dashed; opacity: 0.7; }
+    .chip-atracao.fechada {
+      background: rgba(220, 38, 38, 0.08) !important;
+      border: 1px solid rgba(220, 38, 38, 0.3) !important;
+      color: #dc2626 !important;
+    }
+    .chip-atracao.fechada:hover {
+      background: #dc2626 !important;
+      color: white !important;
+      border-color: #dc2626 !important;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+    }
     
     /* Popover/Modal de Atração */
     .atracao-popover { 
@@ -913,7 +924,7 @@
                 temConteudo = true;
                 const atrHtml = el.atracoesDoDia && el.atracoesDoDia.length > 0 
                   ? `<div class="dia-atracoes">
-                      ${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}
+                      ${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr, dia.data)).join('')}
                      </div>`
                   : '';
                 elementsHTML += `
@@ -1226,16 +1237,128 @@
       }
     }
 
-    function criarChipAtracaoHTML(nomeAtracao) {
-      const match = atracaoMap.get(nomeAtracao.toLowerCase());
+    function normalizarNome(nome) {
+      if (!nome) return '';
+      return nome.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/museum/g, 'museu')
+        .replace(/tokyo/g, 'toquio')
+        .replace(/[^a-z0-9]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function verificarSimilaridade(nome1, nome2, taxaMinima = 0.75) {
+      const n1 = normalizarNome(nome1);
+      const n2 = normalizarNome(nome2);
+      
+      if (n1 === n2) return true;
+      
+      const palavras1 = n1.split(' ').filter(Boolean);
+      const palavras2 = n2.split(' ').filter(Boolean);
+      
+      if (palavras1.length === 0 || palavras2.length === 0) return false;
+      
+      const todas1em2 = palavras1.every(p => palavras2.includes(p));
+      const todas2em1 = palavras2.every(p => palavras1.includes(p));
+      
+      if (todas1em2 && todas2em1) return true;
+      
+      const ignorar = ['de', 'do', 'da', 'o', 'a', 'e', 'em'];
+      const p1Filtradas = palavras1.filter(p => !ignorar.includes(p));
+      const p2Filtradas = palavras2.filter(p => !ignorar.includes(p));
+      
+      if (p1Filtradas.length > 0 && p2Filtradas.length > 0) {
+        const intersec = p1Filtradas.filter(p => p2Filtradas.includes(p));
+        const taxa1 = intersec.length / p1Filtradas.length;
+        const taxa2 = intersec.length / p2Filtradas.length;
+        if (taxa1 >= taxaMinima || taxa2 >= taxaMinima) return true;
+      }
+      
+      return false;
+    }
+
+    function verificarFuncionamentoAtracao(atracao, dataStr) {
+      if (!dataStr || !atracao) return { fechado: false };
+      
+      // 1) Checagem de Manutenção/Reforma
+      if (atracao.manutencaoInicio && atracao.manutencaoFim) {
+        if (dataStr >= atracao.manutencaoInicio && dataStr <= atracao.manutencaoFim) {
+          return { 
+            fechado: true, 
+            tipoBloqueio: 'manutencao', 
+            motivo: atracao.manutencaoMotivo || 'Fechado para manutenção/reforma',
+            inicio: atracao.manutencaoInicio,
+            fim: atracao.manutencaoFim
+          };
+        }
+      }
+      
+      // 2) Checagem de Dia da Semana Recorrente
+      if (atracao.diasFechados && Array.isArray(atracao.diasFechados) && atracao.diasFechados.length > 0) {
+        const [yy, mm, dd] = dataStr.split('-').map(Number);
+        const dateObj = new Date(yy, mm - 1, dd);
+        const dayOfWeek = dateObj.getDay(); // 0 = Dom, 1 = Seg, etc.
+        
+        if (atracao.diasFechados.includes(dayOfWeek)) {
+          const diasSemanaNomes = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+          return {
+            fechado: true,
+            tipoBloqueio: 'semanal',
+            diaSemanaNome: diasSemanaNomes[dayOfWeek]
+          };
+        }
+      }
+      
+      return { fechado: false };
+    }
+
+    function buscarAtracaoNoMapa(nome) {
+      if (!nome) return null;
+      const nomeLower = nome.toLowerCase().trim();
+      if (atracaoMap.has(nomeLower)) {
+        return atracaoMap.get(nomeLower);
+      }
+      
+      // 1º passo: Match perfeito de palavras (100%, ordem indiferente)
+      let match = Array.from(atracaoMap.values()).find(a => verificarSimilaridade(a['Nome da Atração'], nome, 1.0));
+      
+      // 2º passo: Match parcial (75%)
+      if (!match) {
+        match = Array.from(atracaoMap.values()).find(a => verificarSimilaridade(a['Nome da Atração'], nome, 0.75));
+      }
+      
+      return match;
+    }
+
+    function criarChipAtracaoHTML(nomeAtracao, dataStr) {
+      const match = buscarAtracaoNoMapa(nomeAtracao);
       const isMissing = !match ? 'missing' : '';
-      return `<div class="chip-atracao ${isMissing}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}">${nomeAtracao}</div>`;
+      
+      let extraClass = '';
+      let warnIcon = '';
+      let warnTitle = '';
+      
+      if (match && dataStr) {
+        const chk = verificarFuncionamentoAtracao(match, dataStr);
+        if (chk.fechado) {
+          extraClass = ' fechada';
+          warnIcon = '⚠️ ';
+          if (chk.tipoBloqueio === 'semanal') {
+            warnTitle = ` (fecha às ${chk.diaSemanaNome.toLowerCase()}s)`;
+          } else if (chk.tipoBloqueio === 'manutencao') {
+            warnTitle = ` (manutenção: ${chk.motivo})`;
+          }
+        }
+      }
+      
+      return `<div class="chip-atracao ${isMissing}${extraClass}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}" title="${nomeAtracao}${warnTitle}">${warnIcon}${nomeAtracao}${warnTitle}</div>`;
     }
 
     function showPopover(e) {
       const chip = e.target;
       const nome = chip.getAttribute('data-id');
-      const atracao = atracaoMap.get(nome.toLowerCase());
+      const atracao = buscarAtracaoNoMapa(nome);
       
       const popover = document.getElementById('atracaoPopover');
       if (!popover) return;
