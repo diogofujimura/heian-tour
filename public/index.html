@@ -7,6 +7,15 @@
   <link rel="stylesheet" href="css/style.css?v=premium_vis10">
 
 <script>
+// Limpa credenciais na URL para evitar erro TypeError no fetch em navegadores mobile
+if (window.location.href.includes('@') && (window.location.href.includes('http://') || window.location.href.includes('https://'))) {
+  try {
+    const cleanUrl = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + window.location.pathname + window.location.hash;
+    window.location.replace(cleanUrl);
+  } catch (err) {
+    console.error('Erro ao limpar URL:', err);
+  }
+}
 window.addEventListener('error', function(e) {
   let errBox = document.getElementById('debugErrorBox');
   if (!errBox) {
