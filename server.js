@@ -1539,6 +1539,7 @@ app.post('/api/sync', async (req, res) => {
         const idxManutencaoInicio = getIdx(['manutencaoinicio', 'manutencao_inicio', 'manutenção início', 'manutencao inicio'], 7);
         const idxManutencaoFim = getIdx(['manutencaofim', 'manutencao_fim', 'manutenção fim', 'manutencao fim'], 8);
         const idxManutencaoMotivo = getIdx(['manutencaomotivo', 'manutencao_motivo', 'motivo', 'manutencao motivo'], 9);
+        const idxFoto = getIdx(['foto (url)', 'foto', 'foto_url', 'imagem', 'image'], 10);
 
         const dataRows = foundHeader ? rows.slice(headerIdx + 1) : rows;
 
@@ -1584,6 +1585,7 @@ app.post('/api/sync', async (req, res) => {
               manutencaoInicio: cellVal(c[idxManutencaoInicio]) || '',
               manutencaoFim: cellVal(c[idxManutencaoFim]) || '',
               manutencaoMotivo: cellVal(c[idxManutencaoMotivo]) || '',
+              'Foto (URL)': cellVal(c[idxFoto]) || '',
               Origem: cellVal(c[idxOrigem]) || 'Google Sheets'
             };
           })
