@@ -1045,7 +1045,7 @@ window.addEventListener('unhandledrejection', function(e) {
               <table class="modern-table" id="colabEscalaTable" style="width:100%; border-collapse:collapse; min-width:800px;">
                 <thead>
                   <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Data</th>
+                    <th onclick="alternarOrdemDataColab()" style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); cursor:pointer; user-select:none;">Data <span id="colabOrdemDataIcon">▼</span></th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Encontro</th>
@@ -1091,7 +1091,7 @@ window.addEventListener('unhandledrejection', function(e) {
               <table class="modern-table" id="colabToursTable" style="width:100%; border-collapse:collapse; min-width:600px;">
                 <thead>
                   <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Data</th>
+                    <th onclick="alternarOrdemDataColab()" style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); cursor:pointer; user-select:none;">Data <span id="colabOrdemDataIconFin">▼</span></th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
                     <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Valor Diária (JPY)</th>

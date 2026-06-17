@@ -5595,6 +5595,18 @@ window.sincronizarRoteiroCalendario = async function(roteiroNome) {
 
 // ── SISTEMA DE GESTÃO DE COLABORADORES & DASHBOARD FINANCEIRO ───────────────
 let calSelectedColaboradorId = null;
+let colabDashOrdemData = 'desc'; // Começa decrescente por padrão
+
+window.alternarOrdemDataColab = function() {
+  colabDashOrdemData = colabDashOrdemData === 'asc' ? 'desc' : 'asc';
+  
+  const icones = [document.getElementById('colabOrdemDataIcon'), document.getElementById('colabOrdemDataIconFin')];
+  icones.forEach(icon => {
+    if (icon) icon.innerText = colabDashOrdemData === 'asc' ? ' ▲' : ' ▼';
+  });
+  
+  filtrarDashColaborador();
+};
 
 window.setupColaboradoresTab = async function() {
   const listEl = document.getElementById('tabelaColaboradoresList');
@@ -5799,8 +5811,12 @@ window.filtrarDashColaborador = function() {
     });
   }
   
-  // Ordenar tours por data ascendente
-  tours.sort((a, b) => a.dataServico.localeCompare(b.dataServico));
+  // Ordenar tours por data (crescente ou decrescente)
+  tours.sort((a, b) => {
+    return colabDashOrdemData === 'asc'
+      ? a.dataServico.localeCompare(b.dataServico)
+      : b.dataServico.localeCompare(a.dataServico);
+  });
   
   // ── SUB-ABA 1: RENDERIZAR TABELA DE ESCALA (TODOS OS SERVIÇOS) ──
   const tbodyEscala = document.getElementById('colabEscalaTableBody');
