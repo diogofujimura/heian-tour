@@ -1260,25 +1260,54 @@
         fotoEl.style.display = 'block';
       }
 
+      const popFunc = document.getElementById('popFuncionamento');
+      const popFuncTxt = document.getElementById('popFuncionamentoTexto');
+
       if (atracao) {
         document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
         document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
         document.getElementById('popDesc').textContent = (atracao['Descrição Detalhada'] || 'Visitação livre.').replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
         let preco = atracao['Preço (Ingresso)'];
         document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
+        
+        // Validar fechamento recorrente e manutenção para o popover
+        let alertas = [];
+        
+        // 1) Dias fechados semanais
+        if (atracao.diasFechados && Array.isArray(atracao.diasFechados) && atracao.diasFechados.length > 0) {
+          const diasSemanaNomes = ["Domingos", "Segundas-feiras", "Terças-feiras", "Quartas-feiras", "Quintas-feiras", "Sextas-feiras", "Sábados"];
+          const nomesFechados = atracao.diasFechados.map(d => diasSemanaNomes[d]);
+          alertas.push(`Fecha às ${nomesFechados.join(' e ')}`);
+        }
+        
+        // 2) Período de manutenção
+        if (atracao.manutencaoInicio && atracao.manutencaoFim) {
+          const formataDataSimples = (dStr) => dStr.split('-').reverse().slice(0, 2).join('/');
+          const motivoStr = atracao.manutencaoMotivo ? ` (${atracao.manutencaoMotivo})` : '';
+          alertas.push(`Manutenção de ${formataDataSimples(atracao.manutencaoInicio)} a ${formataDataSimples(atracao.manutencaoFim)}${motivoStr}`);
+        }
+        
+        if (alertas.length > 0 && popFunc && popFuncTxt) {
+          popFuncTxt.textContent = alertas.join(' | ');
+          popFunc.style.display = 'block';
+        } else if (popFunc) {
+          popFunc.style.display = 'none';
+        }
       } else {
         document.getElementById('popBairro').textContent = 'Ponto de Interesse';
         document.getElementById('popTitulo').textContent = nome;
         document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
         document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-light)">Sem dados</strong>`;
+        if (popFunc) popFunc.style.display = 'none';
       }
 
       const rect = chip.getBoundingClientRect();
       let topPos = rect.bottom + 8;
       let leftPos = rect.left;
       
-      if (topPos + 320 > window.innerHeight) {
-        topPos = rect.top - 330;
+      // Abre para cima se não couber embaixo (considerando a altura adicional do popover com o alerta)
+      if (topPos + 350 > window.innerHeight) {
+        topPos = rect.top - 360;
       }
       
       if (leftPos + 320 > window.innerWidth) {
@@ -1319,6 +1348,10 @@
           <div class="popover-preco" id="popPreco">
             <span>Preço:</span>
             <strong class="preco-brt">Grátis</strong>
+          </div>
+          <div class="popover-funcionamento" id="popFuncionamento" style="display:none; margin-top:8px; font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(107,31,42,0.06); border:1px solid rgba(107,31,42,0.12); color:var(--crimson);">
+            <span style="font-weight:700;">⚠️ Funcionamento:</span>
+            <span id="popFuncionamentoTexto"></span>
           </div>
         `;
         document.body.appendChild(popover);
