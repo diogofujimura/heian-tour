@@ -2483,7 +2483,8 @@ window.abrirModalGeradorIA = async function() {
 
   // Resetar campos
   document.getElementById('iaInstrucoesPrompt').value = '';
-  document.getElementById('iaDataInicio').value = '';
+  const dateVal = roteiroEmEdicao?.cliente?.dataInicio || roteiroEmEdicao?.cliente?.dataOrcamento || document.getElementById('rotClienteData')?.value || '';
+  document.getElementById('iaDataInicio').value = dateVal;
   document.getElementById('iaLoadingSpinner').style.display = 'none';
   document.getElementById('btnConfirmarGerarIA').disabled = false;
   document.getElementById('iaBriefingCliente').value = 'Nenhum briefing carregado do Notion para este cliente.';
