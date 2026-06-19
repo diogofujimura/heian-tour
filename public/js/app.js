@@ -275,6 +275,8 @@ function abrirOrcamento(id, directEdit = false) {
   const lockedStyle = temCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
   const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
   if(btnEditarCot) btnEditarCot.innerHTML = temCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
+  const btnImport = document.getElementById('btnImportNotion');
+  if (btnImport) btnImport.style.display = temCliente ? 'none' : 'inline-block';
   ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
     if(el) { el.readOnly = temCliente; el.style.cssText = lockedStyle; }
@@ -400,6 +402,8 @@ function novoOrcamento() {
   document.getElementById('clienteDataOrcamento').value = today();
   const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
   if(btnEditarCot) btnEditarCot.innerHTML = '💾 Salvar Cliente no Notion';
+  const btnImport = document.getElementById('btnImportNotion');
+  if (btnImport) btnImport.style.display = 'inline-block';
   
   if (!state.orcamento.valoresTour) state.orcamento.valoresTour = {};
   const defs = { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 };
@@ -2559,6 +2563,9 @@ function setupNotion() {
       document.getElementById('clienteNome').value = c.nome;
       document.getElementById('clienteAdultos').value = c.adultos || 2;
       document.getElementById('clienteCriancas').value = c.criancas || 0;
+      
+      const btnImport = document.getElementById('btnImportNotion');
+      if (btnImport) btnImport.style.display = 'none';
 
       // Puxa estadias salvas localmente ou faz o parse automático
       try {
@@ -4076,7 +4083,13 @@ function renderAbaRoteiros(cliente) {
   }).join('');
 
   contentDiv.innerHTML = `
-    <div class="compact-cards-grid">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <span style="font-size:13px; color:var(--ink-lt); font-weight:500;">Histórico de Roteiros</span>
+      <button class="btn-primary" onclick="window.criarRoteiroParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:6px; padding: 6px 12px; font-size:12px; border-radius: 6px;">
+        ➕ Novo Roteiro
+      </button>
+    </div>
+    <div class="compact-cards-grid" style="margin-bottom:16px;">
       ${cardsHTML}
     </div>
     <div id="roteiroActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
@@ -4234,7 +4247,13 @@ function renderAbaCotacoes(cliente) {
   }).join('');
 
   contentDiv.innerHTML = `
-    <div class="compact-cards-grid">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <span style="font-size:13px; color:var(--ink-lt); font-weight:500;">Histórico de Cotações</span>
+      <button class="btn-primary" onclick="window.criarCotacaoParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:6px; padding: 6px 12px; font-size:12px; border-radius: 6px;">
+        ➕ Nova Cotação
+      </button>
+    </div>
+    <div class="compact-cards-grid" style="margin-bottom:16px;">
       ${cardsHTML}
     </div>
     <div id="cotacaoActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
@@ -4321,6 +4340,16 @@ window.criarCotacaoParaCliente = function(clienteId) {
   document.getElementById('clienteNome').value = nome;
   document.getElementById('clienteAdultos').value = cliente.adultos || '2';
   document.getElementById('clienteCriancas').value = cliente.criancas || '0';
+  
+  const btnImport = document.getElementById('btnImportNotion');
+  if (btnImport) btnImport.style.display = 'none';
+  ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.readOnly = true; el.style.cssText = 'background:#f1f5f9; cursor:not-allowed'; }
+  });
+  const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
+  if(btnEditarCot) btnEditarCot.innerHTML = '👤 Editar Cliente';
+
   state.orcamento.cliente.nome = nome;
   state.orcamento.cliente.adultos = cliente.adultos || '2';
   state.orcamento.cliente.criancas = cliente.criancas || '0';

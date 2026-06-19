@@ -1191,6 +1191,8 @@ function abrirEditorRoteiro(nome) {
   });
   const btnEditarRot = document.getElementById('btnEditarClienteRoteiro');
   if(btnEditarRot) btnEditarRot.innerHTML = rotTemCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
+  const btnImportRot = document.getElementById('btnImportNotionRoteiro');
+  if (btnImportRot) btnImportRot.style.display = rotTemCliente ? 'none' : 'inline-block';
   
   // Datas e voos (não estão mais na UI do Roteiro como editáveis globalmente, mas para garantir preenchemos)
   document.getElementById('rotClienteData').value = notionCli ? notionCli.dataInicio : (roteiroEmEdicao.cliente?.dataInicio || roteiroEmEdicao.cliente?.dataOrcamento || '');
@@ -2206,6 +2208,8 @@ window.vincularClienteRoteiroFromSelect = function() {
     
     document.getElementById('rotNotionSelectWrapper').style.display = 'none';
     select.value = '';
+    const btnImport = document.getElementById('btnImportNotionRoteiro');
+    if (btnImport) btnImport.style.display = 'none';
     
     if(typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
     if(typeof updateRoteiroHeader === 'function') updateRoteiroHeader();
