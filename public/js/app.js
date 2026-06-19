@@ -2723,10 +2723,27 @@ window.restaurarItemLixeira = async function(tipo, key) {
     // Atualiza os dados ativos no frontend
     if (tipo === 'cotacao') {
       const resList = await fetch('/api/orcamentos?t=' + Date.now(), { cache: 'no-store' });
-      if (resList.ok) state.orcamentosDB = await resList.json();
+      if (resList.ok) {
+        state.orcamentosDB = await resList.json();
+        if (typeof renderListaOrcamentos === 'function') {
+          renderListaOrcamentos();
+        }
+        if (window.clienteAtualVisualizado && typeof notionClients !== 'undefined') {
+          const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
+          if (cli && typeof renderAbaCotacoes === 'function') {
+            renderAbaCotacoes(cli);
+          }
+        }
+      }
     } else {
       if (typeof window.carregarRoteirosDoServidor === 'function') {
         await window.carregarRoteirosDoServidor();
+        if (window.clienteAtualVisualizado && typeof notionClients !== 'undefined') {
+          const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
+          if (cli && typeof renderAbaRoteiros === 'function') {
+            renderAbaRoteiros(cli);
+          }
+        }
       }
     }
   } catch(err) {
@@ -4417,6 +4434,15 @@ window.selectRoteiroCompact = function(roteiroNome) {
         }
         const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
         renderAbaRoteiros(cli);
+        
+        // Limpa o preview ativo
+        const previewDiv = document.getElementById('roteiroActivePreview');
+        if (previewDiv) {
+          previewDiv.innerHTML = '<div style="color:var(--ink-lt); padding:20px; text-align:center;">Selecione um roteiro para ver a prévia.</div>';
+        }
+        if (typeof renderListaRoteiros === 'function') {
+          renderListaRoteiros();
+        }
       } catch(err) {
         console.error(err);
         alert('Erro ao excluir roteiro.');
@@ -4572,6 +4598,15 @@ window.selectCotacaoCompact = function(cotacaoId) {
         state.orcamentosDB = state.orcamentosDB.filter(x => x.id !== cotacaoId);
         const cli = notionClients.find(x => x.id === window.clienteAtualVisualizado);
         renderAbaCotacoes(cli);
+        
+        // Limpa o preview ativo
+        const previewDiv = document.getElementById('cotacaoActivePreview');
+        if (previewDiv) {
+          previewDiv.innerHTML = '<div style="color:var(--ink-lt); padding:20px; text-align:center;">Selecione uma cotação para ver o resumo.</div>';
+        }
+        if (typeof renderListaOrcamentos === 'function') {
+          renderListaOrcamentos();
+        }
       } catch(err) {
         console.error(err);
         alert('Erro ao excluir cotação.');

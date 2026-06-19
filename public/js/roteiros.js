@@ -231,6 +231,7 @@ async function carregarBases() {
     console.error('Erro ao carregar roteiros:', err);
   }
 }
+window.carregarRoteirosDoServidor = carregarBases;
 
 function preencherSelectRoteiros(selectValue = '') {
   // Atualiza a lista lateral 3-pane de roteiros
