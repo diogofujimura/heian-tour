@@ -270,7 +270,7 @@ function autoSave() {
 function abrirOrcamento(id, directEdit = false) {
   if (typeof navToPage === 'function') navToPage(directEdit ? 'orcamento' : 'meus');
   localStorage.setItem('heian_last_orcamento_id', id);
-  const orc = state.orcamentosDB.find(o => o.id === id);
+  const orc = state.orcamentosDB.find(o => String(o.id) === String(id));
   if (!orc) return;
   state.orcamento = JSON.parse(JSON.stringify(orc));
   
@@ -4020,7 +4020,7 @@ window.previewOrcamento = function(id) {
   if (state.orcamento && state.orcamento.id === id) return;
   
   // Carrega e renderiza o preview sutilmente
-  const orc = state.orcamentosDB.find(o => o.id === id);
+  const orc = state.orcamentosDB.find(o => String(o.id) === String(id));
   if (!orc) return;
   state.orcamento = JSON.parse(JSON.stringify(orc));
   
@@ -4592,7 +4592,7 @@ window.selectCotacaoCompact = function(cotacaoId) {
     });
   }
 
-  const orc = state.orcamentosDB.find(o => o.id === cotacaoId);
+  const orc = state.orcamentosDB.find(o => String(o.id) === String(cotacaoId));
   if (!orc) return;
 
   const titleEl = document.getElementById('cotacaoActiveTitle');
@@ -4688,7 +4688,7 @@ window.criarCotacaoParaCliente = function(clienteId) {
 };
 
 window.renderPreviewOrcamentoNoElemento = function(orcId, element) {
-  const orc = state.orcamentosDB.find(o => o.id === orcId);
+  const orc = state.orcamentosDB.find(o => String(o.id) === String(orcId));
   if (!orc || !element) return;
   
   const originalOrcamento = state.orcamento;
