@@ -1134,17 +1134,32 @@ window.novoRoteiro = function() {
     const btn = document.getElementById('btnSalvarEdicaoRoteiro');
     btn.textContent = 'Salvando...'; btn.disabled = true;
 
-    // Se mudou o nome e o antigo existia, precisamos deletar o antigo do backend
+    let res;
     if (roteiroOriginalNome && roteiroOriginalNome !== novoNome) {
-      await fetch(`/api/roteiros/${encodeURIComponent(roteiroOriginalNome)}`, { method: 'DELETE' });
-      delete dbRotas[roteiroOriginalNome];
+      // Renomeação atômica e cascade update no backend
+      res = await fetch(`/api/roteiros/${encodeURIComponent(roteiroOriginalNome)}/renomear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ novoNome, roteiroObj: roteiroEmEdicao })
+      });
+      if (res.ok) {
+        delete dbRotas[roteiroOriginalNome];
+      }
+    } else {
+      // Salvamento comum
+      res = await fetch(`/api/roteiros/${encodeURIComponent(novoNome)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roteiroEmEdicao)
+      });
     }
 
-    const res = await fetch(`/api/roteiros/${encodeURIComponent(novoNome)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(roteiroEmEdicao)
-    });
+    if (res.status === 409) {
+      const errData = await res.json();
+      alert(errData.message || 'Já existe um roteiro com este nome associado a outro cliente. Por favor, escolha um nome diferente.');
+      btn.textContent = 'Salvar Roteiro'; btn.disabled = false;
+      return;
+    }
 
     if (res.ok) {
       dbRotas[novoNome] = roteiroEmEdicao;

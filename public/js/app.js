@@ -3744,6 +3744,13 @@ function formatHubButtons() {
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(novoRoteiroObj)
         });
+        
+        if (resp.status === 409) {
+          const errData = await resp.json();
+          alert(errData.message || 'Já existe um roteiro com este nome associado a outro cliente. Por favor, escolha outro nome.');
+          return;
+        }
+
         if (resp.ok) {
           if (typeof dbRotas !== 'undefined') dbRotas[nomeRoteiro] = novoRoteiroObj;
           document.getElementById('orcRoteiroVinculado').value = nomeRoteiro;

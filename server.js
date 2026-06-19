@@ -1305,6 +1305,19 @@ app.post('/api/roteiros/:name', async (req, res) => {
       });
       if (error) throw error;
     } else {
+      // Prevenção de colisão de nomes entre clientes diferentes
+      const { data: existente } = await supabase.from('roteiros').select('*').eq('nome', name).maybeSingle();
+      if (existente && existente.data) {
+        const oldClientId = existente.data.cliente?.notionClienteId;
+        const newClientId = dias.cliente?.notionClienteId;
+        if (oldClientId && newClientId && oldClientId !== newClientId) {
+          return res.status(409).json({
+            error: 'conflict_client',
+            message: `O nome "${name}" já está sendo usado por outro cliente. Por favor, escolha um nome diferente.`
+          });
+        }
+      }
+
       const { error } = await supabase.from('roteiros').upsert({
         nome: name,
         data: dias
@@ -1316,6 +1329,65 @@ app.post('/api/roteiros/:name', async (req, res) => {
   } catch(e) {
     console.error('Error saving roteiro:', e);
     res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/roteiros/:name/renomear', async (req, res) => {
+  try {
+    const nomeAntigo = req.params.name;
+    const { novoNome, roteiroObj } = req.body;
+    
+    if (!novoNome) {
+      return res.status(400).json({ error: 'invalid_name', message: 'O novo nome do roteiro é obrigatório.' });
+    }
+    
+    // 1. Verificar colisão com outro cliente no novoNome
+    if (nomeAntigo !== novoNome) {
+      const { data: existente } = await supabase.from('roteiros').select('*').eq('nome', novoNome).maybeSingle();
+      if (existente && existente.data) {
+        const oldClientId = existente.data.cliente?.notionClienteId;
+        const newClientId = roteiroObj.cliente?.notionClienteId;
+        if (oldClientId && newClientId && oldClientId !== newClientId) {
+          return res.status(409).json({
+            error: 'conflict_client',
+            message: `O nome "${novoNome}" já está sendo usado por outro cliente. Por favor, escolha um nome diferente.`
+          });
+        }
+      }
+    }
+    
+    // 2. Executar o UPDATE do nome e dados de forma atômica no Supabase
+    const { error: updateErr } = await supabase
+      .from('roteiros')
+      .update({
+        nome: novoNome,
+        data: roteiroObj
+      })
+      .eq('nome', nomeAntigo);
+      
+    if (updateErr) throw updateErr;
+    
+    // 3. Cascade Update: Buscar todas as cotações para atualizar o vínculo
+    if (nomeAntigo !== novoNome) {
+      const { data: orcamentos, error: fetchOrcErr } = await supabase.from('orcamentos').select('*');
+      if (!fetchOrcErr && orcamentos) {
+        for (const orc of orcamentos) {
+          const dados = orc.data || {};
+          if (dados.orcRoteiroVinculado === nomeAntigo || dados.roteiroVinculado === nomeAntigo) {
+            if (dados.orcRoteiroVinculado) dados.orcRoteiroVinculado = novoNome;
+            if (dados.roteiroVinculado) dados.roteiroVinculado = novoNome;
+            
+            // Grava a cotação atualizada de volta
+            await supabase.from('orcamentos').update({ data: dados }).eq('id', orc.id);
+          }
+        }
+      }
+    }
+    
+    res.json({ ok: true, novoNome });
+  } catch(e) {
+    console.error('Error renaming roteiro:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
