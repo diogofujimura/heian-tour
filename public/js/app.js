@@ -507,7 +507,7 @@ function navToPage(pg) {
   if (targetPg === 'contabilidade' && typeof carregarSaldosContas === 'function') carregarSaldosContas();
   if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
   if (targetPg === 'colaboradores' && typeof setupColaboradoresTab === 'function') setupColaboradoresTab();
-  if (targetPg === 'config' && typeof window.carregarLixeira === 'function') window.carregarLixeira();
+  if (targetPg === 'lixeira' && typeof window.carregarLixeira === 'function') window.carregarLixeira();
 }
 
 function setupMenuCambio() {

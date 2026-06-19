@@ -72,6 +72,7 @@ window.addEventListener('unhandledrejection', function(e) {
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
     <a class="nav-item" data-page="base">◇ &nbsp;Base de Dados</a>
+    <a class="nav-item" data-page="lixeira">🗑️ &nbsp;Lixeira</a>
     <a class="nav-item" data-page="config">◉ &nbsp;Configurações</a>
   </nav>
   
@@ -919,11 +920,16 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="btn-primary" id="btnSalvarSugestoes">Salvar Mensagens Rápidas</button>
     </div>
     
+  </div>
+
+  <!-- ── LIXEIRA ──────────────────────────────────────────────────────────── -->
+  <div id="page-lixeira" class="page">
+    <div class="page-header">
+      <h1>🗑️ Lixeira do Sistema</h1>
+    </div>
     <div class="card">
-      <h2 class="card-title">🗑️ Lixeira do Sistema</h2>
       <p class="hint" style="margin-bottom:12px">Gerencie cotações e roteiros excluídos. Você pode restaurá-los ou apagá-los definitivamente.</p>
-      
-      <div id="lixeiraListContainer" style="max-height: 400px; overflow-y: auto; background:#fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+      <div id="lixeiraListContainer" style="max-height: 500px; overflow-y: auto; background:#fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
         <div style="color:var(--ink-lt); padding:20px; text-align:center; font-size:13px;">Carregando lixeira...</div>
       </div>
     </div>
