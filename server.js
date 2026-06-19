@@ -1288,8 +1288,20 @@ ${datas ? `Data de início da viagem: ${datas}` : ''}
 
 Por favor, gere o JSON do roteiro estruturado com base nas instruções e atrações fornecidas. Certifique-se de que os nomes de atrações colocados no array "atracoesDoDia" correspondam EXATAMENTE aos nomes presentes na lista de atrações por cidade fornecida.`;
 
-    // 4. Chamar a API REST do Gemini
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // 4. Chamar a API REST do Gemini com suporte dinâmico a chaves AQ. (Authorization Keys) e AIza (Legacy Keys)
+    const isNewAuthKey = GEMINI_API_KEY.startsWith('AQ.');
+    const geminiUrl = isNewAuthKey 
+      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (isNewAuthKey) {
+      headers['Authorization'] = `Bearer ${GEMINI_API_KEY}`;
+    }
+
     const geminiPayload = {
       contents: [
         {
@@ -1305,9 +1317,7 @@ Por favor, gere o JSON do roteiro estruturado com base nas instruções e atraç
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify(geminiPayload)
     });
 
