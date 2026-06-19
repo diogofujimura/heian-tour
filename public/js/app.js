@@ -101,18 +101,24 @@ function initRichText(elementOrId, placeholder = '') {
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 async function loadConfig() {
-  const res = await fetch('/api/config');
-  state.config = await res.json();
-  document.getElementById('cambioUSD').value = state.config.cambio_jpy_usd || 0.006280;
-  document.getElementById('cambioBRL').value = state.config.cambio_jpy_brl || 0.031670;
-  if (state.config.cambio_data_ref) {
+  try {
+    const res = await fetch('/api/config');
+    state.config = await res.json();
+  } catch(e) {
+    console.error('Erro ao carregar configurações do servidor:', e);
+    state.config = {};
+  }
+  
+  document.getElementById('cambioUSD').value = state?.config?.cambio_jpy_usd || 0.006280;
+  document.getElementById('cambioBRL').value = state?.config?.cambio_jpy_brl || 0.031670;
+  if (state?.config?.cambio_data_ref) {
     document.getElementById('cambioDataRef').textContent = 'Última atualização automática: ' + state.config.cambio_data_ref;
   }
-  document.getElementById('sheetsId').value  = state.config.sheets_id || '';
-  document.getElementById('sheetsScriptUrl').value = state.config.sheets_script_url || '';
-  document.getElementById('abaTransportes').value = state.config.sheets_aba_transportes || 'Transportes';
-  document.getElementById('abaExperiencias').value = state.config.sheets_aba_experiencias || 'Experiências';
-  document.getElementById('abaAtracoes').value = state.config.sheets_aba_atracoes || 'Atracoes';
+  document.getElementById('sheetsId').value  = state?.config?.sheets_id || '';
+  document.getElementById('sheetsScriptUrl').value = state?.config?.sheets_script_url || '';
+  document.getElementById('abaTransportes').value = state?.config?.sheets_aba_transportes || 'Transportes';
+  document.getElementById('abaExperiencias').value = state?.config?.sheets_aba_experiencias || 'Experiências';
+  document.getElementById('abaAtracoes').value = state?.config?.sheets_aba_atracoes || 'Atracoes';
   const setText = (id, val) => {
     document.getElementById(id).value = val;
     if (window.quillEditors && window.quillEditors[id]) {
@@ -120,14 +126,14 @@ async function loadConfig() {
     }
   };
 
-  setText('textoObservacoes', state.config.texto_observacoes || TEXTOS_DEFAULT.observacoes);
-  setText('textoCondicoes', state.config.texto_condicoes || TEXTOS_DEFAULT.condicoes);
-  setText('textoCancelamento', state.config.texto_cancelamento || TEXTOS_DEFAULT.cancelamentos);
-  setText('sugestoesTours', state.config.sugestoes_tours || '');
-  setText('sugestoesTransportes', state.config.sugestoes_transportes || '');
-  setText('sugestoesExperiencias', state.config.sugestoes_experiencias || '');
+  setText('textoObservacoes', state?.config?.texto_observacoes || TEXTOS_DEFAULT.observacoes);
+  setText('textoCondicoes', state?.config?.texto_condicoes || TEXTOS_DEFAULT.condicoes);
+  setText('textoCancelamento', state?.config?.texto_cancelamento || TEXTOS_DEFAULT.cancelamentos);
+  setText('sugestoesTours', state?.config?.sugestoes_tours || '');
+  setText('sugestoesTransportes', state?.config?.sugestoes_transportes || '');
+  setText('sugestoesExperiencias', state?.config?.sugestoes_experiencias || '');
 
-  if (state.config.ultima_sincronizacao)
+  if (state?.config?.ultima_sincronizacao)
     document.getElementById('syncStatus').textContent = 'Sync: ' + fmtDate(state.config.ultima_sincronizacao);
 }
 
@@ -520,8 +526,8 @@ function setupMenuCambio() {
   const clear = () => { iJ.value = ''; iB.value = ''; iU.value = ''; };
   btn.addEventListener('click', clear);
   
-  const getB = () => parseFloat(state.config.cambio_jpy_brl) || 0.031670;
-  const getU = () => parseFloat(state.config.cambio_jpy_usd) || 0.006280;
+  const getB = () => parseFloat(state?.config?.cambio_jpy_brl) || 0.031670;
+  const getU = () => parseFloat(state?.config?.cambio_jpy_usd) || 0.006280;
 
   iJ.addEventListener('input', () => {
     const v = parseFloat(iJ.value);
@@ -1325,7 +1331,7 @@ function updItemAdicionalRefresh(id, f, v) {
 }
 
 // ── CÁLCULOS ──────────────────────────────────────────────────────────────────
-function getUSD() { return parseFloat(state.config.cambio_jpy_usd)||0.006280; }
+function getUSD() { return parseFloat(state?.config?.cambio_jpy_usd)||0.006280; }
 function getConsultoriaVal() {
   const tog = document.getElementById('consultoriaToggle');
   return tog?.checked ? (parseFloat(document.getElementById('consultoriaValor')?.value)||0) : 0;
@@ -3524,31 +3530,30 @@ async function salvarClienteNotion() {
     }).join('\n');
     if (hoteisStr) payload.hotel = hoteisStr;
 
-    const res = await fetch(url, {
-      method,
+    const urlUnificada = currentEditingClienteId ? `/api/clientes/${currentEditingClienteId}` : '/api/clientes';
+    const methodUnificado = currentEditingClienteId ? 'PATCH' : 'POST';
+
+    const res = await fetch(urlUnificada, {
+      method: methodUnificado,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        notionPayload: payload,
+        localPayload: {
+          estadias: currentEditingEstadias,
+          viajantes: currentEditingViajantes,
+          emails: currentEditingEmails,
+          fotoPerfil: editFotoPerfilBase64
+        }
+      })
     });
     
     if (!res.ok) {
       const errInfo = await res.json();
-      throw new Error(errInfo.message || 'Falha ao comunicar com Notion API');
+      throw new Error(errInfo.message || 'Falha ao salvar dados unificados do cliente');
     }
 
     const data = await res.json();
     const cliId = currentEditingClienteId || data.id;
-    
-    await fetch('/api/clientes/local', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: cliId,
-        estadias: currentEditingEstadias,
-        viajantes: currentEditingViajantes,
-        emails: currentEditingEmails,
-        fotoPerfil: editFotoPerfilBase64
-      })
-    });
     
     window.clienteAtualVisualizado = cliId;
     await loadClientesTabela(); // Recarrega a lista

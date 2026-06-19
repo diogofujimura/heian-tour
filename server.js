@@ -2034,6 +2034,134 @@ app.get('/api/notion/clientes', async (req, res) => {
   }
 });
 
+// ── ENDPOINTS UNIFICADOS DE CLIENTES (NOTION + SUPABASE LOCAL) ────────────────
+app.post('/api/clientes', async (req, res) => {
+  try {
+    const { notionPayload, localPayload } = req.body;
+    
+    // 1. Criar no Notion
+    const properties = {
+      'Nome do Cliente': { title: [{ text: { content: notionPayload.nome || 'Novo Cliente' } }] }
+    };
+    if (notionPayload.status) properties['Status do Cliente'] = { select: { name: notionPayload.status } };
+    if (notionPayload.adultos !== undefined) properties['Qtd Adultos'] = { number: parseInt(notionPayload.adultos) || 0 };
+    if (notionPayload.criancas !== undefined) properties['Qtd Crianças'] = { number: parseInt(notionPayload.criancas) || 0 };
+    const vooChegadaCombined = [notionPayload.vooChegadaNum, notionPayload.vooChegadaHora].filter(Boolean).join(' | ');
+    const vooPartidaCombined = [notionPayload.vooPartidaNum, notionPayload.vooPartidaHora].filter(Boolean).join(' | ');
+    if (vooChegadaCombined || notionPayload.vooChegada) properties['Voo de Chegada'] = { rich_text: [{ text: { content: vooChegadaCombined || notionPayload.vooChegada } }] };
+    if (vooPartidaCombined || notionPayload.vooPartida) properties['Voo de Partida'] = { rich_text: [{ text: { content: vooPartidaCombined || notionPayload.vooPartida } }] };
+    if (notionPayload.hotel) properties['Hotel'] = { rich_text: [{ text: { content: notionPayload.hotel } }] };
+    if (notionPayload.email) {
+      const firstEmail = notionPayload.email.split('\n')[0].trim();
+      if (firstEmail) properties['Email'] = { email: firstEmail };
+    }
+    if (notionPayload.viajantes) properties['Nome dos Viajantes'] = { rich_text: [{ text: { content: notionPayload.viajantes } }] };
+    if (notionPayload.dataInicio) {
+      properties['Período da Viagem'] = { date: { start: notionPayload.dataInicio, end: notionPayload.dataFim || null } };
+    }
+
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_CLIENTS_DB_ID },
+        properties
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+    const data = await response.json();
+    const cliId = data.id;
+
+    // 2. Criar localmente no Supabase
+    if (localPayload) {
+      localPayload.id = cliId; // Garante o ID correto gerado pelo Notion
+      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id: cliId, data: localPayload });
+      if (localErr) throw localErr;
+    }
+
+    res.json({ success: true, id: cliId });
+  } catch (error) {
+    console.error('Erro unificado ao criar cliente:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/clientes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notionPayload, localPayload } = req.body;
+    
+    // 1. Atualizar no Notion
+    const properties = {};
+    if (notionPayload.nome) properties['Nome do Cliente'] = { title: [{ text: { content: notionPayload.nome } }] };
+    if (notionPayload.status) properties['Status do Cliente'] = { select: { name: notionPayload.status } };
+    if (notionPayload.adultos !== undefined) properties['Qtd Adultos'] = { number: parseInt(notionPayload.adultos) || 0 };
+    if (notionPayload.criancas !== undefined) properties['Qtd Crianças'] = { number: parseInt(notionPayload.criancas) || 0 };
+    if (notionPayload.email !== undefined) {
+      if (notionPayload.email) {
+        const firstEmail = notionPayload.email.split('\n')[0].trim();
+        properties['Email'] = { email: firstEmail || null };
+      } else {
+        properties['Email'] = { email: null };
+      }
+    }
+    if (notionPayload.viajantes !== undefined) properties['Nome dos Viajantes'] = notionPayload.viajantes ? [{ text: { content: notionPayload.viajantes } }] : [];
+    const vooChegadaCombined = [notionPayload.vooChegadaNum, notionPayload.vooChegadaHora].filter(Boolean).join(' | ');
+    const vooPartidaCombined = [notionPayload.vooPartidaNum, notionPayload.vooPartidaHora].filter(Boolean).join(' | ');
+    
+    const finalVooChegada = vooChegadaCombined || notionPayload.vooChegada || '';
+    if (notionPayload.vooChegada !== undefined || vooChegadaCombined) properties['Voo de Chegada'] = finalVooChegada ? [{ text: { content: finalVooChegada } }] : [];
+    
+    const finalVooPartida = vooPartidaCombined || notionPayload.vooPartida || '';
+    if (notionPayload.vooPartida !== undefined || vooPartidaCombined) properties['Voo de Partida'] = finalVooPartida ? [{ text: { content: finalVooPartida } }] : [];
+    
+    if (notionPayload.hotel !== undefined) properties['Hotel'] = notionPayload.hotel ? [{ text: { content: notionPayload.hotel } }] : [];
+    
+    if (notionPayload.dataInicio !== undefined) {
+      if (notionPayload.dataInicio) {
+        properties['Período da Viagem'] = { date: { start: notionPayload.dataInicio, end: notionPayload.dataFim || null } };
+      } else {
+        properties['Período da Viagem'] = { date: null };
+      }
+    }
+
+    const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ properties })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+
+    // 2. Atualizar localmente no Supabase
+    if (localPayload) {
+      localPayload.id = id;
+      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id, data: localPayload });
+      if (localErr) throw localErr;
+    }
+
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Erro unificado ao atualizar cliente:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Criar cliente no Notion
 app.post('/api/notion/clientes', async (req, res) => {
   try {
