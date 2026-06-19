@@ -34,3 +34,5 @@ jobs:
           *.bat
           walkthrough.md
           task.md
+          *log*.txt
+          heian-tour-prod.zip
