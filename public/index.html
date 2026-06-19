@@ -124,6 +124,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <h1 id="orcTitulo">Nova Cotação</h1>
       <div class="header-actions">
         <button class="btn-secondary" onclick="window.voltarParaClientesDeCotacao()" style="margin-right:8px;">⬅ Voltar para Clientes</button>
+        <button class="btn-secondary" onclick="window.desfazerAcaoCotacao()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:8px;">↩ Desfazer</button>
         <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
         <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro ➔</button>
         <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)">⚡ Exportar para Roteiro</button>
@@ -340,6 +341,7 @@ window.addEventListener('unhandledrejection', function(e) {
                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
                      <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
                      <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                     <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px;">↩ Desfazer</button>
                      <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
                      <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
                      <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent">Cancelar</button>
@@ -915,6 +917,15 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="field" style="margin-bottom:14px"><label>Mensagens Rápidas para Transportes</label><textarea id="sugestoesTransportes" rows="4" placeholder="Ex: Apenas reserva do assento. Tarifa básica paga na hora."></textarea></div>
       <div class="field" style="margin-bottom:14px"><label>Mensagens Rápidas para Experiências</label><textarea id="sugestoesExperiencias" rows="4" placeholder="Ex: Ingresso emitido eletronicamente. Não reembolsável."></textarea></div>
       <button class="btn-primary" id="btnSalvarSugestoes">Salvar Mensagens Rápidas</button>
+    </div>
+    
+    <div class="card">
+      <h2 class="card-title">🗑️ Lixeira do Sistema</h2>
+      <p class="hint" style="margin-bottom:12px">Gerencie cotações e roteiros excluídos. Você pode restaurá-los ou apagá-los definitivamente.</p>
+      
+      <div id="lixeiraListContainer" style="max-height: 400px; overflow-y: auto; background:#fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+        <div style="color:var(--ink-lt); padding:20px; text-align:center; font-size:13px;">Carregando lixeira...</div>
+      </div>
     </div>
   </div>
 

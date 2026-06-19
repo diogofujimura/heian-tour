@@ -1166,6 +1166,11 @@ window.novoRoteiro = function() {
 function abrirEditorRoteiro(nome) {
   document.getElementById('editRoteiroNome').value = nome === 'Novo Roteiro' ? '' : nome;
   
+  window.roteiroUndoStack = [];
+  if (typeof window.registrarEstadoRoteiro === 'function') {
+    window.registrarEstadoRoteiro(roteiroEmEdicao);
+  }
+  
   // Encontrar o notionClienteId baseado nas cotações vinculadas
   let notionId = null;
   if (typeof state !== 'undefined' && state && state.orcamentosDB && Array.isArray(state.orcamentosDB)) {
@@ -2097,6 +2102,9 @@ window.triggerRoteiroAutoSave = function() {
   clearTimeout(_roteiroAutoSaveTimer);
   _roteiroAutoSaveTimer = setTimeout(async () => {
     if (!roteiroOriginalNome || !roteiroEmEdicao) return;
+    if (typeof window.registrarEstadoRoteiro === 'function') {
+      window.registrarEstadoRoteiro(roteiroEmEdicao);
+    }
     const indicator = document.getElementById('roteiroAutoSaveIndicator');
     if (indicator) { indicator.textContent = 'Salvando...'; indicator.style.opacity = '1'; }
     
@@ -2399,4 +2407,44 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 });
+
+// ── UNDO HISTORY (CTRL+Z) FOR ROTEIRO ─────────────────────────────────────────
+window.roteiroUndoStack = [];
+window.registrarEstadoRoteiro = function(rotState) {
+  if (!rotState) return;
+  const strState = JSON.stringify(rotState);
+  if (window.roteiroUndoStack.length > 0 && window.roteiroUndoStack[window.roteiroUndoStack.length - 1] === strState) {
+    return;
+  }
+  window.roteiroUndoStack.push(strState);
+  if (window.roteiroUndoStack.length > 30) {
+    window.roteiroUndoStack.shift();
+  }
+};
+
+window.desfazerAcaoRoteiro = function() {
+  if (!window.roteiroUndoStack || window.roteiroUndoStack.length <= 1) {
+    showToast('Nada para desfazer!');
+    return;
+  }
+  window.roteiroUndoStack.pop();
+  const estadoAnteriorStr = window.roteiroUndoStack[window.roteiroUndoStack.length - 1];
+  const estadoAnterior = JSON.parse(estadoAnteriorStr);
+  
+  roteiroEmEdicao = estadoAnterior;
+  
+  const nomeAtual = document.getElementById('editRoteiroNome')?.value.trim();
+  const nameToSave = window.roteiroOriginalNome || nomeAtual;
+  if (nameToSave) {
+    dbRotas[nameToSave] = estadoAnterior;
+  }
+  
+  if (typeof renderEditDias === 'function') {
+    renderEditDias();
+  }
+  
+  window.triggerRoteiroAutoSave();
+  
+  showToast('Desfeito! ↩');
+};
 

@@ -217,6 +217,9 @@ let _autoSaveTimer = null;
 function autoSave() {
   clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(() => {
+    if (typeof window.registrarEstadoCotacao === 'function') {
+      window.registrarEstadoCotacao(state.orcamento);
+    }
     syncDOMToState();
     const nome = document.getElementById('orcNome').value.trim()
       || document.getElementById('clienteNome').value.trim()
@@ -264,6 +267,11 @@ function abrirOrcamento(id, directEdit = false) {
   const orc = state.orcamentosDB.find(o => o.id === id);
   if (!orc) return;
   state.orcamento = JSON.parse(JSON.stringify(orc));
+  
+  window.cotacaoUndoStack = [];
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   if (!state.orcamento.itensAdicionais) state.orcamento.itensAdicionais = [];
   document.getElementById('orcNome').value = orc.nome || '';
   const notionCli = orc.notionClienteId && typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === orc.notionClienteId) : null;
@@ -497,9 +505,9 @@ function navToPage(pg) {
   
   if (targetPg === 'dashboard' && typeof renderDashboard === 'function') renderDashboard();
   if (targetPg === 'contabilidade' && typeof carregarSaldosContas === 'function') carregarSaldosContas();
-  if (targetPg === 'roteiros' && typeof fecharEditorRoteiro === 'function') fecharEditorRoteiro();
   if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
   if (targetPg === 'colaboradores' && typeof setupColaboradoresTab === 'function') setupColaboradoresTab();
+  if (targetPg === 'config' && typeof window.carregarLixeira === 'function') window.carregarLixeira();
 }
 
 function setupMenuCambio() {
@@ -816,6 +824,9 @@ function calcTotalTour(t) {
   return base;
 }
 function addTour() {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   const val6h = (state.orcamento.valoresTour && state.orcamento.valoresTour['6h']) || 65000;
   state.orcamento.tours.push({ id: Date.now(), data: '', descricao: '', pontos: '', duracao: '6h', valor: val6h, descontoAtivo: false, desconto: 5, observacao: '' });
   renderToursForm(); updateResumo();
@@ -889,7 +900,14 @@ function updTourDuracao(id, duracao) {
   renderToursForm();
   updateResumo();
 }
-function rmTour(id) { state.orcamento.tours = state.orcamento.tours.filter(t => t.id !== id); renderToursForm(); updateResumo(); }
+function rmTour(id) {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
+  state.orcamento.tours = state.orcamento.tours.filter(t => t.id !== id);
+  renderToursForm();
+  updateResumo();
+}
 function updTourField(id, f, v) {
   const t = state.orcamento.tours.find(x => x.id === id); if (!t) return;
   t[f] = v;
@@ -928,6 +946,9 @@ function finalizarNum(id, tipo, f, rawVal) {
 }
 
 function addTransporte() {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   const ad = parseInt(document.getElementById('clienteAdultos')?.value) || 2;
   const cr = parseInt(document.getElementById('clienteCriancas')?.value) || 0;
   state.orcamento.transportes.push({ 
@@ -1054,7 +1075,14 @@ function renderTransportesForm() {
     cont.appendChild(div);
   });
 }
-function rmTransporte(id) { state.orcamento.transportes = state.orcamento.transportes.filter(t => t.id !== id); renderTransportesForm(); updateResumo(); }
+function rmTransporte(id) {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
+  state.orcamento.transportes = state.orcamento.transportes.filter(t => t.id !== id);
+  renderTransportesForm();
+  updateResumo();
+}
 function updTranspField(id, f, v) { const t = state.orcamento.transportes.find(x=>x.id===id); if(t){ t[f]=v; updateResumo(); } }
 function updTranspNum(id, f, rawVal) {
   const t = state.orcamento.transportes.find(x=>x.id===id); if(!t) return;
@@ -1106,6 +1134,9 @@ function preencherTransporte(id, dbId) {
 
 // ── EXPERIÊNCIAS ──────────────────────────────────────────────────────────────
 function addExperiencia() {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   state.orcamento.experiencias.push({ id: Date.now(), data: '', nome: '', preco: 0, pessoas: 2, taxaAtiva: false, taxaTipo: 'grupo', taxaValor: 3000, observacao: '', _dbId: null });
   renderExperienciasForm(); updateResumo();
 }
@@ -1173,7 +1204,14 @@ function renderExperienciasForm() {
     cont.appendChild(div);
   });
 }
-function rmExp(id) { state.orcamento.experiencias = state.orcamento.experiencias.filter(e => e.id !== id); renderExperienciasForm(); updateResumo(); }
+function rmExp(id) {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
+  state.orcamento.experiencias = state.orcamento.experiencias.filter(e => e.id !== id);
+  renderExperienciasForm();
+  updateResumo();
+}
 function updExpField(id, f, v) { const e = state.orcamento.experiencias.find(x=>x.id===id); if(e){ e[f]=v; updateResumo(); } }
 function updExpNum(id, f, rawVal) {
   const e = state.orcamento.experiencias.find(x=>x.id===id); if(!e) return;
@@ -1217,6 +1255,9 @@ function propagarPessoas() {
 
 // ── ITENS ADICIONAIS ──────────────────────────────────────────────────────────
 function addItemAdicional() {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   if (!state.orcamento.itensAdicionais) state.orcamento.itensAdicionais = [];
   state.orcamento.itensAdicionais.push({ id: Date.now(), descricao: '', valor: 0 });
   renderItensAdicionaisForm();
@@ -1250,6 +1291,9 @@ function renderItensAdicionaisForm() {
 }
 
 function rmItemAdicional(id) {
+  if (typeof window.registrarEstadoCotacao === 'function') {
+    window.registrarEstadoCotacao(state.orcamento);
+  }
   state.orcamento.itensAdicionais = (state.orcamento.itensAdicionais || []).filter(item => item.id !== id);
   renderItensAdicionaisForm();
   updateResumo();
@@ -2506,6 +2550,228 @@ window.deletarRota = async function(id) {
       alert(err.message);
     }
 };
+
+};
+
+// ── UNDO HISTORY (CTRL+Z) FOR COTACAO ─────────────────────────────────────────
+window.cotacaoUndoStack = [];
+window.registrarEstadoCotacao = function(orcState) {
+  if (!orcState) return;
+  // Deep clone do estado atual
+  const strState = JSON.stringify(orcState);
+  // Evita duplicar o último estado salvo
+  if (window.cotacaoUndoStack.length > 0 && window.cotacaoUndoStack[window.cotacaoUndoStack.length - 1] === strState) {
+    return;
+  }
+  window.cotacaoUndoStack.push(strState);
+  if (window.cotacaoUndoStack.length > 30) {
+    window.cotacaoUndoStack.shift();
+  }
+};
+
+window.desfazerAcaoCotacao = function() {
+  if (!window.cotacaoUndoStack || window.cotacaoUndoStack.length <= 1) {
+    showToast('Nada para desfazer!');
+    return;
+  }
+  // Remove o estado atual
+  window.cotacaoUndoStack.pop();
+  // Pega o estado anterior
+  const estadoAnteriorStr = window.cotacaoUndoStack[window.cotacaoUndoStack.length - 1];
+  const estadoAnterior = JSON.parse(estadoAnteriorStr);
+  
+  state.orcamento = estadoAnterior;
+  if (typeof currentEditingEstadias !== 'undefined') {
+    currentEditingEstadias = JSON.parse(JSON.stringify(estadoAnterior.estadias || []));
+  }
+  
+  // Atualiza no banco local
+  const idx = state.orcamentosDB.findIndex(o => o.id === estadoAnterior.id);
+  if (idx > -1) state.orcamentosDB[idx] = estadoAnterior;
+  
+  // Atualiza a interface do formulário
+  preencherInterfaceCotacao(estadoAnterior);
+  
+  // Salva na nuvem
+  saveOrcamentoToCloud(estadoAnterior);
+  renderListaOrcamentos();
+  
+  showToast('Desfeito! ↩');
+};
+
+function preencherInterfaceCotacao(orc) {
+  document.getElementById('orcNome').value = orc.nome || '';
+  const notionCli = orc.notionClienteId && typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === orc.notionClienteId) : null;
+  document.getElementById('clienteNome').value = notionCli ? notionCli.nome : (orc.cliente?.nome || '');
+  document.getElementById('clienteAdultos').value = notionCli ? notionCli.adultos : (orc.cliente?.adultos || '2');
+  document.getElementById('clienteCriancas').value = notionCli ? notionCli.criancas : (orc.cliente?.criancas || '0');
+  document.getElementById('clienteDataOrcamento').value = orc.cliente?.dataOrcamento || today();
+  
+  if (orc.valoresTour) {
+    if(document.getElementById('baseTour4h')) document.getElementById('baseTour4h').value = orc.valoresTour['4h'] || 45000;
+    if(document.getElementById('baseTour6h')) document.getElementById('baseTour6h').value = orc.valoresTour['6h'] || 65000;
+    if(document.getElementById('baseTour8h')) document.getElementById('baseTour8h').value = orc.valoresTour['8h'] || 85000;
+    if(document.getElementById('baseTour10h')) document.getElementById('baseTour10h').value = orc.valoresTour['10h'] || 105000;
+    if(document.getElementById('baseTour12h')) document.getElementById('baseTour12h').value = orc.valoresTour['12h'] || 125000;
+  }
+  
+  if (document.getElementById('orcRoteiroVinculado')) {
+    document.getElementById('orcRoteiroVinculado').value = orc.orcRoteiroVinculado || orc.roteiroVinculado || '';
+  }
+  if (document.getElementById('orcStatus')) {
+    document.getElementById('orcStatus').value = orc.statusVenda || 'Pendente';
+  }
+  document.getElementById('orcTitulo').textContent = orc.nome || 'Cotação';
+  
+  const consAtiva = orc.consultoria?.ativa || false;
+  document.getElementById('consultoriaToggle').checked = consAtiva;
+  document.getElementById('consultoriaFields').classList.toggle('hidden', !consAtiva);
+  document.getElementById('consultoriaValor').value = orc.consultoria?.valor || '';
+  document.getElementById('consultoriaDesc').value  = orc.consultoria?.descricao || '';
+  
+  if (typeof preencherTextosForm === 'function') preencherTextosForm(orc.textos || {});
+  
+  renderEstadiasReadOnlyForm();
+  renderToursForm();
+  renderTransportesForm();
+  renderExperienciasForm();
+  renderItensAdicionaisForm();
+  updateResumo();
+}
+
+// ── LIXEIRA DO SISTEMA (FRONTEND INTEGRATION) ─────────────────────────────────
+window.carregarLixeira = async function() {
+  const container = document.getElementById('lixeiraListContainer');
+  if (!container) return;
+  
+  container.innerHTML = '<div style="color:var(--ink-lt); padding:10px; font-size:13px; text-align:center;">Carregando lixeira...</div>';
+  try {
+    const res = await fetch('/api/lixeira?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('Falha na API da Lixeira');
+    const data = await res.json();
+    
+    const orcs = data.orcamentos || [];
+    const rots = data.roteiros || [];
+    
+    if (orcs.length === 0 && rots.length === 0) {
+      container.innerHTML = '<div style="color:var(--ink-lt); padding:20px; text-align:center; font-size:13px;">A lixeira está vazia.</div>';
+      return;
+    }
+    
+    let html = `
+      <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border); color: var(--ink-lt); font-weight:600;">
+            <th style="padding:8px;">Tipo</th>
+            <th style="padding:8px;">Nome / Item</th>
+            <th style="padding:8px;">Cliente</th>
+            <th style="padding:8px;">Data Exclusão</th>
+            <th style="padding:8px; text-align:right;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    orcs.forEach(o => {
+      const dataDel = o.deletadoEm ? new Date(o.deletadoEm).toLocaleString('pt-BR') : '—';
+      html += `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding:8px;"><span style="background:rgba(107,31,42,0.08); color:var(--crimson); padding:2px 6px; border-radius:4px; font-weight:600; font-size:10px;">Cotação</span></td>
+          <td style="padding:8px; font-weight:500;">${o.nome || 'Sem título'}</td>
+          <td style="padding:8px;">${o.cliente?.nome || '—'}</td>
+          <td style="padding:8px; color:var(--ink-lt);">${dataDel}</td>
+          <td style="padding:8px; text-align:right;">
+            <button class="btn-secondary" onclick="window.restaurarItemLixeira('cotacao', '${o.id}')" style="padding:4px 8px; font-size:11px; margin-right:4px;">Restaurar</button>
+            <button class="btn-secondary" onclick="window.excluirItemDefinitivoLixeira('cotacao', '${o.id}')" style="padding:4px 8px; font-size:11px; color:#c00; border-color:#fee;">Definitivo</button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    rots.forEach(r => {
+      const dataDel = r.deletadoEm ? new Date(r.deletadoEm).toLocaleString('pt-BR') : '—';
+      html += `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding:8px;"><span style="background:rgba(196,163,90,0.08); color:var(--gold-dk); padding:2px 6px; border-radius:4px; font-weight:600; font-size:10px;">Roteiro</span></td>
+          <td style="padding:8px; font-weight:500;">${r.nome}</td>
+          <td style="padding:8px;">${r.cliente?.nome || '—'}</td>
+          <td style="padding:8px; color:var(--ink-lt);">${dataDel}</td>
+          <td style="padding:8px; text-align:right;">
+            <button class="btn-secondary" onclick="window.restaurarItemLixeira('roteiro', '${encodeURIComponent(r.nome)}')" style="padding:4px 8px; font-size:11px; margin-right:4px;">Restaurar</button>
+            <button class="btn-secondary" onclick="window.excluirItemDefinitivoLixeira('roteiro', '${encodeURIComponent(r.nome)}')" style="padding:4px 8px; font-size:11px; color:#c00; border-color:#fee;">Definitivo</button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch(e) {
+    console.error(e);
+    container.innerHTML = '<div style="color:#c00; padding:10px; font-size:13px; text-align:center;">Erro ao carregar a lixeira.</div>';
+  }
+};
+
+window.restaurarItemLixeira = async function(tipo, key) {
+  try {
+    const url = tipo === 'cotacao' ? `/api/orcamentos/${key}/restaurar` : `/api/roteiros/${key}/restaurar`;
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) throw new Error('Erro ao restaurar');
+    showToast('Item restaurado com sucesso! 🔄');
+    
+    // Atualiza a lixeira
+    window.carregarLixeira();
+    
+    // Atualiza os dados ativos no frontend
+    if (tipo === 'cotacao') {
+      const resList = await fetch('/api/orcamentos?t=' + Date.now(), { cache: 'no-store' });
+      if (resList.ok) state.orcamentosDB = await resList.json();
+    } else {
+      if (typeof window.carregarRoteirosDoServidor === 'function') {
+        await window.carregarRoteirosDoServidor();
+      }
+    }
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao restaurar o item.');
+  }
+};
+
+window.excluirItemDefinitivoLixeira = async function(tipo, key) {
+  if (!confirm('Tem certeza de que deseja excluir permanentemente este item? Esta ação é irreversível e apagará os dados na nuvem de vez!')) {
+    return;
+  }
+  try {
+    const url = tipo === 'cotacao' ? `/api/orcamentos/${key}/definitivo` : `/api/roteiros/${key}/definitivo`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Erro ao excluir permanentemente');
+    showToast('Item apagado definitivamente! 🗑️');
+    window.carregarLixeira();
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao apagar o item da lixeira.');
+  }
+};
+
+// Captura de atalho Ctrl+Z global
+window.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+    const isOrcamentoVisible = document.getElementById('orcamentosEditorWrapper')?.style.display === 'block';
+    const isRoteiroVisible = document.getElementById('roteiroEditContainer')?.style.display === 'block';
+    
+    if (isOrcamentoVisible) {
+      e.preventDefault();
+      if (typeof window.desfazerAcaoCotacao === 'function') {
+        window.desfazerAcaoCotacao();
+      }
+    } else if (isRoteiroVisible) {
+      e.preventDefault();
+      if (typeof window.desfazerAcaoRoteiro === 'function') {
+        window.desfazerAcaoRoteiro();
+      }
+    }
+  }
+});
 
 // ── NOTION SETUP ────────────────────────────────────────────────────────────
 let notionClients = [];

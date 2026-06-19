@@ -951,7 +951,9 @@ app.get('/api/orcamentos', async (req, res) => {
   try {
     const { data, error } = await supabase.from('orcamentos').select('data');
     if (error) throw error;
-    res.json(data ? data.map(r => r.data) : []);
+    // Filtra para retornar apenas os orçamentos ativos (não deletados)
+    const ativos = data ? data.map(r => r.data).filter(item => item && !item.deletado) : [];
+    res.json(ativos);
   } catch(e) {
     console.error('Error getting orcamentos:', e);
     res.status(500).json({error: e.message});
@@ -968,7 +970,16 @@ app.post('/api/orcamentos', async (req, res) => {
 });
 app.delete('/api/orcamentos/:id', async (req, res) => {
   try {
-    const { error } = await supabase.from('orcamentos').delete().eq('id', String(req.params.id));
+    const id = req.params.id;
+    // Soft Delete: carrega o orçamento atual, marca como deletado no JSON e atualiza
+    const { data, error: fetchErr } = await supabase.from('orcamentos').select('data').eq('id', String(id)).single();
+    if (fetchErr) throw fetchErr;
+    
+    const orc = data.data || {};
+    orc.deletado = true;
+    orc.deletadoEm = new Date().toISOString();
+    
+    const { error } = await supabase.from('orcamentos').upsert({ id: String(id), data: orc });
     if (error) throw error;
     res.json({success:true});
   } catch(e) {
@@ -1267,7 +1278,10 @@ app.get('/api/roteiros', async (req, res) => {
     
     const rotasMap = {};
     for (const r of rotsRes.data || []) {
-      rotasMap[r.nome] = r.data;
+      // Filtra os roteiros ativos (não deletados)
+      if (r.data && !r.data.deletado) {
+        rotasMap[r.nome] = r.data;
+      }
     }
     if (baseRes.data && baseRes.data.data) {
       rotasMap['[PLANILHA] Base de Rotas'] = { dias: baseRes.data.data };
@@ -1312,12 +1326,113 @@ app.delete('/api/roteiros/:name', async (req, res) => {
       const { error } = await supabase.from('rotas_base').delete().eq('id', 'base');
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('roteiros').delete().eq('nome', name);
+      // Soft Delete: carrega o roteiro atual, marca como deletado no JSON e atualiza
+      const { data, error: fetchErr } = await supabase.from('roteiros').select('data').eq('nome', name).single();
+      if (fetchErr) throw fetchErr;
+      
+      const rot = data.data || {};
+      rot.deletado = true;
+      rot.deletadoEm = new Date().toISOString();
+      
+      const { error } = await supabase.from('roteiros').upsert({
+        nome: name,
+        data: rot
+      }, { onConflict: 'nome' });
       if (error) throw error;
     }
     res.json({ ok: true });
   } catch(e) {
     console.error('Error deleting roteiro:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+// ── API: Lixeira do Sistema (Soft Delete Rescues) ──────────────────────────
+app.get('/api/lixeira', async (req, res) => {
+  try {
+    const [orcsRes, rotsRes] = await Promise.all([
+      supabase.from('orcamentos').select('*'),
+      supabase.from('roteiros').select('*')
+    ]);
+    if (orcsRes.error) throw orcsRes.error;
+    if (rotsRes.error) throw rotsRes.error;
+    
+    const orcDeletados = (orcsRes.data || [])
+      .map(r => r.data)
+      .filter(item => item && item.deletado);
+      
+    const rotDeletados = (rotsRes.data || [])
+      .map(r => ({ nome: r.nome, ...r.data }))
+      .filter(item => item && item.deletado);
+      
+    res.json({
+      orcamentos: orcDeletados,
+      roteiros: rotDeletados
+    });
+  } catch(e) {
+    console.error('Error getting trash:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/orcamentos/:id/restaurar', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { data, error: fetchErr } = await supabase.from('orcamentos').select('data').eq('id', String(id)).single();
+    if (fetchErr) throw fetchErr;
+    
+    const orc = data.data || {};
+    delete orc.deletado;
+    delete orc.deletadoEm;
+    
+    const { error } = await supabase.from('orcamentos').upsert({ id: String(id), data: orc });
+    if (error) throw error;
+    res.json({ success: true });
+  } catch(e) {
+    console.error('Error restoring orcamento:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.delete('/api/orcamentos/:id/definitivo', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { error } = await supabase.from('orcamentos').delete().eq('id', String(id));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch(e) {
+    console.error('Error hard deleting orcamento:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/roteiros/:name/restaurar', async (req, res) => {
+  try {
+    const name = req.params.name;
+    const { data, error: fetchErr } = await supabase.from('roteiros').select('data').eq('nome', name).single();
+    if (fetchErr) throw fetchErr;
+    
+    const rot = data.data || {};
+    delete rot.deletado;
+    delete rot.deletadoEm;
+    
+    const { error } = await supabase.from('roteiros').upsert({ nome: name, data: rot }, { onConflict: 'nome' });
+    if (error) throw error;
+    res.json({ success: true });
+  } catch(e) {
+    console.error('Error restoring roteiro:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.delete('/api/roteiros/:name/definitivo', async (req, res) => {
+  try {
+    const name = req.params.name;
+    const { error } = await supabase.from('roteiros').delete().eq('nome', name);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch(e) {
+    console.error('Error hard deleting roteiro:', e);
     res.status(500).json({error: e.message});
   }
 });
