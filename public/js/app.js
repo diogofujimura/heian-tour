@@ -1938,8 +1938,10 @@ function renderPreview() {
   const o = state.orcamento;
   const usd = getUSD();
   
-  // Só faz a sincronização de DOM se o editor estiver visível
-  const editorVisivel = document.getElementById('orcamentosEditorWrapper') && document.getElementById('orcamentosEditorWrapper').style.display === 'block';
+  // Só faz a sincronização de DOM se o editor estiver visível e a página de orçamentos ativa
+  const editorVisivel = document.getElementById('page-meus')?.classList.contains('active') && 
+                        document.getElementById('orcamentosEditorWrapper') && 
+                        document.getElementById('orcamentosEditorWrapper').style.display === 'block';
   if (editorVisivel) {
     syncDOMToState();
   }
