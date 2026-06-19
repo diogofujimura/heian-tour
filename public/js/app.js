@@ -2551,8 +2551,6 @@ window.deletarRota = async function(id) {
     }
 };
 
-};
-
 // ── UNDO HISTORY (CTRL+Z) FOR COTACAO ─────────────────────────────────────────
 window.cotacaoUndoStack = [];
 window.registrarEstadoCotacao = function(orcState) {
