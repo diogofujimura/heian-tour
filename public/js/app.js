@@ -365,6 +365,22 @@ function abrirOrcamento(id, directEdit = false) {
   }
 }
 
+window.voltarParaClientesDeCotacao = function() {
+  if (state.orcamento && state.orcamento.notionClienteId) {
+    const clienteId = state.orcamento.notionClienteId;
+    if (typeof navToPage === 'function') navToPage('clientes');
+    if (typeof window.abrirDetalhesCliente === 'function') {
+      window.abrirDetalhesCliente(clienteId);
+      setTimeout(() => {
+        const btnTab = document.querySelector('.tab-client-btn[data-tab="cotacoes"]');
+        if (btnTab) btnTab.click();
+      }, 150);
+    }
+  } else {
+    if (typeof navToPage === 'function') navToPage('clientes');
+  }
+};
+
 function novoOrcamento() {
   localStorage.removeItem('heian_last_orcamento_id');
   state.orcamento = emptyOrc();

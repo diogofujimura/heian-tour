@@ -66,14 +66,11 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gestão & Vendas</div>
     <a class="nav-item active" data-page="dashboard">📊 &nbsp;Painel Geral</a>
     <a class="nav-item" data-page="clientes">👥 &nbsp;Clientes</a>
-    <a class="nav-item" data-page="roteiros">🗺️ &nbsp;Roteiros de Viagem</a>
-    <a class="nav-item" data-page="meus">💰 &nbsp;Cotações</a>
     <a class="nav-item" data-page="calendario">📅 &nbsp;Calendário</a>
     <a class="nav-item" data-page="colaboradores">👤 &nbsp;Colaboradores</a>
     <a class="nav-item" data-page="contabilidade">💵 &nbsp;Contabilidade</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
-    <a class="nav-item" data-page="orcamento">◈ &nbsp;Criar Cotação Rápida</a>
     <a class="nav-item" data-page="base">◇ &nbsp;Base de Dados</a>
     <a class="nav-item" data-page="config">◉ &nbsp;Configurações</a>
   </nav>
@@ -126,6 +123,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div class="page-header">
       <h1 id="orcTitulo">Nova Cotação</h1>
       <div class="header-actions">
+        <button class="btn-secondary" onclick="window.voltarParaClientesDeCotacao()" style="margin-right:8px;">⬅ Voltar para Clientes</button>
         <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
         <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro ➔</button>
         <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)">⚡ Exportar para Roteiro</button>

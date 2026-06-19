@@ -1219,14 +1219,24 @@ function abrirEditorRoteiro(nome) {
 function fecharEditorRoteiro() {
   document.getElementById('roteiroEditContainer').style.display = 'none';
   document.getElementById('roteiroTimeline').style.display = 'block';
-  // document.getElementById('selectRoteiroBase').disabled = false;
   
-  // Restaura botoes baseado na seleção
   const val = window.roteiroAtualVisualizado;
-  // Removido show do btnNovoRoteiro
   document.getElementById('btnEditarRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnExcluirRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnGerarRoteiro').style.display = 'inline-block';
+
+  // Se veio do contexto de um cliente, volta para a aba do cliente
+  if (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao && roteiroEmEdicao.notionClienteId) {
+    const clienteId = roteiroEmEdicao.notionClienteId;
+    if (typeof navToPage === 'function') navToPage('clientes');
+    if (typeof window.abrirDetalhesCliente === 'function') {
+      window.abrirDetalhesCliente(clienteId);
+      setTimeout(() => {
+        const btnTab = document.querySelector('.tab-client-btn[data-tab="roteiros"]');
+        if (btnTab) btnTab.click();
+      }, 150);
+    }
+  }
 }
 
 window.atualizarBotoesCotacao = function() {
