@@ -2464,3 +2464,119 @@ window.desfazerAcaoRoteiro = function() {
   showToast('Desfeito! ↩');
 };
 
+window.abrirModalGeradorIA = async function() {
+  const modal = document.getElementById('modalPromptIA');
+  if (!modal) return;
+
+  // Resetar campos
+  document.getElementById('iaInstrucoesPrompt').value = '';
+  document.getElementById('iaDataInicio').value = '';
+  document.getElementById('iaLoadingSpinner').style.display = 'none';
+  document.getElementById('btnConfirmarGerarIA').disabled = false;
+  document.getElementById('iaBriefingCliente').value = 'Nenhum briefing carregado do Notion para este cliente.';
+
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+
+  // Buscar briefing se houver cliente vinculado
+  if (window.roteiroEmEdicao && window.roteiroEmEdicao.notionClienteId) {
+    document.getElementById('iaBriefingCliente').value = 'Buscando briefing no Notion...';
+    try {
+      const res = await fetch('/api/public/client-data/' + window.roteiroEmEdicao.notionClienteId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.clientLocalInfo && data.clientLocalInfo.briefing) {
+          document.getElementById('iaBriefingCliente').value = data.clientLocalInfo.briefing;
+        } else {
+          document.getElementById('iaBriefingCliente').value = 'Nenhum briefing cadastrado na ficha do Notion deste cliente.';
+        }
+      } else {
+        document.getElementById('iaBriefingCliente').value = 'Não foi possível ler o briefing do Notion.';
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById('iaBriefingCliente').value = 'Erro ao buscar o briefing no Notion.';
+    }
+  } else {
+    document.getElementById('iaBriefingCliente').value = 'Roteiro sem cliente vinculado. Vincule um cliente no botão "Importar do Notion" se quiser carregar as preferências dele automaticamente.';
+  }
+};
+
+window.fecharModalPromptIA = function() {
+  const modal = document.getElementById('modalPromptIA');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+window.gerarRoteiroComIA = async function() {
+  const spinner = document.getElementById('iaLoadingSpinner');
+  const btn = document.getElementById('btnConfirmarGerarIA');
+  const prompt = document.getElementById('iaInstrucoesPrompt').value.trim();
+  const datas = document.getElementById('iaDataInicio').value;
+
+  if (!prompt && (!window.roteiroEmEdicao || !window.roteiroEmEdicao.notionClienteId)) {
+    alert('Por favor, digite alguma instrução para a IA saber qual roteiro criar!');
+    return;
+  }
+
+  if (spinner) {
+    spinner.style.display = 'flex';
+    spinner.style.alignItems = 'center';
+  }
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/roteiros/gerar-ia', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        clienteId: window.roteiroEmEdicao?.notionClienteId || '',
+        promptAdicional: prompt,
+        datas: datas
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || errData.details || 'Erro desconhecido na geração.');
+    }
+
+    const data = await res.json();
+    if (data.success && data.data && Array.isArray(data.data.dias)) {
+      // Registrar estado atual no undo stack
+      if (typeof window.registrarEstadoRoteiro === 'function') {
+        window.registrarEstadoRoteiro(window.roteiroEmEdicao);
+      }
+
+      // Substituir os dias do roteiro em edição pelos dias gerados pela IA
+      window.roteiroEmEdicao.dias = data.data.dias;
+
+      // Forçar re-renderização do editor
+      if (typeof renderEditDias === 'function') {
+        renderEditDias();
+      }
+
+      // Disparar o salvamento automático
+      window.triggerRoteiroAutoSave();
+
+      showToast('Roteiro gerado com IA com sucesso! 🪄');
+      window.fecharModalPromptIA();
+    } else {
+      throw new Error('Formato de resposta da IA inválido.');
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao gerar roteiro com IA: ' + err.message);
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+    if (btn) btn.disabled = false;
+  }
+};
+

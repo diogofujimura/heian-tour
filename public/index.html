@@ -342,6 +342,7 @@ window.addEventListener('unhandledrejection', function(e) {
                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
                      <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
                      <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                     <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()">🪄 Gerar com IA</button>
                      <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px;">↩ Desfazer</button>
                      <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
                      <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
@@ -1695,6 +1696,61 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="btn-secondary" onclick="fecharModalCriarEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
       <button class="btn-primary" id="btnConfirmarCriarEvento" onclick="salvarNovoEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:12px; background-color: var(--crimson); border-color: var(--crimson-dk);">Salvar Evento</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Gerador de Roteiros com IA (Gemini) -->
+<style>
+  @keyframes ia-spin {
+    to { transform: rotate(360deg); }
+  }
+  .ia-spinner-animation {
+    animation: ia-spin 1s linear infinite;
+    border: 2px solid #6d28d9;
+    border-top-color: transparent;
+    border-radius: 50%;
+  }
+</style>
+<div id="modalPromptIA" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
+  <div class="event-modal-box" style="width:100%; max-width:550px; background:#fff; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:16px;">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px;">
+      <h3 style="color: #6d28d9; font-size: 18px; font-weight: 700; margin: 0; display:flex; align-items:center; gap:8px;">
+        <span>🪄</span> Planejar Roteiro com IA
+      </h3>
+      <button onclick="window.fecharModalPromptIA()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
+    </div>
+
+    <!-- Briefing Carregado (Somente Leitura) -->
+    <div class="field" style="margin:0;">
+      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Briefing do Cliente (Notion)</label>
+      <textarea id="iaBriefingCliente" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:80px; font-family:var(--ff-body); background:#f8fafc; color:var(--text-sec); cursor:not-allowed;" readonly placeholder="Nenhum briefing carregado do Notion para este cliente."></textarea>
+    </div>
+
+    <!-- Data de Início da Viagem -->
+    <div class="field" style="margin:0;">
+      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data de Início da Viagem (Opcional)</label>
+      <input type="date" id="iaDataInicio" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px;">
+    </div>
+
+    <!-- Instruções Especiais / Prompt Livre -->
+    <div class="field" style="margin:0;">
+      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Instruções de Personalização para a IA</label>
+      <textarea id="iaInstrucoesPrompt" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:100px; font-family:var(--ff-body); resize:vertical;" placeholder="Ex: Casal de 30 anos. Focar em animes/games em Tóquio, templos históricos em Quioto e ryokan tradicional com onsen em Hakone. Viagem com ritmo moderado."></textarea>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="iaLoadingSpinner" style="display:none; text-align:center; padding:10px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; color:#6d28d9; font-weight:600; font-size:13px; align-items:center; justify-content:center; gap:8px;">
+      <span class="ia-spinner-animation" style="display:inline-block; width:16px; height:16px;"></span>
+      <span>O Gemini está estruturando o seu roteiro... Isso pode levar alguns segundos.</span>
+    </div>
+
+    <!-- Botões -->
+    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px; margin-top:4px;">
+      <button class="btn-secondary" onclick="window.fecharModalPromptIA()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
+      <button class="btn-primary" id="btnConfirmarGerarIA" onclick="window.gerarRoteiroComIA()" style="margin-top:0; padding:8px 16px; font-size:12px; background-color:#6d28d9; border-color:#5b21b6; font-weight:600;">🪄 Gerar Roteiro</button>
+    </div>
+
   </div>
 </div>
 

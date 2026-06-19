@@ -1185,6 +1185,153 @@ app.delete('/api/experiencias/:id', async (req, res) => {
 });
 
 // ── API: Roteiros & Atrações ────────────────────────────────────────────────
+app.post('/api/roteiros/gerar-ia', async (req, res) => {
+  try {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
+      return res.status(400).json({ error: 'Configuração da API do Gemini incompleta no arquivo .env (chave GEMINI_API_KEY ausente).' });
+    }
+
+    const { clienteId, promptAdicional, datas } = req.body;
+    let briefingCliente = '';
+    let clienteNome = 'Cliente';
+
+    // 1. Opcional: Buscar dados do cliente no Notion se houver clienteId
+    if (clienteId && clienteId !== 'cliente_desconhecido' && process.env.NOTION_API_KEY) {
+      try {
+        const notionRes = await fetch(`https://api.notion.com/v1/pages/${clienteId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${process.env.NOTION_API_KEY || NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28'
+          }
+        });
+        if (notionRes.ok) {
+          const page = await notionRes.json();
+          const p = page.properties;
+          clienteNome = p['Nome do Cliente']?.title?.map(t => t.plain_text).join('') || 
+                        p['Name']?.title?.map(t => t.plain_text).join('') || 
+                        p['Nome']?.title?.map(t => t.plain_text).join('') || 'Cliente';
+          
+          // Tentar ler alguma propriedade de briefing/observações
+          const briefingProp = p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição'];
+          if (briefingProp) {
+            briefingCliente = briefingProp.rich_text?.map(t => t.plain_text).join('') || '';
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao ler briefing do cliente no Notion:', err.message);
+      }
+    }
+
+    // 2. Buscar atrações da base de dados local (Supabase)
+    const { data: cfgAtr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
+    const listaAtracoes = cfgAtr && cfgAtr.data ? cfgAtr.data : [];
+    
+    // Condensar as atrações para enviar no prompt para não estourar limite e economizar tempo
+    const atracoesFormatadas = {};
+    listaAtracoes.forEach(a => {
+      const cidade = (a.Cidade || 'Geral').trim();
+      const nome = a['Nome da Atração'];
+      if (nome) {
+        if (!atracoesFormatadas[cidade]) atracoesFormatadas[cidade] = [];
+        atracoesFormatadas[cidade].push(nome);
+      }
+    });
+
+    const contextAtracoes = Object.entries(atracoesFormatadas)
+      .map(([cidade, nomes]) => `- ${cidade}: ${nomes.slice(0, 50).join(', ')}`)
+      .join('\n');
+
+    // 3. Montar o prompt do Gemini
+    const systemPrompt = `Você é um agente de viagens especialista em turismo de luxo no Japão para a operadora premium "Heian Tour".
+Seu objetivo é planejar e estruturar um itinerário dia-a-dia de excelência, otimizado geograficamente e adequado aos interesses do viajante.
+
+Você receberá um Briefing do Cliente, Instruções Adicionais e uma lista de Atrações Disponíveis por cidade que pertencem à nossa base de dados.
+Dê preferência absoluta em utilizar as Atrações Disponíveis da lista que combinam com o perfil do cliente, organizando-as por dia e em ordem lógica de visitação.
+
+Instruções importantes:
+1. Organize o roteiro em ordem de dias (Dia 1, Dia 2, etc.).
+2. Para cada dia, adicione um elemento do tipo "sequencia" (contendo a lista de atrações daquele dia) e opcionalmente um elemento do tipo "texto" contendo dicas do dia, sugestões de restaurantes ou observações importantes de logística.
+3. Responda estritamente no formato JSON fornecido abaixo. Não retorne nenhum texto extra antes ou depois do JSON.
+
+Modelo do JSON esperado de saída:
+{
+  "dias": [
+    {
+      "data": "YYYY-MM-DD",
+      "cidade": "Nome da cidade principal do dia",
+      "elementos": [
+        {
+          "tipo": "sequencia",
+          "cidade": "Nome da cidade do passeio",
+          "nomeDaRota": "Título descritivo da rota do dia (ex: Quioto Histórico ou Asakusa e Ueno Tradicional)",
+          "atracoesDoDia": []
+        },
+        {
+          "tipo": "texto",
+          "conteudo": "Recomendações especiais de restaurantes, logística ou dicas para este dia..."
+        }
+      ]
+    }
+  ]
+}
+
+Atrações Disponíveis no nosso banco de dados por cidade:\n${contextAtracoes}`;
+
+    const userPrompt = `Briefing do Cliente (${clienteNome}):
+${briefingCliente || 'Nenhum briefing específico fornecido.'}
+
+Instruções Adicionais e Informações da Viagem (Datas, dias, estilo):
+${promptAdicional || 'Nenhuma instrução adicional.'}
+${datas ? `Data de início da viagem: ${datas}` : ''}
+
+Por favor, gere o JSON do roteiro estruturado com base nas instruções e atrações fornecidas. Certifique-se de que os nomes de atrações colocados no array "atracoesDoDia" correspondam EXATAMENTE aos nomes presentes na lista de atrações por cidade fornecida.`;
+
+    // 4. Chamar a API REST do Gemini
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiPayload = {
+      contents: [
+        {
+          parts: [
+            { text: systemPrompt + '\n\n' + userPrompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    };
+
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(geminiPayload)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Erro na API do Gemini: ${errText}`);
+    }
+
+    const geminiData = await response.json();
+    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!responseText) {
+      throw new Error('A API do Gemini retornou uma resposta vazia ou em formato inesperado.');
+    }
+
+    // Fazer parse da resposta JSON da IA
+    const roteiroGerado = JSON.parse(responseText.trim());
+    res.json({ success: true, data: roteiroGerado });
+
+  } catch (error) {
+    console.error('Erro na geração do roteiro com IA:', error);
+    res.status(500).json({ error: 'Erro ao gerar roteiro com IA', details: error.message });
+  }
+});
+
 app.get('/api/atracoes', async (req, res) => {
   try {
     const { data, error } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
