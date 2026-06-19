@@ -2551,7 +2551,8 @@ window.gerarRoteiroComIA = async function() {
       body: JSON.stringify({
         clienteId: roteiroEmEdicao?.notionClienteId || '',
         promptAdicional: prompt,
-        datas: datas
+        datas: datas,
+        clienteData: roteiroEmEdicao?.cliente || null
       })
     });
 

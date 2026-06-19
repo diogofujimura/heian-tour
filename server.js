@@ -1192,7 +1192,7 @@ app.post('/api/roteiros/gerar-ia', async (req, res) => {
       return res.status(400).json({ error: 'Configuração da API do Gemini incompleta no arquivo .env (chave GEMINI_API_KEY ausente).' });
     }
 
-    const { clienteId, promptAdicional, datas } = req.body;
+    const { clienteId, promptAdicional, datas, clienteData } = req.body;
     let briefingCliente = '';
     let clienteNome = 'Cliente';
 
@@ -1279,8 +1279,35 @@ Modelo do JSON esperado de saída:
 
 Atrações Disponíveis no nosso banco de dados por cidade:\n${contextAtracoes}`;
 
+    let infoClientePrompt = '';
+    if (clienteData) {
+      const adultos = clienteData.adultos || 2;
+      const criancas = clienteData.criancas || 0;
+      infoClientePrompt += `- Viajantes: ${adultos} adulto(s)${criancas > 0 ? ` e ${criancas} criança(s)` : ''}\n`;
+      if (clienteData.vooChegada) infoClientePrompt += `- Voo de Chegada: ${clienteData.vooChegada}\n`;
+      if (clienteData.vooPartida) infoClientePrompt += `- Voo de Partida: ${clienteData.vooPartida}\n`;
+      
+      if (Array.isArray(clienteData.estadias) && clienteData.estadias.length > 0) {
+        infoClientePrompt += `- Cidades e Hotéis de Hospedagem (Estadias) agendadas:\n`;
+        clienteData.estadias.forEach((est, idx) => {
+          if (est.cidade) {
+            let dataStr = '';
+            if (est.dataInicio && est.dataFim) {
+              const d1 = est.dataInicio.split('-').reverse().join('/');
+              const d2 = est.dataFim.split('-').reverse().join('/');
+              dataStr = ` de ${d1} a ${d2}`;
+            }
+            infoClientePrompt += `  * Estadia ${idx + 1}: ${est.cidade}${est.hotel ? ` no hotel ${est.hotel}` : ''}${dataStr}\n`;
+          }
+        });
+      }
+    }
+
     const userPrompt = `Briefing do Cliente (${clienteNome}):
 ${briefingCliente || 'Nenhum briefing específico fornecido.'}
+
+Dados Cadastrados do Cliente no Roteiro:
+${infoClientePrompt || 'Nenhum dado cadastrado.'}
 
 Instruções Adicionais e Informações da Viagem (Datas, dias, estilo):
 ${promptAdicional || 'Nenhuma instrução adicional.'}
