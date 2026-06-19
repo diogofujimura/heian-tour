@@ -4000,14 +4000,22 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
     const extrairInfoVal = (descricao, valorJPY, moedaOriginal) => {
       const match = descricao && descricao.match(/\[Original:\s*([BRL|USD|JPY$¥]+)\s*([\d.,\s]+)/i);
       if (match) {
-        const valStr = match[2].replace(/[.\s]/g, '').replace(',', '.');
+        const coinText = match[1].toUpperCase();
+        let parsedMoeda = 'JPY';
+        if (coinText.includes('R$') || coinText.includes('BRL')) parsedMoeda = 'BRL';
+        else if (coinText.includes('$') || coinText.includes('USD')) parsedMoeda = 'USD';
+
+        let valStr = match[2].trim();
+        if (parsedMoeda === 'BRL') {
+          // BRL: milhar é ponto (remover), decimal é vírgula (virar ponto)
+          valStr = valStr.replace(/[.\s]/g, '').replace(',', '.');
+        } else {
+          // JPY / USD: milhar é vírgula (remover), decimal é ponto (manter)
+          valStr = valStr.replace(/[\,\s]/g, '');
+        }
+
         const parsedVal = parseFloat(valStr);
         if (!isNaN(parsedVal)) {
-          const coinText = match[1].toUpperCase();
-          let parsedMoeda = 'JPY';
-          if (coinText.includes('R$') || coinText.includes('BRL')) parsedMoeda = 'BRL';
-          else if (coinText.includes('$') || coinText.includes('USD')) parsedMoeda = 'USD';
-          
           return { valor: parsedVal, moeda: parsedMoeda };
         }
       }
