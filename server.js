@@ -4348,6 +4348,7 @@ app.get('/api/public/client-data/:clientId', async (req, res) => {
       dataFim: getDateEnd(p['Período da Viagem']),
       hotel: getRichText(p['Hotel']),
       viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+      briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
       valorTotal: getNumber(p['Valor Total']),
       totalPago: getRollupNumber(p['Total Pago']),
       saldoPagar: getFormulaNumber(p['Saldo a Pagar']),

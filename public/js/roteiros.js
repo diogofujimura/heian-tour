@@ -2500,10 +2500,11 @@ window.abrirModalGeradorIA = async function() {
       const res = await fetch('/api/public/client-data/' + roteiroEmEdicao.notionClienteId);
       if (res.ok) {
         const data = await res.json();
-        if (data.clientLocalInfo && data.clientLocalInfo.briefing) {
-          document.getElementById('iaBriefingCliente').value = data.clientLocalInfo.briefing;
+        const briefing = data.clientLocalInfo?.briefing || data.clientInfo?.briefing || '';
+        if (briefing) {
+          document.getElementById('iaBriefingCliente').value = briefing;
         } else {
-          document.getElementById('iaBriefingCliente').value = 'Nenhum briefing cadastrado na ficha do Notion deste cliente.';
+          document.getElementById('iaBriefingCliente').value = 'Nenhum briefing cadastrado na ficha do Notion ou local deste cliente.';
         }
       } else {
         document.getElementById('iaBriefingCliente').value = 'Não foi possível ler o briefing do Notion.';
