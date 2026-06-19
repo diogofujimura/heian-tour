@@ -2136,3 +2136,8 @@ window.iniciarPagamentoGuiaDeContabilidade = async function(eventoId, colaborado
   modal.classList.remove('hidden');
   modal.classList.add('active');
 };
+
+// Exposição explícita de funções globais do dashboard
+window.selecionarClienteDashboard = selecionarClienteDashboard;
+window.carregarSaldosContas = carregarSaldosContas;
+window.renderDashboard = renderDashboard;

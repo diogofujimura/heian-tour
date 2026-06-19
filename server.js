@@ -3480,7 +3480,7 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
 
 app.get('/api/notion/contas', async (req, res) => {
   try {
-    const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';
+    const NOTION_CONTAS_DB_ID = process.env.NOTION_CONTAS_DB_ID || '2bab6e48f954803bae65d962d2b529f5';
     const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CONTAS_DB_ID}/query`, {
       method: 'POST',
       headers: {
@@ -3903,7 +3903,7 @@ app.get('/api/financeiro/diarias-pendentes', async (req, res) => {
 
 app.get('/api/dashboard/saldos-contas', async (req, res) => {
   try {
-    const NOTION_CONTAS_DB_ID = '2bab6e48f954803bae65d962d2b529f5';
+    const NOTION_CONTAS_DB_ID = process.env.NOTION_CONTAS_DB_ID || '2bab6e48f954803bae65d962d2b529f5';
     const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
     const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
 

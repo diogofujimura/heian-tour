@@ -635,6 +635,9 @@ function setupNav() {
       navToPage('orcamento');
     } else {
       navToPage(pg);
+      if (pg === 'dashboard' && typeof selecionarClienteDashboard === 'function') {
+        selecionarClienteDashboard('');
+      }
     }
   }));
   const btnNovoOrcList = document.getElementById('btnNovoOrcList');
@@ -656,6 +659,9 @@ function setupNav() {
         navToPage('orcamento');
       } else {
         navToPage(e.state.page);
+        if (e.state.page === 'dashboard' && typeof selecionarClienteDashboard === 'function') {
+          selecionarClienteDashboard('');
+        }
       }
     } else {
       navToPage('orcamento');
