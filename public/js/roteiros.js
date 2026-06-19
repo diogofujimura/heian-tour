@@ -786,6 +786,19 @@ function hidePopover() {
 let roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: [] };
 let roteiroOriginalNome = '';
 
+// Garantir sincronização perfeita com o escopo global (window) para scripts externos e depuração
+Object.defineProperty(window, 'roteiroEmEdicao', {
+  get() { return roteiroEmEdicao; },
+  set(val) { roteiroEmEdicao = val; },
+  configurable: true
+});
+
+Object.defineProperty(window, 'roteiroOriginalNome', {
+  get() { return roteiroOriginalNome; },
+  set(val) { roteiroOriginalNome = val; },
+  configurable: true
+});
+
 function setupEditorEvents() {
   // Removido listener antigo do btnNovoRoteiro
 window.novoRoteiro = function() {
@@ -2480,10 +2493,10 @@ window.abrirModalGeradorIA = async function() {
   modal.classList.add('active');
 
   // Buscar briefing se houver cliente vinculado
-  if (window.roteiroEmEdicao && window.roteiroEmEdicao.notionClienteId) {
+  if (roteiroEmEdicao && roteiroEmEdicao.notionClienteId) {
     document.getElementById('iaBriefingCliente').value = 'Buscando briefing no Notion...';
     try {
-      const res = await fetch('/api/public/client-data/' + window.roteiroEmEdicao.notionClienteId);
+      const res = await fetch('/api/public/client-data/' + roteiroEmEdicao.notionClienteId);
       if (res.ok) {
         const data = await res.json();
         if (data.clientLocalInfo && data.clientLocalInfo.briefing) {
@@ -2518,7 +2531,7 @@ window.gerarRoteiroComIA = async function() {
   const prompt = document.getElementById('iaInstrucoesPrompt').value.trim();
   const datas = document.getElementById('iaDataInicio').value;
 
-  if (!prompt && (!window.roteiroEmEdicao || !window.roteiroEmEdicao.notionClienteId)) {
+  if (!prompt && (!roteiroEmEdicao || !roteiroEmEdicao.notionClienteId)) {
     alert('Por favor, digite alguma instrução para a IA saber qual roteiro criar!');
     return;
   }
@@ -2536,7 +2549,7 @@ window.gerarRoteiroComIA = async function() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        clienteId: window.roteiroEmEdicao?.notionClienteId || '',
+        clienteId: roteiroEmEdicao?.notionClienteId || '',
         promptAdicional: prompt,
         datas: datas
       })
@@ -2551,11 +2564,11 @@ window.gerarRoteiroComIA = async function() {
     if (data.success && data.data && Array.isArray(data.data.dias)) {
       // Registrar estado atual no undo stack
       if (typeof window.registrarEstadoRoteiro === 'function') {
-        window.registrarEstadoRoteiro(window.roteiroEmEdicao);
+        window.registrarEstadoRoteiro(roteiroEmEdicao);
       }
 
       // Substituir os dias do roteiro em edição pelos dias gerados pela IA
-      window.roteiroEmEdicao.dias = data.data.dias;
+      roteiroEmEdicao.dias = data.data.dias;
 
       // Forçar re-renderização do editor
       if (typeof renderEditDias === 'function') {
