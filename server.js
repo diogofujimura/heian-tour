@@ -2260,17 +2260,17 @@ app.patch('/api/clientes/:id', async (req, res) => {
         properties['Email'] = { email: null };
       }
     }
-    if (notionPayload.viajantes !== undefined) properties['Nome dos Viajantes'] = notionPayload.viajantes ? [{ text: { content: notionPayload.viajantes } }] : [];
+    if (notionPayload.viajantes !== undefined) properties['Nome dos Viajantes'] = { rich_text: notionPayload.viajantes ? [{ text: { content: notionPayload.viajantes } }] : [] };
     const vooChegadaCombined = [notionPayload.vooChegadaNum, notionPayload.vooChegadaHora].filter(Boolean).join(' | ');
     const vooPartidaCombined = [notionPayload.vooPartidaNum, notionPayload.vooPartidaHora].filter(Boolean).join(' | ');
     
     const finalVooChegada = vooChegadaCombined || notionPayload.vooChegada || '';
-    if (notionPayload.vooChegada !== undefined || vooChegadaCombined) properties['Voo de Chegada'] = finalVooChegada ? [{ text: { content: finalVooChegada } }] : [];
+    if (notionPayload.vooChegada !== undefined || vooChegadaCombined) properties['Voo de Chegada'] = { rich_text: finalVooChegada ? [{ text: { content: finalVooChegada } }] : [] };
     
     const finalVooPartida = vooPartidaCombined || notionPayload.vooPartida || '';
-    if (notionPayload.vooPartida !== undefined || vooPartidaCombined) properties['Voo de Partida'] = finalVooPartida ? [{ text: { content: finalVooPartida } }] : [];
+    if (notionPayload.vooPartida !== undefined || vooPartidaCombined) properties['Voo de Partida'] = { rich_text: finalVooPartida ? [{ text: { content: finalVooPartida } }] : [] };
     
-    if (notionPayload.hotel !== undefined) properties['Hotel'] = notionPayload.hotel ? [{ text: { content: notionPayload.hotel } }] : [];
+    if (notionPayload.hotel !== undefined) properties['Hotel'] = { rich_text: notionPayload.hotel ? [{ text: { content: notionPayload.hotel } }] : [] };
     
     if (notionPayload.dataInicio !== undefined) {
       if (notionPayload.dataInicio) {
