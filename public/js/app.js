@@ -5076,9 +5076,14 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
             // Detalhes extras por tipo
             let detalhesPrincipais = '';
             if (eh.tipo === 'transporte') {
+              // Sanitização: só mostrar trecho se origem ≠ destino
+              const [trechoOrigem, trechoDestino] = (eh.origemDestino || '').split(' ➔ ').map(s => s.trim());
+              const trechoValido = trechoOrigem && trechoDestino && trechoOrigem.toLowerCase() !== trechoDestino.toLowerCase();
+              // Sanitização: ignorar categoria se for puramente numérica (ex: preço "40000")
+              const categoriaValida = eh.categoria && !/^\d+$/.test(String(eh.categoria).trim()) && eh.categoria !== '-';
               detalhesPrincipais = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-                  ${eh.origemDestino ? `<div style="grid-column:span 2; background:#f0f4f9; border-radius:6px; padding:8px 10px;">
+                  ${trechoValido ? `<div style="grid-column:span 2; background:#f0f4f9; border-radius:6px; padding:8px 10px;">
                     <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🛤️ Trecho</div>
                     <div style="font-size:14px; color:var(--ink-dk); font-weight:700;">${eh.origemDestino}</div>
                   </div>` : ''}
@@ -5086,7 +5091,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                     <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🔖 Trem / Voo / Linha</div>
                     <div style="font-size:13px; color:var(--ink-dk); font-weight:700;">${eh.linha}</div>
                   </div>` : ''}
-                  ${eh.categoria ? `<div style="background:#f5f0ff; border:1px solid #ede9fe; border-radius:6px; padding:8px 10px;">
+                  ${categoriaValida ? `<div style="background:#f5f0ff; border:1px solid #ede9fe; border-radius:6px; padding:8px 10px;">
                     <div style="font-size:10px; font-weight:600; color:#6d28d9; text-transform:uppercase; margin-bottom:3px;">🎫 Classe / Tipo</div>
                     <div style="font-size:13px; color:#4c1d95; font-weight:700;">${eh.categoria}</div>
                   </div>` : ''}
@@ -5142,7 +5147,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                 </div>
 
                 <div style="font-size:11px; color:${eh.tipo === 'transporte' ? '#9c8248' : 'var(--crimson)'}; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">${eh.tipoLabel}</div>
-                <div style="font-size:15px; font-weight:700; color:var(--ink-dk); line-height:1.3;">${eh.tituloItem || eh.desc}</div>
+                <div style="font-size:15px; font-weight:700; color:var(--ink-dk); line-height:1.3;">${(eh.tituloItem && eh.tituloItem !== 'Transporte') ? eh.tituloItem : (eh.desc && eh.desc !== 'Transporte' ? eh.desc : 'Transfer')}</div>
 
                 ${detalhesPrincipais}
 
