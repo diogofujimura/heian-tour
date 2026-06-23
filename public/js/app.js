@@ -4949,10 +4949,11 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               });
             } else if (el.tipo === 'experiencia') {
               const e = el.expInfo || {};
-              const nomeExp = e.nomeExp || el.titulo || 'Experiência';
+              // nomeExp vive direto em el.nomeExp — expInfo é apenas fallback
+              const nomeExp = el.nomeExp || e.nomeExp || el.titulo || 'Experiência';
               itensRoteiro.push({ val: `experiencia:${nomeExp}`, label: `🎟️ Exp: ${nomeExp} (${diaLabel})` });
 
-              const compradoPelaHeian = e.compradoHeian !== false;
+              const compradoPelaHeian = el.compradoHeian !== false && e.compradoHeian !== false;
               if (compradoPelaHeian) {
                 const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('experiencia:') && x.atracaoNome.includes(nomeExp));
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
@@ -4964,26 +4965,27 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                   diaLabel: diaLabel,
                   key: `experiencia:${nomeExp}`,
                   voucher: v,
-                  dataSugerida: e.dataDoTour || el.dataDoTour || dataDoDiaStr || '',
-                  horario: e.horaPartida || el.horaPartida || '',
-                  local: e.localEncontro || el.localEncontro || '',
+                  dataSugerida: el.dataDoTour || e.dataDoTour || dataDoDiaStr || '',
+                  horario: el.horaPartida || e.horaPartida || '',
+                  local: el.localEncontro || e.localEncontro || '',
                   pessoasText: pText,
                   instrucoesPreCompra: el.instrucoesPreCompra || ''
                 });
               }
             } else if (el.tipo === 'transporte') {
               const t = el.transportInfo || {};
-              const transpNome = t.tipoTransporte || el.tipoServico || 'Transporte';
+              // tipoTransporte vive direto em el.tipoTransporte
+              const transpNome = el.tipoTransporte || t.tipoTransporte || el.tipoServico || 'Transporte';
               const desc = `${transpNome}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
               itensRoteiro.push({ val: `transporte:${transpNome}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
 
-              const compradoPelaHeian = t.compradoHeian !== false;
+              const compradoPelaHeian = el.compradoHeian !== false && t.compradoHeian !== false;
               if (compradoPelaHeian) {
                 const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('transporte:') && x.atracaoNome.includes(transpNome));
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'transporte',
-                  tipoLabel: '🚄 Transporte',
+                  tipoLabel: `🚄 ${transpNome}`,
                   tituloItem: transpNome,
                   desc: desc,
                   origemDestino: `${el.cidadeOrigem || t.origem || 'A definir'} ➔ ${el.cidadeDestino || t.destino || 'A definir'}`,
@@ -4992,6 +4994,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                   voucher: v,
                   dataSugerida: el.data || dataDoDiaStr || '',
                   linha: el.linha || t.linha || '',
+                  categoria: el.categoria || t.categoria || '',
                   horario: el.horario || t.horario || '',
                   duracao: el.tempo || t.tempo || '',
                   pessoasText: pText,
@@ -5064,21 +5067,25 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
             if (eh.tipo === 'transporte') {
               detalhesPrincipais = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-                  ${eh.origemDestino ? `<div style="grid-column:span 2; background:#f9f9f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Trecho</div>
-                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.origemDestino}</div>
+                  ${eh.origemDestino ? `<div style="grid-column:span 2; background:#f0f4f9; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🛤️ Trecho</div>
+                    <div style="font-size:14px; color:var(--ink-dk); font-weight:700;">${eh.origemDestino}</div>
                   </div>` : ''}
                   ${eh.linha ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Linha / Trem / Voo</div>
-                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.linha}</div>
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🔖 Trem / Voo / Linha</div>
+                    <div style="font-size:13px; color:var(--ink-dk); font-weight:700;">${eh.linha}</div>
+                  </div>` : ''}
+                  ${eh.categoria ? `<div style="background:#f5f0ff; border:1px solid #ede9fe; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:#6d28d9; text-transform:uppercase; margin-bottom:3px;">🎫 Classe / Tipo</div>
+                    <div style="font-size:13px; color:#4c1d95; font-weight:700;">${eh.categoria}</div>
                   </div>` : ''}
                   ${eh.horario ? `<div style="background:#fff8e6; border:1px solid #fef3c7; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:2px;">Horário de Partida</div>
-                    <div style="font-size:16px; color:#000; font-weight:800;">${eh.horario}</div>
+                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:3px;">⏰ Horário de Partida</div>
+                    <div style="font-size:22px; color:#92400e; font-weight:800; line-height:1;">${eh.horario}</div>
                   </div>` : ''}
                   ${eh.duracao ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Duração</div>
-                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">⏱ ${eh.duracao}</div>
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">⏱ Duração</div>
+                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.duracao}</div>
                   </div>` : ''}
                 </div>
               `;
@@ -5115,14 +5122,15 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
 
             return `
               <div style="border: 1px solid ${cardBorderColor}; border-left: 4px solid ${cardBorderLeft}; border-radius: 10px; padding: 14px; background: ${cardBg}; display: flex; flex-direction: column; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
-                  <div>
-                    <div style="font-size:10.5px; color:var(--ink-lt); font-weight:500; margin-bottom:2px;">${eh.diaLabel} · ${eh.dataSugerida ? fmtDataBR(eh.dataSugerida) : 'Sem data definida'}</div>
-                    <div style="font-size:11px; color:${eh.tipo === 'transporte' ? '#9c8248' : 'var(--crimson)'}; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">${eh.tipoLabel}</div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+                  <div style="flex:1;">
+                    <div style="font-size:16px; font-weight:800; color:var(--ink-dk); letter-spacing:-0.02em;">${eh.dataSugerida ? fmtDataBR(eh.dataSugerida) : 'Sem data definida'}</div>
+                    <div style="font-size:11.5px; color:var(--ink-lt); font-weight:500; margin-top:1px;">${eh.diaLabel}</div>
                   </div>
                   ${statusBadge}
                 </div>
 
+                <div style="font-size:11px; color:${eh.tipo === 'transporte' ? '#9c8248' : 'var(--crimson)'}; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">${eh.tipoLabel}</div>
                 <div style="font-size:15px; font-weight:700; color:var(--ink-dk); line-height:1.3;">${eh.tituloItem || eh.desc}</div>
 
                 ${detalhesPrincipais}
