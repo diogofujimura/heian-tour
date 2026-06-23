@@ -16,27 +16,33 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Heian Tour">
   <link rel="apple-touch-icon" href="/assets/logo-192.png">
+  <link rel="icon" type="image/png" href="/assets/logo.png">
 
   
   <style>
     :root {
       --primary: #8e1c1c; /* Crimson Heian */
-      --primary-light: #fef2f2;
-      --accent: #d97706; /* Ouro/Gold */
-      --accent-light: #fef3c7;
-      --bg: #faf8f6;
-      --card-bg: #ffffff;
-      --border: #e8e3dd;
-      --ink: #1e1b18;
-      --ink-mid: #6b6259;
-      --ink-light: #a3968a;
+      --primary-dark: #560b0b;
+      --primary-gradient: linear-gradient(135deg, #8e1c1c 0%, #560b0b 100%);
+      --accent: #dfb76c; /* Gold Heian */
+      --accent-dark: #c5a059;
+      --accent-gradient: linear-gradient(135deg, #dfb76c 0%, #c5a059 100%);
+      --accent-light: #fdf8ee;
+      --bg: #fbf9f6;
+      --card-bg: rgba(255, 255, 255, 0.75);
+      --border: rgba(142, 28, 28, 0.08);
+      --border-light: rgba(255, 255, 255, 0.5);
+      --ink: #231f1b; /* Soft dark */
+      --ink-mid: #5c544e;
+      --ink-light: #9c9085;
       
       --ff-display: 'Outfit', sans-serif;
       --ff-body: 'Inter', sans-serif;
       --ff-num: 'Outfit', sans-serif;
-      --shadow: 0 4px 20px rgba(142, 28, 28, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-      --shadow-hover: 0 10px 30px rgba(142, 28, 28, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-sm: 0 2px 8px rgba(35, 31, 27, 0.04);
+      --shadow-md: 0 10px 30px rgba(142, 28, 28, 0.05), 0 2px 8px rgba(0, 0, 0, 0.02);
+      --shadow-lg: 0 20px 45px rgba(86, 11, 11, 0.08), 0 4px 16px rgba(0, 0, 0, 0.03);
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     * {
@@ -46,7 +52,8 @@
     }
 
     body {
-      background-color: var(--bg);
+      background: radial-gradient(circle at top right, #fdfcfa 0%, #f6f2ec 100%);
+      background-attachment: fixed;
       color: var(--ink);
       font-family: var(--ff-body);
       line-height: 1.6;
@@ -56,148 +63,192 @@
     }
 
     .container {
-      max-width: 1040px;
+      max-width: 1080px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 24px;
     }
 
     /* Header & Hero Section */
     .hero {
-      background: linear-gradient(rgba(12, 10, 9, 0.45), rgba(12, 10, 9, 0.85)), url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200') no-repeat center center;
+      background: linear-gradient(180deg, rgba(86, 11, 11, 0.3) 0%, rgba(35, 31, 27, 0.85) 100%), url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200') no-repeat center center;
       background-size: cover;
       color: white;
-      padding: 50px 0 70px 0;
+      padding: 60px 0 80px 0;
       position: relative;
       overflow: hidden;
-      border-bottom-left-radius: 24px;
-      border-bottom-right-radius: 24px;
-      box-shadow: 0 10px 30px rgba(12, 10, 9, 0.2);
-    }
-
-    .hero::before {
-      display: none;
+      border-bottom-left-radius: 32px;
+      border-bottom-right-radius: 32px;
+      box-shadow: 0 12px 35px rgba(35, 31, 27, 0.15);
+      border-bottom: 2px solid var(--accent);
     }
 
     .hero-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 40px;
+      margin-bottom: 48px;
     }
 
     .logo-container {
       display: flex;
       align-items: center;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
 
     .logo-img {
-      height: 38px;
+      height: 42px;
       width: auto;
       object-fit: contain;
     }
 
     .hero-content {
-      animation: fadeIn 0.8s ease-out;
+      animation: fadeInUp 0.8s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
     .hero-subtitle {
       font-family: var(--ff-display);
-      font-size: 14px;
+      font-size: 13px;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 600;
-      margin-bottom: 8px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 10px;
     }
 
     .hero-title {
       font-family: var(--ff-display);
-      font-size: 36px;
-      font-weight: 600;
-      line-height: 1.2;
-      margin-bottom: 16px;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 20px;
       color: white;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.15);
     }
 
     .hero-meta {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
+      margin-top: 8px;
     }
 
     .meta-badge {
-      background: rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(8px);
-      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 8px 16px;
       border-radius: 30px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 500;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: var(--transition);
     }
 
-    /* Financial Summary Cards */
+    .meta-badge:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Financial Summary Cards (Cartões de Metal de Luxo) */
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: -30px;
-      margin-bottom: 40px;
+      gap: 24px;
+      margin-top: -36px;
+      margin-bottom: 48px;
       position: relative;
       z-index: 10;
     }
 
     .summary-card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
+      background: linear-gradient(135deg, #2a221f 0%, #171311 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(223, 183, 108, 0.15);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
       transition: var(--transition);
     }
 
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(223, 183, 108, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
     .summary-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-hover);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      border-color: rgba(223, 183, 108, 0.35);
     }
 
     .summary-label {
-      font-size: 12px;
-      color: var(--ink-mid);
-      font-weight: 500;
+      font-size: 11px;
+      color: #9c9085;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1.5px;
     }
 
     .summary-value {
       font-family: var(--ff-num);
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 700;
-      color: var(--ink);
+      color: #dfb76c; /* Gold Heian */
+      text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .summary-card.accent-paid {
+      background: linear-gradient(135deg, #1c3620 0%, #0d1e10 100%);
+      border-color: rgba(46, 125, 50, 0.2);
+    }
+    
+    .summary-card.accent-paid .summary-label {
+      color: #a3cda7;
     }
 
     .summary-card.accent-paid .summary-value {
-      color: #2e7d32;
+      color: #4caf50;
+    }
+
+    .summary-card.accent-pending {
+      background: linear-gradient(135deg, #501b1b 0%, #2f0b0b 100%);
+      border-color: rgba(198, 40, 40, 0.2);
+    }
+
+    .summary-card.accent-pending .summary-label {
+      color: #e5b0b0;
     }
 
     .summary-card.accent-pending .summary-value {
-      color: #c62828;
+      color: #ff6b6b;
     }
 
     /* Navigation Tabs */
     .tabs {
       display: flex;
-      border-bottom: 2px solid var(--border);
-      gap: 24px;
-      margin-bottom: 30px;
+      border-bottom: 2px solid rgba(142, 28, 28, 0.08);
+      gap: 28px;
+      margin-bottom: 40px;
       overflow-x: auto;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      position: relative;
     }
 
     .tabs::-webkit-scrollbar {
@@ -211,7 +262,7 @@
       font-size: 15px;
       font-weight: 600;
       color: var(--ink-mid);
-      padding: 12px 4px;
+      padding: 14px 4px;
       cursor: pointer;
       position: relative;
       white-space: nowrap;
@@ -226,21 +277,27 @@
       color: var(--primary);
     }
 
-    .tab-btn.active::after {
+    .tab-btn::after {
       content: '';
       position: absolute;
       bottom: -2px;
-      left: 0;
-      width: 100%;
+      left: 50%;
+      width: 0;
       height: 3px;
       background-color: var(--primary);
       border-radius: 3px;
+      transition: var(--transition);
+      transform: translateX(-50%);
+    }
+
+    .tab-btn.active::after {
+      width: 100%;
     }
 
     /* Tab Content Layouts */
     .tab-content {
       display: none;
-      animation: fadeIn 0.4s ease-out;
+      animation: fadeInUp 0.5s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
     .tab-content.active {
@@ -250,178 +307,250 @@
     /* Itinerary / Timeline styling */
     .timeline {
       position: relative;
-      padding-left: 32px;
-      margin-top: 10px;
+      padding-left: 36px;
+      margin-top: 15px;
     }
 
     .timeline::before {
       content: '';
       position: absolute;
       left: 7px;
-      top: 10px;
-      bottom: 10px;
-      width: 2px;
-      background: var(--border);
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent), var(--primary));
+      border-radius: 2px;
+      opacity: 0.5;
     }
 
     .timeline-item {
       position: relative;
-      margin-bottom: 30px;
+      margin-bottom: 40px;
     }
 
     .timeline-dot {
       position: absolute;
-      left: -32px;
-      top: 4px;
+      left: -35px;
+      top: 6px;
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--card-bg);
-      border: 3px solid var(--primary);
+      background: var(--primary-gradient);
+      border: 4px solid var(--bg);
       z-index: 2;
-      box-shadow: 0 0 0 4px var(--bg);
+      box-shadow: 0 0 0 4px rgba(142, 28, 28, 0.15);
+      transition: var(--transition);
+    }
+
+    .timeline-item:hover .timeline-dot {
+      transform: scale(1.2);
+      box-shadow: 0 0 0 6px rgba(142, 28, 28, 0.25);
     }
 
     .timeline-item.no-tour .timeline-dot {
-      border-color: var(--ink-light);
+      background: var(--accent-gradient);
+      box-shadow: 0 0 0 4px rgba(223, 183, 108, 0.2);
+    }
+
+    .timeline-item.no-tour:hover .timeline-dot {
+      box-shadow: 0 0 0 6px rgba(223, 183, 108, 0.35);
     }
 
     .timeline-card {
       background: var(--card-bg);
-      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
       border: 1px solid var(--border);
-      padding: 24px;
-      box-shadow: var(--shadow);
+      padding: 28px;
+      box-shadow: var(--shadow-md);
       transition: var(--transition);
     }
 
     .timeline-card:hover {
-      box-shadow: var(--shadow-hover);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(142, 28, 28, 0.15);
+      background: rgba(255, 255, 255, 0.85);
     }
 
     .timeline-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
+      align-items: center;
+      margin-bottom: 20px;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 12px;
+      border-bottom: 1px solid rgba(142, 28, 28, 0.05);
+      padding-bottom: 14px;
     }
 
     .timeline-day-title {
       font-family: var(--ff-display);
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 20px;
+      font-weight: 700;
       color: var(--ink);
     }
 
     .timeline-day-tag {
-      background: var(--primary-light);
-      color: var(--primary);
-      padding: 4px 10px;
-      border-radius: 6px;
+      background: var(--primary-gradient);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 8px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      box-shadow: 0 2px 6px rgba(142, 28, 28, 0.15);
     }
 
     .timeline-day-tag.guide-no {
-      background: var(--bg);
+      background: rgba(35, 31, 27, 0.05);
       color: var(--ink-mid);
       border: 1px solid var(--border);
+      box-shadow: none;
     }
 
     .timeline-desc {
       color: var(--ink-mid);
-      font-size: 13.5px;
-      margin-bottom: 16px;
+      font-size: 14px;
+      margin-bottom: 20px;
       white-space: pre-wrap;
     }
 
     .timeline-events-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 14px;
     }
 
+    /* Design Especial Estilo Ticket/Boarding Pass para Eventos */
     .event-pill {
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 12.5px;
+      background: white;
+      border-radius: 14px;
+      padding: 16px 20px;
+      font-size: 13.5px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-left: 3px solid var(--primary);
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--primary);
+      position: relative;
+      overflow: visible; /* Necessário para os furos de picote nas bordas */
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    /* Furos de picote circulares */
+    .event-pill::before,
+    .event-pill::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--bg); /* Mesma cor de fundo da página */
+      transform: translateY(-50%);
+      border: 1px solid var(--border);
+      box-sizing: border-box;
+      z-index: 5;
+    }
+
+    .event-pill::before {
+      left: -6px;
+      border-left-color: transparent;
+      border-top-color: transparent;
+    }
+
+    .event-pill::after {
+      right: -6px;
+      border-right-color: transparent;
+      border-bottom-color: transparent;
     }
 
     .event-pill.transport {
-      border-left-color: #3b82f6;
+      border-left-color: #2b6cb0;
     }
 
     .event-pill.experience {
-      border-left-color: var(--accent);
+      border-left-color: var(--accent-dark);
     }
 
-    /* Cards generic */
+    .event-pill:hover {
+      transform: translateY(-3px) scale(1.005);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Cards Genéricos */
     .info-card {
       background: var(--card-bg);
-      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
       border: 1px solid var(--border);
-      padding: 24px;
-      box-shadow: var(--shadow);
-      margin-bottom: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 30px;
     }
 
     .info-card-title {
       font-family: var(--ff-display);
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 18px;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
       color: var(--primary);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
+      padding-bottom: 12px;
     }
 
     /* Tables */
     .data-table-wrapper {
       overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
     }
 
     .data-table {
       width: 100%;
       border-collapse: collapse;
       text-align: left;
-      font-size: 13px;
+      font-size: 13.5px;
+      background: white;
     }
 
     .data-table th {
-      color: var(--ink-mid);
+      color: var(--ink);
       font-family: var(--ff-display);
-      font-weight: 600;
-      padding: 12px;
+      font-weight: 700;
+      padding: 16px;
+      background: var(--accent-light);
       border-bottom: 2px solid var(--border);
     }
 
     .data-table td {
-      padding: 12px;
+      padding: 16px;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
+      color: var(--ink-mid);
     }
 
     .data-table tr:last-child td {
       border-bottom: none;
     }
 
+    .data-table tr:hover td {
+      background: rgba(142, 28, 28, 0.01);
+      color: var(--ink);
+    }
+
     /* Flight & Stays Details */
     .details-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 24px;
     }
 
     @media (max-width: 768px) {
@@ -430,28 +559,48 @@
       }
       .summary-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .timeline {
+        padding-left: 28px;
+      }
+      .timeline-dot {
+        left: -29px;
+      }
+      .hero-title {
+        font-size: 32px;
       }
     }
 
     .detail-item {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      margin-bottom: 12px;
+      gap: 6px;
+      background: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .detail-item:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(142, 28, 28, 0.1);
     }
 
     .detail-label {
       font-size: 11px;
       color: var(--ink-light);
       text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      font-weight: 700;
+      letter-spacing: 1px;
     }
 
     .detail-value {
-      font-size: 13.5px;
+      font-size: 14.5px;
       color: var(--ink);
-      font-weight: 500;
+      font-weight: 600;
     }
 
     /* Loading and empty states */
@@ -460,63 +609,70 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 80px 0;
-      gap: 16px;
+      padding: 120px 0;
+      gap: 20px;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--border);
+      width: 46px;
+      height: 46px;
+      border: 4px solid var(--border);
       border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
     .error-container {
       background: white;
-      border-radius: 16px;
+      border-radius: 24px;
       border: 1px solid var(--border);
-      padding: 40px;
+      padding: 48px;
       text-align: center;
-      max-width: 500px;
+      max-width: 520px;
       margin: 80px auto;
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-lg);
+      animation: fadeInUp 0.6s ease;
     }
 
     .error-title {
       font-family: var(--ff-display);
       color: var(--primary);
-      font-size: 20px;
-      margin-bottom: 10px;
+      font-size: 22px;
+      margin-bottom: 12px;
+      font-weight: 700;
     }
 
     .badge-paid {
       background: #e8f5e9;
       color: #2e7d32;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
       font-size: 11px;
       display: inline-block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .badge-pending {
       background: #ffebee;
       color: #c62828;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
       font-size: 11px;
       display: inline-block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -525,71 +681,76 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     .chip-atracao { 
-      background: rgba(196,163,90,0.08); 
-      border: 1px solid rgba(196,163,90,0.18); 
-      padding: 6px 12px; 
-      border-radius: 12px; 
+      background: rgba(223, 183, 108, 0.08); 
+      border: 1px solid rgba(223, 183, 108, 0.25); 
+      padding: 6px 14px; 
+      border-radius: 30px; 
       font-size: 12px; 
       color: var(--ink-mid); 
-      font-weight: 500; 
+      font-weight: 600; 
       cursor: pointer; 
-      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+      transition: var(--transition); 
       position: relative; 
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
     }
     .chip-atracao:hover { 
-      background: var(--accent); 
+      background: var(--accent-gradient); 
       color: white; 
-      transform: translateY(-1px); 
-      box-shadow: 0 4px 12px rgba(217,119,6,0.15); 
-      border-color: var(--accent);
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(223, 183, 108, 0.3); 
+      border-color: var(--accent-dark);
     }
-    .chip-atracao.missing { border-style: dashed; opacity: 0.7; }
+    .chip-atracao.missing { border-style: dashed; opacity: 0.75; }
     .chip-atracao.fechada {
-      background: rgba(220, 38, 38, 0.08) !important;
-      border: 1px solid rgba(220, 38, 38, 0.3) !important;
+      background: rgba(220, 38, 38, 0.06) !important;
+      border: 1px solid rgba(220, 38, 38, 0.25) !important;
       color: #dc2626 !important;
     }
     .chip-atracao.fechada:hover {
-      background: #dc2626 !important;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
       color: white !important;
-      border-color: #dc2626 !important;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+      border-color: #991b1b !important;
+      box-shadow: 0 6px 15px rgba(220, 38, 38, 0.25) !important;
     }
     
-    /* Popover/Modal de Atração */
+    /* Popover/Modal de Atração (Glassmorphism Pesado) */
     .atracao-popover { 
       position: fixed; 
       z-index: 9999; 
-      background: rgba(255, 255, 255, 0.95); 
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.8); 
-      border-radius: 12px; 
-      width: 320px; 
-      padding: 20px; 
-      box-shadow: 0 12px 40px rgba(0,0,0,0.08); 
+      background: rgba(255, 255, 255, 0.9); 
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.5); 
+      border-radius: 20px; 
+      width: 330px; 
+      padding: 24px; 
+      box-shadow: 0 15px 40px rgba(35, 31, 27, 0.12); 
       display: none; 
       opacity: 0; 
-      transition: opacity 0.2s; 
-      pointer-events: none; 
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out; 
+      transform: translateY(8px);
+      pointer-events: auto; 
     }
-    .atracao-popover.visible { display: block; opacity: 1; }
-    .popover-bairro { font-size: 10px; text-transform: uppercase; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 4px; font-weight: 600; }
-    .popover-titulo { font-family: var(--ff-display); font-size: 19px; color: var(--primary); margin-bottom: 8px; font-weight: 600; }
-    .popover-desc { font-size: 12px; color: var(--ink-mid); line-height: 1.5; margin-bottom: 12px; }
-    .popover-preco { font-size: 13px; font-weight: 500; color: var(--ink); border-top: 1px solid rgba(142, 28, 28, 0.12); padding-top: 10px; display: flex; justify-content: space-between; }
-    .preco-brt { color: var(--accent); font-weight: 600; }
+    .atracao-popover.visible { display: block; opacity: 1; transform: translateY(0); }
+    .popover-bairro { font-size: 10px; text-transform: uppercase; color: var(--primary); letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
+    .popover-titulo { font-family: var(--ff-display); font-size: 20px; color: var(--ink); margin-bottom: 10px; font-weight: 700; line-height: 1.25; }
+    .popover-desc { font-size: 12.5px; color: var(--ink-mid); line-height: 1.55; margin-bottom: 16px; text-align: justify; }
+    .popover-preco { font-size: 13.5px; font-weight: 600; color: var(--ink); border-top: 1px solid rgba(142, 28, 28, 0.08); padding-top: 12px; display: flex; justify-content: space-between; }
+    .preco-brt { color: var(--primary); font-weight: 700; }
 
     /* Estilos Premium para Cards de Hotéis PWA/Mobile */
     .hotel-premium-card {
       background: var(--card-bg);
-      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-md);
       border: 1px solid var(--border);
       margin-bottom: 24px;
       transition: var(--transition);
@@ -600,25 +761,11 @@
       user-select: none;
     }
     .hotel-premium-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(142, 28, 28, 0.12);
     }
-    .hotel-collapsible-details {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-      opacity: 0;
-      margin-top: 0;
-      border-top: 1px dashed transparent;
-      padding-top: 0;
-    }
-    .hotel-premium-card.expanded .hotel-collapsible-details {
-      max-height: 500px;
-      opacity: 1;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top-color: var(--border);
-    }
+    
     /* Modal de Detalhes do Hotel */
     .hotel-modal-overlay {
       position: fixed;
@@ -626,9 +773,9 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(30, 27, 24, 0.65);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      background: rgba(35, 31, 27, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       z-index: 10000;
       display: flex;
       justify-content: center;
@@ -636,24 +783,24 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s ease;
-      padding: 20px;
+      padding: 24px;
     }
     .hotel-modal-overlay.visible {
       opacity: 1;
       pointer-events: auto;
     }
     .hotel-modal-box {
-      background: var(--card-bg);
+      background: white;
       width: 100%;
-      max-width: 580px;
+      max-width: 600px;
       max-height: 90vh;
-      border-radius: 24px;
+      border-radius: 28px;
       overflow-y: auto;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       position: relative;
       transform: scale(0.9);
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       display: flex;
       flex-direction: column;
     }
@@ -662,17 +809,17 @@
     }
     .hotel-modal-close {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 20px;
+      right: 20px;
       z-index: 10;
-      background: rgba(30, 27, 24, 0.6);
-      backdrop-filter: blur(4px);
+      background: rgba(35, 31, 27, 0.5);
+      backdrop-filter: blur(8px);
       color: white;
       border: none;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      font-size: 16px;
+      font-size: 18px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -681,12 +828,13 @@
     }
     .hotel-modal-close:hover {
       background: var(--primary);
+      transform: rotate(90deg);
     }
     
     /* Carrossel de Fotos do Hotel */
     .hotel-carousel {
       width: 100%;
-      height: 280px;
+      height: 300px;
       position: relative;
       background: #eae5de;
       overflow: hidden;
@@ -695,7 +843,7 @@
       display: flex;
       width: 100%;
       height: 100%;
-      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
     }
     .hotel-carousel-slide {
       min-width: 100%;
@@ -710,56 +858,53 @@
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.9);
       border: none;
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      font-size: 18px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
       z-index: 5;
       transition: var(--transition);
     }
     .hotel-carousel-btn:hover {
       background: white;
       color: var(--primary);
-      transform: translateY(-50%) scale(1.05);
+      transform: translateY(-50%) scale(1.1);
     }
-    .hotel-carousel-btn.prev {
-      left: 16px;
-    }
-    .hotel-carousel-btn.next {
-      right: 16px;
-    }
+    .hotel-carousel-btn.prev { left: 20px; }
+    .hotel-carousel-btn.next { right: 20px; }
+    
     .hotel-carousel-dots {
       position: absolute;
-      bottom: 16px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 6px;
+      gap: 8px;
       z-index: 5;
     }
     .hotel-carousel-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.4);
       transition: var(--transition);
       cursor: pointer;
     }
     .hotel-carousel-dot.active {
       background: white;
-      width: 20px;
+      width: 22px;
       border-radius: 10px;
     }
     .hotel-photo-wrapper {
       width: 100%;
-      height: 200px;
+      height: 220px;
       position: relative;
       background-color: #eae5de;
       overflow: hidden;
@@ -768,162 +913,152 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.5s ease;
+      transition: transform 0.6s ease;
     }
     .hotel-premium-card:hover .hotel-photo {
-      transform: scale(1.05);
+      transform: scale(1.06);
     }
     .hotel-city-badge {
       position: absolute;
-      top: 16px;
-      left: 16px;
-      background: rgba(142, 28, 28, 0.9);
-      backdrop-filter: blur(8px);
+      top: 20px;
+      left: 20px;
+      background: var(--primary-gradient);
       color: white;
-      padding: 6px 14px;
+      padding: 6px 16px;
       border-radius: 30px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      letter-spacing: 1.2px;
+      box-shadow: 0 4px 12px rgba(142, 28, 28, 0.2);
     }
     .hotel-content {
-      padding: 24px;
+      padding: 28px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .hotel-title {
       font-family: var(--ff-display);
       font-size: 22px;
       color: var(--primary);
       font-weight: 700;
-      line-height: 1.3;
+      line-height: 1.25;
       margin: 0;
     }
     .hotel-period {
-      font-size: 13px;
+      font-size: 13.5px;
       color: var(--ink-mid);
-      font-weight: 500;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .hotel-description {
       font-size: 13.5px;
       color: var(--ink-mid);
-      line-height: 1.6;
+      line-height: 1.65;
       text-align: justify;
-      margin: 4px 0;
-    }
-    .hotel-badges-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 4px 0;
     }
     .hotel-meta-badge {
-      background: var(--primary-light);
+      background: var(--accent-light);
       color: var(--primary);
-      padding: 4px 10px;
-      border-radius: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
       font-size: 11px;
-      font-weight: 600;
-      border: 1px solid rgba(142, 28, 28, 0.1);
+      font-weight: 700;
+      border: 1px solid rgba(142, 28, 28, 0.08);
+      box-shadow: var(--shadow-sm);
     }
     .hotel-actions {
       display: flex;
       justify-content: flex-end;
       border-top: 1px solid var(--border);
-      padding-top: 16px;
-      margin-top: 4px;
+      padding-top: 20px;
+      margin-top: 6px;
     }
     .hotel-maps-btn {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: var(--primary);
+      gap: 8px;
+      background: var(--primary-gradient);
       color: white !important;
       text-decoration: none !important;
-      padding: 8px 18px;
+      padding: 10px 22px;
       border-radius: 30px;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 600;
       transition: var(--transition);
-      box-shadow: 0 4px 10px rgba(142, 28, 28, 0.15);
+      box-shadow: 0 4px 12px rgba(142, 28, 28, 0.2);
     }
     .hotel-maps-btn:hover {
-      background: #4c0d0d;
-      box-shadow: 0 6px 15px rgba(142, 28, 28, 0.25);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(142, 28, 28, 0.35);
     }
 
     @media (min-width: 768px) {
       .hotel-premium-card {
         flex-direction: row;
-        height: auto;
-        min-height: 220px;
+        min-height: 240px;
       }
       .hotel-photo-wrapper {
-        width: 35%;
+        width: 38%;
         height: auto;
-        min-height: 220px;
+        min-height: 240px;
       }
       .hotel-content {
-        width: 65%;
-        padding: 24px 30px;
+        width: 62%;
+        padding: 28px 36px;
         justify-content: center;
-      }
-      .hotel-actions {
-        margin-top: auto;
       }
     }
 
-    /* Botão Flutuante de Dias (FAB) */
+    /* Botão Flutuante de Dias (FAB - Estilo Selo Imperial) */
     .days-fab-container {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 28px;
+      right: 28px;
       z-index: 999;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 12px;
+      gap: 16px;
       font-family: var(--ff-display);
     }
     .days-fab-trigger {
-      width: 56px;
-      height: 56px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      background: var(--primary);
+      background: var(--primary-gradient);
       color: white;
-      border: none;
-      box-shadow: 0 8px 24px rgba(142, 28, 28, 0.35);
+      border: 2px solid var(--accent);
+      box-shadow: 0 10px 30px rgba(142, 28, 28, 0.4);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
       transition: var(--transition);
     }
     .days-fab-trigger:hover {
-      transform: scale(1.05);
-      box-shadow: 0 12px 30px rgba(142, 28, 28, 0.45);
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 12px 35px rgba(142, 28, 28, 0.55);
     }
     .days-fab-panel {
-      background: var(--card-bg);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.18);
       border: 1px solid var(--border);
-      width: 240px;
-      max-height: 280px;
+      width: 250px;
+      max-height: 300px;
       overflow-y: auto;
       display: none;
       opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.25s ease, transform 0.25s ease;
+      transform: translateY(15px);
+      transition: opacity 0.3s, transform 0.3s;
     }
     .days-fab-panel.visible {
       display: block;
@@ -931,14 +1066,14 @@
       transform: translateY(0);
     }
     .days-fab-title {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 700;
       color: var(--ink);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
+      padding-bottom: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -946,31 +1081,395 @@
     .days-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 10px;
     }
     .day-select-btn {
       aspect-ratio: 1;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid var(--border);
-      background: var(--bg);
+      background: white;
       color: var(--ink);
       font-weight: 600;
-      font-size: 13px;
+      font-size: 13.5px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: var(--transition);
+      box-shadow: var(--shadow-sm);
     }
     .day-select-btn:hover {
-      background: var(--primary-light);
+      background: var(--accent-light);
       color: var(--primary);
-      border-color: rgba(142, 28, 28, 0.2);
+      border-color: var(--accent-dark);
+      transform: translateY(-2px);
     }
     .day-select-btn.active-day {
-      background: var(--primary);
+      background: var(--primary-gradient);
       color: white;
-      border-color: var(--primary);
+      border-color: var(--primary-dark);
+      box-shadow: 0 4px 10px rgba(142, 28, 28, 0.25);
+    }
+
+    /* Estilos Vouchers e Ingressos (Visual de Ticket Stub) */
+    .vouchers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 20px;
+    }
+    .voucher-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: visible; /* Necessário para os furos de picote do ticket vertical */
+    }
+    .voucher-card::before,
+    .voucher-card::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background-color: var(--bg);
+      transform: translateX(-50%);
+      border: 1px solid var(--border);
+      box-sizing: border-box;
+      z-index: 5;
+    }
+    .voucher-card::before { top: -8px; border-top-color: transparent; }
+    .voucher-card::after { bottom: -8px; border-bottom-color: transparent; }
+
+    .voucher-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(142, 28, 28, 0.15);
+    }
+    .voucher-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      box-shadow: var(--shadow-sm);
+    }
+    .voucher-badge.qr_code { background: #e6f7ed; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.15); }
+    .voucher-badge.pdf { background: #fee2e2; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); }
+    .voucher-badge.link { background: #eff6ff; color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.15); }
+    .voucher-badge.instrucao { background: #fffbeb; color: #d97706; border: 1px solid rgba(217, 119, 6, 0.15); }
+    
+    .voucher-title {
+      font-family: var(--ff-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      padding-right: 90px;
+      line-height: 1.3;
+    }
+    .voucher-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--ink-mid);
+      font-weight: 500;
+    }
+    .voucher-instruction-box {
+      background: var(--accent-light);
+      border-radius: 12px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--accent);
+      font-size: 13px;
+      color: var(--ink-mid);
+      white-space: pre-line;
+      line-height: 1.6;
+      border: 1px solid rgba(223, 183, 108, 0.15);
+      border-left: 4px solid var(--accent);
+    }
+    .voucher-preview-container {
+      width: 100%;
+      height: 170px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+    }
+    .voucher-preview-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 10px;
+      transition: var(--transition);
+    }
+    .voucher-preview-container:hover img {
+      transform: scale(1.05);
+    }
+    .voucher-preview-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(35, 31, 27, 0.65);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      padding: 8px 0;
+      opacity: 0;
+      transition: var(--transition);
+      letter-spacing: 0.5px;
+    }
+    .voucher-preview-container:hover .voucher-preview-overlay {
+      opacity: 1;
+    }
+    .voucher-pdf-card {
+      border: 1px solid var(--border);
+      background: white;
+      padding: 14px 18px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Modal Zoom de QR Code */
+    .qr-zoom-modal {
+      display: none;
+      position: fixed;
+      z-index: 1100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(35, 31, 27, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+    .qr-zoom-modal.active {
+      display: flex;
+    }
+    .qr-zoom-content {
+      background-color: white;
+      margin: auto;
+      padding: 32px;
+      border-radius: 28px;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      animation: scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .qr-zoom-close {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      color: var(--ink-light);
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .qr-zoom-close:hover {
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+    .qr-zoom-title {
+      font-family: var(--ff-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+      width: 100%;
+      letter-spacing: 0.5px;
+    }
+    .qr-zoom-img {
+      max-width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 16px;
+      background: white;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .qr-zoom-desc {
+      font-size: 13px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      background: var(--bg);
+      padding: 16px;
+      border-radius: 14px;
+      width: 100%;
+      text-align: left;
+      white-space: pre-line;
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+    }
+
+    /* Galeria de QR Codes Múltiplos */
+    .voucher-gallery {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary) transparent;
+      width: 100%;
+    }
+    .voucher-gallery::-webkit-scrollbar {
+      height: 6px;
+    }
+    .voucher-gallery::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 3px;
+    }
+    .voucher-gallery-item {
+      flex: 0 0 115px;
+      height: 115px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      background: white;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    .voucher-gallery-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(142, 28, 28, 0.15);
+    }
+    .voucher-gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 6px;
+    }
+    .voucher-gallery-item-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(35,31,27,0.7);
+      color: white;
+      font-size: 9.5px;
+      text-align: center;
+      padding: 3px 0;
+      font-weight: 600;
+    }
+
+    /* Modal Zoom Slider */
+    .qr-zoom-slider-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .qr-zoom-arrow {
+      background: var(--accent-light);
+      color: var(--primary);
+      border: 1px solid rgba(142, 28, 28, 0.12);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: var(--transition);
+      user-select: none;
+      box-shadow: var(--shadow-sm);
+    }
+    .qr-zoom-arrow:hover {
+      background: var(--primary-gradient);
+      color: white;
+      border-color: var(--primary-dark);
+      transform: scale(1.05);
+    }
+    .qr-zoom-counter {
+      font-size: 11.5px;
+      color: var(--ink-light);
+      margin-top: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Card da Timeline Clicável */
+    .timeline-card .event-pill.experience,
+    .timeline-card .event-pill.transport {
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .timeline-card .event-pill.experience:hover {
+      background: var(--accent-light) !important;
+      border-left-width: 6px !important;
+      border-color: var(--accent-dark);
+    }
+    .timeline-card .event-pill.transport:hover {
+      background: #eff6ff !important;
+      border-left-width: 6px !important;
+      border-color: #2563eb;
+    }
+
+    /* Botão Padrão */
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: white !important;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: var(--ff-display);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(142, 28, 28, 0.2);
+      transition: var(--transition);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(142, 28, 28, 0.35);
     }
   </style>
 </head>
@@ -1020,6 +1519,7 @@
         <button class="tab-btn" onclick="switchTab(event, 'tab-services')">💼 Serviços Inclusos</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-info')">✈️ Voos & Hotéis</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-payments')">💳 Extrato Financeiro</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-vouchers')">🎟️ Ingressos & Vouchers</button>
       </nav>
 
       <!-- TAB 1: ITINERARY -->
@@ -1175,6 +1675,17 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 5: VOUCHERS -->
+      <section id="tab-vouchers" class="tab-content">
+        <div class="vouchers-header-section" style="margin-bottom: 24px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+          <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--primary); margin-bottom: 6px;">🎟️ Seus Ingressos & Vouchers</h2>
+          <p style="color: var(--ink-mid); font-size: 14px;">Acesse e baixe aqui os QR codes, PDFs de reservas e instruções específicas para suas atividades.</p>
+        </div>
+        <div class="vouchers-grid" id="vouchers-list-container">
+          <!-- Vouchers renderizados dinamicamente pelo JS -->
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1185,6 +1696,24 @@
       <div id="hotel-modal-content">
         <!-- Preenchido via JS -->
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ZOOM DO QR CODE -->
+  <div id="qrZoomModal" class="qr-zoom-modal" onclick="window.closeQrZoom()">
+    <div class="qr-zoom-content" onclick="event.stopPropagation()">
+      <span class="qr-zoom-close" onclick="window.closeQrZoom()">&times;</span>
+      <h3 id="qrZoomTitle" class="qr-zoom-title"></h3>
+      <div class="qr-zoom-slider-container">
+        <button id="qrZoomPrevBtn" class="qr-zoom-arrow" onclick="window.navigateQrZoom(-1)">◀</button>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <img id="qrZoomImg" class="qr-zoom-img" src="" alt="QR Code Ampliado" style="margin-bottom:0;">
+          <div id="qrZoomCounter" class="qr-zoom-counter"></div>
+        </div>
+        <button id="qrZoomNextBtn" class="qr-zoom-arrow" onclick="window.navigateQrZoom(1)">▶</button>
+      </div>
+      <div id="qrZoomDesc" class="qr-zoom-desc"></div>
+      <a id="qrZoomDownloadBtn" class="btn-primary" style="display:inline-block; margin-top:16px; text-decoration:none; text-align:center; padding:10px 20px; font-weight:600; border-radius:8px;" href="" download="qrcode.png">📥 Baixar Arquivo / Imagem</a>
     </div>
   </div>
 
@@ -1441,28 +1970,100 @@
                 `;
               } else if (el.tipo === 'experiencia') {
                 temConteudo = true;
-                elementsHTML += `
-                  <div class="event-pill experience" style="border-left-color: var(--accent); display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;">
-                    <span>🎟️ <strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--accent);">(${el.horaPartida})</span>` : ''}</span>
-                    <span class="meta-badge" style="font-size: 11px; border: none; background: ${el.compradoHeian !== false ? '#e2f0d9; color: #385723' : '#f2f2f2; color: #7f7f7f'}">
+                const expVoucher = (clientLocalInfo.vouchers || []).find(v => {
+                  return v.atracaoNome === `experiencia:${el.nomeExp}` || (v.atracaoNome && v.atracaoNome.toLowerCase().includes(el.nomeExp.toLowerCase()));
+                });
+                
+                let clickAttr = '';
+                let vchIndicator = '';
+                let instrucaoAdicional = '';
+                if (expVoucher) {
+                  const safeNome = expVoucher.nome.replace(/'/g, "\\'");
+                  const safeDesc = (expVoucher.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'");
+                  const arqListJson = expVoucher.arquivos && expVoucher.arquivos.length > 0
+                    ? JSON.stringify(expVoucher.arquivos).replace(/'/g, "\\'").replace(/"/g, '&quot;')
+                    : JSON.stringify([{ id: 'legacy', url: expVoucher.url, fileName: expVoucher.fileName || expVoucher.nome }]).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                  const clickAction = expVoucher.tipo === 'qr_code' 
+                    ? `window.openQrZoom('${safeNome}', '${expVoucher.url}', '${safeDesc}', ${arqListJson}, 0)`
+                    : `window.rolarParaVoucher('${expVoucher.id}')`;
+                  
+                  clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: var(--accent); background: rgba(223, 183, 108, 0.1); color: var(--primary); font-weight: 700; flex-shrink:0; padding: 4px 10px;">🎟️ Ver Bilhete</span>`;
+                  
+                  if (el.instrucoesPosCompra) {
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>💡</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
+                  }
+                } else {
+                  vchIndicator = `
+                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
                       ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
                     </span>
+                  `;
+                  
+                  if (el.instrucoesPreCompra) {
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>⚠️</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
+                  }
+                }
+
+                elementsHTML += `
+                  <div class="event-pill experience" ${clickAttr}>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                      <span>🎟️ <strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--primary);">(${el.horaPartida})</span>` : ''}</span>
+                      ${vchIndicator}
+                    </div>
+                    ${instrucaoAdicional}
                   </div>
                 `;
               } else if (el.tipo === 'transporte') {
                 temConteudo = true;
+                const transVoucher = (clientLocalInfo.vouchers || []).find(v => {
+                  return v.atracaoNome === `transporte:${el.tipoTransporte}` || (v.atracaoNome && v.atracaoNome.toLowerCase().includes(el.tipoTransporte.toLowerCase()));
+                });
+                
+                let clickAttr = '';
+                let vchIndicator = '';
+                let instrucaoAdicional = '';
+                if (transVoucher) {
+                  const safeNome = transVoucher.nome.replace(/'/g, "\\'");
+                  const safeDesc = (transVoucher.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'");
+                  const arqListJson = transVoucher.arquivos && transVoucher.arquivos.length > 0
+                    ? JSON.stringify(transVoucher.arquivos).replace(/'/g, "\\'").replace(/"/g, '&quot;')
+                    : JSON.stringify([{ id: 'legacy', url: transVoucher.url, fileName: transVoucher.fileName || transVoucher.nome }]).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                  const clickAction = transVoucher.tipo === 'qr_code' 
+                    ? `window.openQrZoom('${safeNome}', '${transVoucher.url}', '${safeDesc}', ${arqListJson}, 0)`
+                    : `window.rolarParaVoucher('${transVoucher.id}')`;
+                  
+                  clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); color: #2563eb; font-weight: 700; flex-shrink:0; padding: 4px 10px;">🎟️ Ver Bilhete</span>`;
+                  
+                  if (el.instrucoesPosCompra) {
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>💡</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
+                  }
+                } else {
+                  vchIndicator = `
+                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
+                      ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
+                    </span>
+                  `;
+                  
+                  if (el.instrucoesPreCompra) {
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>⚠️</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
+                  }
+                }
+                
                 const rotaStr = el.cidadeOrigem || el.cidadeDestino 
                   ? `<div style="font-size: 11.5px; color: var(--ink-mid); margin-top: 2px;"><strong>${el.cidadeOrigem || ''}</strong> ${el.cidadeDestino ? `➔ <strong>${el.cidadeDestino}</strong>` : ''}${el.linha ? ` | Linha: ${el.linha}` : ''}${el.categoria ? ` (${el.categoria})` : ''}${el.tempo ? ` | ⏱ ${el.tempo}` : ''}</div>`
                   : '';
                 elementsHTML += `
-                  <div class="event-pill transport" style="border-left-color: #3b82f6; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 10px; width: 100%;">
+                  <div class="event-pill transport" ${clickAttr}>
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                       <span>🚄 <strong>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb;">(${el.horario})</span>` : ''}</span>
-                      <span class="meta-badge" style="font-size: 11px; border: none; background: ${el.compradoHeian !== false ? '#e2f0d9; color: #385723' : '#f2f2f2; color: #7f7f7f'}">
-                        ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
-                      </span>
+                      ${vchIndicator}
                     </div>
                     ${rotaStr}
+                    ${instrucaoAdicional}
                   </div>
                 `;
               }
@@ -1475,11 +2076,20 @@
           
           let dayCityText = dia.cidade ? ` • ${dia.cidade}` : '';
 
+          const diaVoucher = (clientLocalInfo.vouchers || []).find(v => v.atracaoNome === `dia:${index + 1}`);
+          let diaVchHtml = '';
+          if (diaVoucher) {
+            const clickAction = diaVoucher.tipo === 'qr_code'
+              ? `window.openQrZoom('${diaVoucher.nome.replace(/'/g, "\\'")}', '${diaVoucher.url}', '${(diaVoucher.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'")}')`
+              : `window.rolarParaVoucher('${diaVoucher.id}')`;
+            diaVchHtml = `<span onclick="event.stopPropagation(); ${clickAction}" style="margin-left: 10px; display:inline-flex; align-items:center; background:#10b98122; color:#10b981; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; cursor:pointer;" title="${diaVoucher.nome}">🎟️ Voucher</span>`;
+          }
+
           item.innerHTML = `
             <div class="timeline-dot"></div>
             <div class="timeline-card">
               <div class="timeline-header">
-                <h3 class="timeline-day-title">Dia ${index + 1} (${diaData})${dayCityText}</h3>
+                <h3 class="timeline-day-title">Dia ${index + 1} (${diaData})${dayCityText} ${diaVchHtml}</h3>
                 ${headerTag}
               </div>
               <div class="timeline-events-list">
@@ -1766,7 +2376,259 @@
       } else {
         paymentsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--ink-light);">Nenhum pagamento registrado no momento.</td></tr>';
       }
+
+      // 7. Renderizar Vouchers na Central
+      renderClientVouchers(clientLocalInfo.vouchers || []);
     }
+
+    // --- RENDERIZAR VOUCHERS NA CENTRAL ---
+    function renderClientVouchers(vouchers) {
+      const container = document.getElementById('vouchers-list-container');
+      if (!container) return;
+
+      container.innerHTML = '';
+      window.clientVouchersCache = vouchers || [];
+
+      if (!vouchers || vouchers.length === 0) {
+        container.innerHTML = `
+          <div class="info-card" style="grid-column: span 3; text-align:center; padding: 40px; color: var(--ink-mid); width: 100%;">
+            Não há ingressos ou vouchers disponíveis para sua viagem ainda.
+          </div>
+        `;
+        return;
+      }
+
+      vouchers.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'voucher-card';
+        card.id = `voucher-card-${v.id}`;
+        
+        let typeLabel = 'Reserva';
+        if (v.tipo === 'qr_code') typeLabel = 'QR Code';
+        else if (v.tipo === 'pdf') typeLabel = 'PDF';
+        else if (v.tipo === 'link') typeLabel = 'Link';
+        else if (v.tipo === 'instrucao') typeLabel = 'Instrução';
+
+        let assocLabel = '';
+        if (v.atracaoNome) {
+          if (v.atracaoNome.startsWith('dia:')) assocLabel = `📅 Associado ao Dia ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('atracao:')) assocLabel = `📍 Atração: ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('experiencia:')) assocLabel = `🎟️ Exp: ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('transporte:')) assocLabel = `🚄 Transp: ${v.atracaoNome.split(':')[1]}`;
+          else assocLabel = `🔗 ${v.atracaoNome}`;
+        }
+
+        let mediaHTML = '';
+        const vArquivos = v.arquivos && Array.isArray(v.arquivos) && v.arquivos.length > 0
+          ? v.arquivos
+          : (v.url ? [{ id: 'legacy', url: v.url, fileName: v.fileName || v.nome }] : []);
+
+        if (v.tipo === 'qr_code') {
+          if (vArquivos.length > 1) {
+            const itemsHtml = vArquivos.map((arq, idx) => {
+              const safeNome = v.nome.replace(/'/g, "\\'");
+              const safeDesc = (v.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'");
+              const arqListJson = JSON.stringify(vArquivos).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+              return `
+                <div class="voucher-gallery-item" onclick="window.openQrZoom('${safeNome}', '${arq.url}', '${safeDesc}', ${arqListJson}, ${idx})">
+                  <img src="${arq.url}" alt="Ingresso ${idx + 1}">
+                  <span class="voucher-gallery-item-label"># ${idx + 1}</span>
+                </div>
+              `;
+            }).join('');
+
+            mediaHTML = `
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📱 Ingressos (${vArquivos.length} pessoas)</span>
+                <div class="voucher-gallery">
+                  ${itemsHtml}
+                </div>
+              </div>
+            `;
+          } else if (vArquivos.length === 1) {
+            const arq = vArquivos[0];
+            const safeNome = v.nome.replace(/'/g, "\\'");
+            const safeDesc = (v.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'");
+            const arqListJson = JSON.stringify(vArquivos).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            mediaHTML = `
+              <div class="voucher-preview-container" onclick="window.openQrZoom('${safeNome}', '${arq.url}', '${safeDesc}', ${arqListJson}, 0)">
+                <img src="${arq.url}" alt="QR Code">
+                <div class="voucher-preview-overlay">🔍 Clique para Ampliar e Escanear</div>
+              </div>
+            `;
+          }
+        } else if (v.tipo === 'pdf') {
+          if (vArquivos.length > 0) {
+            mediaHTML = `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📄 Documentos PDF (${vArquivos.length})</span>
+                ${vArquivos.map((arq, idx) => {
+                  const downloadName = arq.fileName || `${v.nome}_${idx + 1}.pdf`;
+                  return `
+                    <div class="voucher-pdf-card" style="margin-bottom:0; padding:12px;">
+                      <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                        <span style="font-size:20px; flex-shrink:0;">📄</span>
+                        <div style="min-width:0; flex:1;">
+                          <div style="font-weight:600; font-size:12.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${downloadName}">${downloadName}</div>
+                          <div style="font-size:11px; color:var(--ink-light);">PDF #${idx + 1}</div>
+                        </div>
+                      </div>
+                      <a class="btn-primary" href="${arq.url}" download="${downloadName}" style="padding:6px 10px; font-size:11px; text-decoration:none; border-radius:6px; font-weight:600; flex-shrink:0;">📥 Baixar</a>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          }
+        } else if (v.tipo === 'link' && v.url) {
+          mediaHTML = `
+            <div style="text-align: center; margin-top: 4px;">
+              <a class="btn-primary" href="${v.url}" target="_blank" style="padding:8px 16px; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; border-radius:8px; font-weight:600; width: 100%; justify-content: center;">
+                🌐 Acessar Link Externo ↗
+              </a>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <span class="voucher-badge ${v.tipo}">${typeLabel}</span>
+          <h3 class="voucher-title">${v.nome}</h3>
+          
+          ${v.dataUso ? `<div class="voucher-meta-item">📅 &nbsp;Uso em: ${fmtDateBR(v.dataUso)}</div>` : ''}
+          ${assocLabel ? `<div class="voucher-meta-item">${assocLabel}</div>` : ''}
+          
+          ${mediaHTML}
+          
+          ${v.instrucao ? `
+            <div class="voucher-instruction-box">
+              <strong style="color:var(--primary); font-size:11.5px; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">💡 Instruções Específicas</strong>
+              ${v.instrucao}
+            </div>
+          ` : ''}
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Modal de Zoom de QR Code com navegação Slider
+    window.qrZoomState = {
+      title: '',
+      desc: '',
+      arquivos: [],
+      currentIndex: 0
+    };
+
+    window.openQrZoom = function(title, src, desc, arquivosList, indexInicial = 0) {
+      const modal = document.getElementById('qrZoomModal');
+      const modalTitle = document.getElementById('qrZoomTitle');
+      const modalDesc = document.getElementById('qrZoomDesc');
+      
+      if (!modal) return;
+
+      window.qrZoomState.title = title || 'Voucher';
+      window.qrZoomState.desc = desc || '';
+      window.qrZoomState.currentIndex = indexInicial;
+
+      if (arquivosList && Array.isArray(arquivosList) && arquivosList.length > 0) {
+        window.qrZoomState.arquivos = arquivosList;
+      } else {
+        window.qrZoomState.arquivos = [{ id: '1', url: src, fileName: title || 'Ingresso' }];
+      }
+
+      modalTitle.textContent = window.qrZoomState.title;
+      
+      if (window.qrZoomState.desc) {
+        modalDesc.style.display = 'block';
+        modalDesc.textContent = window.qrZoomState.desc;
+      } else {
+        modalDesc.style.display = 'none';
+      }
+
+      window.updateQrZoomContent();
+
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.updateQrZoomContent = function() {
+      const state = window.qrZoomState;
+      const file = state.arquivos[state.currentIndex];
+      
+      const modalImg = document.getElementById('qrZoomImg');
+      const counterEl = document.getElementById('qrZoomCounter');
+      const downloadBtn = document.getElementById('qrZoomDownloadBtn');
+      const prevBtn = document.getElementById('qrZoomPrevBtn');
+      const nextBtn = document.getElementById('qrZoomNextBtn');
+
+      if (modalImg && file) {
+        modalImg.src = file.url || '';
+        
+        if (state.arquivos.length > 1) {
+          if (counterEl) {
+            counterEl.style.display = 'block';
+            counterEl.textContent = `${state.currentIndex + 1} de ${state.arquivos.length} (Toque nas setas para passar)`;
+          }
+          if (prevBtn) prevBtn.style.display = 'flex';
+          if (nextBtn) nextBtn.style.display = 'flex';
+        } else {
+          if (counterEl) counterEl.style.display = 'none';
+          if (prevBtn) prevBtn.style.display = 'none';
+          if (nextBtn) nextBtn.style.display = 'none';
+        }
+
+        if (downloadBtn) {
+          downloadBtn.href = file.url || '';
+          const nameClean = (file.fileName || state.title || 'qrcode').replace(/[^a-zA-Z0-9.\-_]/g, '_');
+          downloadBtn.download = nameClean;
+          
+          if (file.url && (file.url.startsWith('data:application/pdf') || file.url.startsWith('data:application/octet-stream'))) {
+            downloadBtn.innerHTML = '📥 Baixar Documento PDF';
+          } else {
+            downloadBtn.innerHTML = '📥 Baixar Imagem';
+          }
+        }
+      }
+    };
+
+    window.navigateQrZoom = function(direction) {
+      const state = window.qrZoomState;
+      if (!state.arquivos || state.arquivos.length <= 1) return;
+
+      let newIndex = state.currentIndex + direction;
+      if (newIndex < 0) {
+        newIndex = state.arquivos.length - 1;
+      } else if (newIndex >= state.arquivos.length) {
+        newIndex = 0;
+      }
+
+      state.currentIndex = newIndex;
+      window.updateQrZoomContent();
+    };
+
+    window.closeQrZoom = function() {
+      const modal = document.getElementById('qrZoomModal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    };
+
+    window.rolarParaVoucher = function(voucherId) {
+      switchTab({ currentTarget: document.querySelector('.tab-btn[onclick*="tab-vouchers"]') }, 'tab-vouchers');
+      setTimeout(() => {
+        const vCard = document.getElementById(`voucher-card-${voucherId}`);
+        if (vCard) {
+          vCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          vCard.style.outline = '3px solid var(--accent)';
+          vCard.style.outlineOffset = '2px';
+          setTimeout(() => {
+            vCard.style.transition = 'outline 0.8s';
+            vCard.style.outline = 'none';
+          }, 2000);
+        }
+      }, 100);
+    };
 
     // --- LÓGICA DO POPOVER E CHIPS DE ATRAÇÃO NA ÁREA DO CLIENTE ---
     let atracaoMap = new Map();
@@ -1790,14 +2652,25 @@
       const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get('id');
       
-      if (!clientId) {
+      let fetchUrl = '';
+      if (clientId) {
+        fetchUrl = `/api/public/client-data/${clientId}`;
+      } else {
+        const pathParts = window.location.pathname.split('/');
+        if (pathParts.length >= 3 && pathParts[1] === 'cliente') {
+          const clientSlug = pathParts[2];
+          fetchUrl = `/api/public/client-data/slug/${clientSlug}`;
+        }
+      }
+      
+      if (!fetchUrl) {
         document.getElementById('loader').style.display = 'none';
         document.getElementById('error-screen').style.display = 'block';
         return;
       }
 
       try {
-        const response = await fetch(`/api/public/client-data/${clientId}`);
+        const response = await fetch(fetchUrl);
         if (!response.ok) {
           throw new Error('Falha ao obter dados do cliente');
         }
@@ -2002,16 +2875,40 @@
         if (popFunc) popFunc.style.display = 'none';
       }
 
+      const popVch = document.getElementById('popVoucher');
+      const popVchInst = document.getElementById('popVoucherInstrucao');
+      const popVchBtn = document.getElementById('popVoucherBtn');
+      
+      if (popVch) {
+        popVch.style.display = 'none';
+        if (window.clientVouchersCache) {
+          const voucher = window.clientVouchersCache.find(v => {
+            if (!v.atracaoNome) return false;
+            const targetVal = v.atracaoNome.toLowerCase();
+            return targetVal === `atracao:${nome.toLowerCase()}` || targetVal.includes(nome.toLowerCase());
+          });
+
+          if (voucher) {
+            popVch.style.display = 'block';
+            popVchInst.textContent = voucher.instrucao ? voucher.instrucao.substring(0, 100) + (voucher.instrucao.length > 100 ? '...' : '') : 'Acesse seu QR code/voucher.';
+            
+            popVchBtn.onclick = (event) => {
+              event.stopPropagation();
+              if (voucher.tipo === 'qr_code') {
+                window.openQrZoom(voucher.nome, voucher.url, voucher.instrucao);
+              } else {
+                window.rolarParaVoucher(voucher.id);
+              }
+            };
+          }
+        }
+      }
+
       const rect = chip.getBoundingClientRect();
       let topPos = rect.bottom + 8;
       let leftPos = rect.left;
       
-      // Abre para cima se não couber embaixo (considerando a altura adicional do popover com o alerta)
-      if (topPos + 350 > window.innerHeight) {
-        topPos = rect.top - 360;
-      }
-      
-      if (leftPos + 320 > window.innerWidth) {
+if (leftPos + 320 > window.innerWidth) {
         leftPos = window.innerWidth - 340;
       }
       if (leftPos < 10) leftPos = 10;
@@ -2021,17 +2918,30 @@
       popover.classList.add('visible');
     }
 
-    function hidePopover() {
+    window.popoverFixed = false;
+
+    function hidePopover(force = false) {
+      if (window.popoverFixed && !force) return;
       const popover = document.getElementById('atracaoPopover');
       if (popover) popover.classList.remove('visible');
+      window.popoverFixed = false;
+    }
+
+    function showPopoverClick(e) {
+      e.stopPropagation();
+      showPopover(e);
+      window.popoverFixed = true;
     }
 
     function attachChipEvents() {
       document.querySelectorAll('.chip-atracao').forEach(chip => {
         chip.removeEventListener('mouseenter', showPopover);
         chip.removeEventListener('mouseleave', hidePopover);
+        chip.removeEventListener('click', showPopoverClick);
+        
         chip.addEventListener('mouseenter', showPopover);
         chip.addEventListener('mouseleave', hidePopover);
+        chip.addEventListener('click', showPopoverClick);
       });
     }
 
@@ -2042,6 +2952,7 @@
         popover.className = 'atracao-popover';
         popover.id = 'atracaoPopover';
         popover.innerHTML = `
+          <span class="popover-close" id="popClose" onclick="event.stopPropagation(); window.hidePopover(true)" style="position:absolute; top:8px; right:12px; font-size:16px; font-weight:bold; color:var(--ink-light); cursor:pointer; user-select:none; z-index:10;">✕</span>
           <img class="popover-foto" id="popFoto" src="" alt="Atração" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; display: none;">
           <div class="popover-bairro" id="popBairro">Bairro</div>
           <div class="popover-titulo" id="popTitulo">Nome da Atração</div>
@@ -2054,10 +2965,25 @@
             <span style="font-weight:700;">⚠️ Funcionamento:</span>
             <span id="popFuncionamentoTexto"></span>
           </div>
+          <div class="popover-voucher" id="popVoucher" style="display:none; margin-top:10px; padding:10px; border-radius:8px; background:#e6f7ed; border:1px solid #a7f3d0; text-align:left;">
+            <div style="font-weight:700; font-size:12px; color:#065f46; display:flex; align-items:center; gap:4px; margin-bottom:4px;">
+              <span>🎟️ Ingresso / Voucher</span>
+            </div>
+            <div id="popVoucherInstrucao" style="font-size:11.5px; color:#065f46; margin-bottom:6px; white-space:pre-line; max-height: 80px; overflow-y: auto;"></div>
+            <button id="popVoucherBtn" style="width:100%; border:none; background:#10b981; color:white; padding:6px 10px; border-radius:6px; font-weight:600; font-size:11.5px; cursor:pointer;">Visualizar Ingresso</button>
+          </div>
         `;
         document.body.appendChild(popover);
       }
     }
+
+    // Fechar popover clicando fora
+    document.addEventListener('click', (e) => {
+      const pop = document.getElementById('atracaoPopover');
+      if (pop && pop.classList.contains('visible') && !pop.contains(e.target) && !e.target.classList.contains('chip-atracao')) {
+        window.hidePopover(true);
+      }
+    });
 
     window.openHotelDetail = function(hotelId) {
       const hotel = window.hoteisCache ? window.hoteisCache.find(h => h.id == hotelId) : null;

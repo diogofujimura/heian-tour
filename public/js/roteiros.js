@@ -584,9 +584,32 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
   const rotas = Array.isArray(rotasData) ? rotasData : (rotasData.dias || []);
   if (rotas.length === 0) { timeline.innerHTML = '<div class="empty-state">Este roteiro não possui dias cadastrados.</div>'; return; }
   
+  const clienteId = rotasData.notionClienteId || window.clienteAtualVisualizado || '';
+
   timeline.innerHTML = '';
   rotas.forEach((rotaOrig, index) => {
     const rota = migrarDiaParaNovaEstrutura(rotaOrig);
+    
+    // Tenta obter a data correspondente ao dia com base na data de início do cliente
+    let dataDoDiaStr = '';
+    if (typeof notionClients !== 'undefined' && clienteId) {
+      const cliente = notionClients.find(c => c.id === clienteId);
+      if (cliente && cliente.dataInicio) {
+        try {
+          const dt = new Date(cliente.dataInicio + 'T00:00:00');
+          if (!isNaN(dt.getTime())) {
+            dt.setDate(dt.getDate() + index);
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const d = String(dt.getDate()).padStart(2, '0');
+            dataDoDiaStr = `${y}-${m}-${d}`;
+          }
+        } catch(err) {
+          console.error("Erro ao calcular data do dia:", err);
+        }
+      }
+    }
+
     const card = document.createElement('div');
     card.className = 'dia-card';
     card.style.marginBottom = '24px';
@@ -622,24 +645,91 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         const h = el.horario ? `${el.horario}` : '';
         const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
         
+        let voucherBadge = '';
+        if (el.compradoHeian !== false && el.tipoTransporte) {
+          const v = window.currentEditingVouchers ? window.currentEditingVouchers.find(x => {
+            if (!x.atracaoNome) return false;
+            const target = x.atracaoNome.toLowerCase();
+            return target === `transporte:${el.tipoTransporte.toLowerCase()}` || target.includes(el.tipoTransporte.toLowerCase());
+          }) : null;
+
+          if (v) {
+            const editAction = `window.uploadRapidoVoucherAdmin('${clienteId}', '${(v.atracaoNome || '').replace(/'/g, "\\'")}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Ingresso anexado. Clique para editar.">🎟️ Ingresso Ok</span>`;
+          } else {
+            const suggestionsName = `Bilhete - ${el.tipoTransporte}`;
+            const suggestionsDate = el.data || dataDoDiaStr || '';
+            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'transporte:${el.tipoTransporte.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Falta o bilhete! Clique para upload rápido.">⚠️ Sem Ingresso</span>`;
+          }
+        } else if (el.compradoHeian !== false) {
+          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>`;
+        }
+        
+        let instrucaoAdicional = '';
+        if (v) {
+          if (el.instrucoesPosCompra) {
+            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">💡 Pós-compra: ${el.instrucoesPosCompra}</div>`;
+          }
+        } else {
+          if (el.instrucoesPreCompra) {
+            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">⚠️ Pré-compra: ${el.instrucoesPreCompra}</div>`;
+          }
+        }
+        
         return `
           <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
             <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
               <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${voucherBadge}</div>
+            ${instrucaoAdicional}
           </div>`;
       } else if (el.tipo === 'experiencia') {
         const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
         const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
+        
+        let voucherBadge = '';
+        if (el.compradoHeian !== false && el.nomeExp) {
+          const v = window.currentEditingVouchers ? window.currentEditingVouchers.find(x => {
+            if (!x.atracaoNome) return false;
+            const target = x.atracaoNome.toLowerCase();
+            return target === `experiencia:${el.nomeExp.toLowerCase()}` || target.includes(el.nomeExp.toLowerCase()) || target === `atracao:${el.nomeExp.toLowerCase()}`;
+          }) : null;
+
+          if (v) {
+            const editAction = `window.uploadRapidoVoucherAdmin('${clienteId}', '${(v.atracaoNome || '').replace(/'/g, "\\'")}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Ingresso anexado. Clique para editar.">🎟️ Ingresso Ok</span>`;
+          } else {
+            const suggestionsName = `Ingresso - ${el.nomeExp}`;
+            const suggestionsDate = el.dataDoTour || el.data || dataDoDiaStr || '';
+            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'experiencia:${el.nomeExp.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Falta o ingresso! Clique para upload rápido.">⚠️ Sem Ingresso</span>`;
+          }
+        } else if (el.compradoHeian !== false) {
+          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>`;
+        }
+
+        let instrucaoAdicional = '';
+        if (v) {
+          if (el.instrucoesPosCompra) {
+            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">💡 Pós-compra: ${el.instrucoesPosCompra}</div>`;
+          }
+        } else {
+          if (el.instrucoesPreCompra) {
+            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">⚠️ Pré-compra: ${el.instrucoesPreCompra}</div>`;
+          }
+        }
+
         return `
           <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
             <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
               <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${voucherBadge}</div>
+            ${instrucaoAdicional}
           </div>`;
       } else if (el.tipo === 'sequencia') {
         const tituloRota = el.nomeDaRota || 'Sequência';
@@ -1403,6 +1493,16 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 </label>
               </div>
             </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+              <div class="field" style="margin:0">
+                <label style="font-size:10px;color:var(--ink-mid)">Aviso Pré-Compra (Ex: comprar com 1 mês de antecedência)</label>
+                <input type="text" placeholder="Instrução pré-compra..." value="${el.instrucoesPreCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPreCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
+              </div>
+              <div class="field" style="margin:0">
+                <label style="font-size:10px;color:var(--ink-mid)">Instruções Pós-Compra (Ex: como pegar na estação)</label>
+                <input type="text" placeholder="Instrução pós-compra..." value="${el.instrucoesPosCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPosCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
+              </div>
+            </div>
             ${el.tipoTransporte ? `<div style="font-size:11px; margin-top:8px; color:var(--text-sec)">Selecionado: <strong>${el.tipoTransporte}</strong> (${el.linha}) - ${el.categoria} ${el.tempo ? `<strong style="color:var(--gold-dk); margin-left:8px;">⏱ ${el.tempo}</strong>` : ''}</div>` : ''}
           </div>`;
       } else if (el.tipo === 'experiencia') {
@@ -1443,6 +1543,16 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
                   <input type="checkbox" ${el.compradoHeian !== false ? 'checked' : ''} onchange="updElementoEdit(${idx}, ${eIdx}, 'compradoHeian', this.checked)" style="margin-right:6px"> EMITIDO P/ HEIAN
                 </label>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+              <div class="field" style="margin:0">
+                <label style="font-size:10px;color:var(--ink-mid)">Aviso Pré-Compra (Ex: cotação abre dia X)</label>
+                <input type="text" placeholder="Instrução pré-compra..." value="${el.instrucoesPreCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPreCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
+              </div>
+              <div class="field" style="margin:0">
+                <label style="font-size:10px;color:var(--ink-mid)">Instruções Pós-Compra (Ex: ponto de encontro detalhado)</label>
+                <input type="text" placeholder="Instrução pós-compra..." value="${el.instrucoesPosCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPosCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
               </div>
             </div>
             ${el.nomeExp ? `<div style="font-size:11px; margin-top:8px; color:var(--text-sec)">Selecionado: <strong>${el.nomeExp}</strong></div>` : ''}

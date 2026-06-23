@@ -1410,6 +1410,17 @@ app.get('/api/hoteis', async (req, res) => {
   }
 });
 
+app.get('/api/templates-vouchers', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'templates_vouchers').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : []);
+  } catch(e) {
+    console.error('Error getting templates-vouchers:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
 app.post('/api/hoteis', async (req, res) => {
   try {
     const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
@@ -1900,11 +1911,12 @@ app.post('/api/sync', async (req, res) => {
 
     const db = {
       config,
-      transportes: [],
-      experiencias: [],
-      atracoes: [],
-      hoteis: [],
-      rotas: {}
+      transportes: null,
+      experiencias: null,
+      atracoes: null,
+      hoteis: null,
+      rotas: null,
+      templates_vouchers: null
     };
 
   // Busca uma aba via gviz usando o range completo (inclui linhas em branco)
@@ -1997,7 +2009,8 @@ app.post('/api/sync', async (req, res) => {
         })
         .filter(Boolean);
 
-      if (transportes.length > 0) { db.transportes = transportes; nTransp = transportes.length; }
+      db.transportes = transportes;
+      nTransp = transportes.length;
     } catch (e) { console.error('Erro aba transportes:', e.message); }
 
     // ── EXPERIÊNCIAS (aba "BaseEX") ──────────────────────────────────
@@ -2029,7 +2042,8 @@ app.post('/api/sync', async (req, res) => {
         })
         .filter(Boolean);
 
-      if (experiencias.length > 0) { db.experiencias = experiencias; nExp = experiencias.length; }
+      db.experiencias = experiencias;
+      nExp = experiencias.length;
     } catch (e) { console.error('Erro aba experiências:', e.message); }
 
     // ── ATRAÇÕES (aba "Atracoes") ────────────────────────────────────
@@ -2038,21 +2052,29 @@ app.post('/api/sync', async (req, res) => {
       const rows = table.rows || [];
 
       if (rows.length > 0) {
-        // Encontra a linha de cabeçalho (procura nas primeiras 5 linhas)
-        let headerIdx = 0;
+        // Encontra a linha de cabeçalho
+        let headerIdx = -1;
         let foundHeader = false;
-        for (let i = 0; i < Math.min(5, rows.length); i++) {
-          const cells = rows[i].c || [];
-          const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
-          if (rowVals.some(v => v.includes('atração') || v.includes('atracao') || v.includes('atrações') || v.includes('atracoes') || v.includes('nome'))) {
-            headerIdx = i;
-            foundHeader = true;
-            break;
+        let headers = [];
+
+        // Tenta ler dos 'cols' do gviz primeiro
+        if (table.cols && table.cols.length > 0 && table.cols[0].label) {
+          headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
+          foundHeader = true;
+        } else {
+          for (let i = 0; i < Math.min(5, rows.length); i++) {
+            const cells = rows[i].c || [];
+            const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
+            if (rowVals.some(v => v.includes('atração') || v.includes('atracao') || v.includes('atrações') || v.includes('atracoes') || v.includes('nome'))) {
+              headerIdx = i;
+              foundHeader = true;
+              headers = rowVals;
+              break;
+            }
           }
         }
 
-        const headerCells = rows[headerIdx]?.c || [];
-        const headerVals = headerCells.map(cellVal).map(v => v.toLowerCase());
+        const headerVals = headers;
 
         const getIdx = (keywords, defaultVal) => {
           let idx = headerVals.findIndex(h => keywords.some(k => h === k));
@@ -2074,7 +2096,7 @@ app.post('/api/sync', async (req, res) => {
         const idxManutencaoMotivo = getIdx(['manutencaomotivo', 'manutencao_motivo', 'motivo', 'manutencao motivo'], 9);
         const idxFoto = getIdx(['foto (url)', 'foto', 'foto_url', 'imagem', 'image'], 10);
 
-        const dataRows = foundHeader ? rows.slice(headerIdx + 1) : rows;
+        const dataRows = (foundHeader && headerIdx >= 0) ? rows.slice(headerIdx + 1) : rows;
 
         const atracoes = dataRows
           .map((r, i) => {
@@ -2124,10 +2146,8 @@ app.post('/api/sync', async (req, res) => {
           })
           .filter(Boolean);
 
-        if (atracoes.length > 0) {
-          db.atracoes = atracoes;
-          nAtracoes = atracoes.length;
-        }
+        db.atracoes = atracoes;
+        nAtracoes = atracoes.length;
       }
     } catch (e) { console.error('Erro aba atrações:', e.message); }
 
@@ -2156,8 +2176,9 @@ app.post('/api/sync', async (req, res) => {
         }
       }
       if (diasImportados.length > 0) {
-        if (!db.rotas) db.rotas = {};
-        db.rotas['[PLANILHA] Base de Rotas'] = { dias: diasImportados };
+        db.rotas = { '[PLANILHA] Base de Rotas': { dias: diasImportados } };
+      } else {
+        db.rotas = { '[PLANILHA] Base de Rotas': { dias: [] } };
       }
     } catch (e) { console.error('Erro aba Rotas:', e.message); }
 
@@ -2178,21 +2199,29 @@ app.post('/api/sync', async (req, res) => {
       const rows = table.rows || [];
 
       if (rows.length > 0) {
-        // Encontra a linha de cabeçalho (procura nas primeiras 5 linhas)
-        let headerIdx = 0;
+        // Encontra a linha de cabeçalho
+        let headerIdx = -1;
         let foundHeader = false;
-        for (let i = 0; i < Math.min(5, rows.length); i++) {
-          const cells = rows[i].c || [];
-          const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
-          if (rowVals.some(v => v.includes('hotel') || v.includes('hotéis') || v.includes('hoteis') || v.includes('nome'))) {
-            headerIdx = i;
-            foundHeader = true;
-            break;
+        let headers = [];
+
+        // Tenta ler dos 'cols' do gviz primeiro
+        if (table.cols && table.cols.length > 0 && table.cols[0].label) {
+          headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
+          foundHeader = true;
+        } else {
+          for (let i = 0; i < Math.min(5, rows.length); i++) {
+            const cells = rows[i].c || [];
+            const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
+            if (rowVals.some(v => v.includes('hotel') || v.includes('hotéis') || v.includes('hoteis') || v.includes('nome'))) {
+              headerIdx = i;
+              foundHeader = true;
+              headers = rowVals;
+              break;
+            }
           }
         }
 
-        const headerCells = rows[headerIdx]?.c || [];
-        const headerVals = headerCells.map(cellVal).map(v => v.toLowerCase());
+        const headerVals = headers;
 
         const getIdx = (keywords, defaultVal) => {
           let idx = headerVals.findIndex(h => keywords.some(k => h === k));
@@ -2209,7 +2238,7 @@ app.post('/api/sync', async (req, res) => {
         const idxComodidades = getIdx(['comodidades', 'tags', 'facilidades', 'comodidade'], 5);
         const idxId = getIdx(['id'], 6);
 
-        const dataRows = foundHeader ? rows.slice(headerIdx + 1) : rows;
+        const dataRows = (foundHeader && headerIdx >= 0) ? rows.slice(headerIdx + 1) : rows;
 
         const hoteis = dataRows
           .map((r, i) => {
@@ -2229,34 +2258,106 @@ app.post('/api/sync', async (req, res) => {
           })
           .filter(Boolean);
 
-        if (hoteis.length > 0) {
-          db.hoteis = hoteis;
-          nHoteis = hoteis.length;
-        }
+        db.hoteis = hoteis;
+        nHoteis = hoteis.length;
       }
     } catch (e) { console.error('Erro aba hotéis:', e.message); }
+
+    // ── MODELOS DE INSTRUÇÕES DE VOUCHERS (aba "ModelosVouchers") ─────────
+    let nTemplatesVouchers = 0;
+    try {
+      const abaV = config.sheets_aba_instrucoes_vouchers || 'ModelosVouchers';
+      const table = await fetchAba(abaV);
+      const rows = table.rows || [];
+
+      if (rows.length > 0) {
+        // Encontra a linha de cabeçalho
+        let headerIdx = -1;
+        let foundHeader = false;
+        let headers = [];
+
+        // Tenta ler dos 'cols' do gviz primeiro
+        if (table.cols && table.cols.length > 0 && table.cols[0].label) {
+          headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
+          foundHeader = true;
+        } else {
+          for (let i = 0; i < Math.min(5, rows.length); i++) {
+            const cells = rows[i].c || [];
+            const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
+            if (rowVals.some(v => v.includes('modelo') || v.includes('titulo') || v.includes('título') || v.includes('chave') || v.includes('item'))) {
+              headerIdx = i;
+              foundHeader = true;
+              headers = rowVals;
+              break;
+            }
+          }
+        }
+
+        const headerVals = headers;
+
+        const getIdx = (keywords, defaultVal) => {
+          let idx = headerVals.findIndex(h => keywords.some(k => h === k));
+          if (idx >= 0) return idx;
+          idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
+          return idx >= 0 ? idx : defaultVal;
+        };
+
+        const idxTitulo = getIdx(['título do modelo', 'titulo do modelo', 'modelo', 'titulo', 'título', 'chave', 'item'], 0);
+        const idxInstrucoes = getIdx(['instruções padrão', 'instrucoes padrao', 'instruções', 'instrucoes', 'texto', 'descritivo', 'descrição', 'descricao'], 1);
+
+        const dataRows = (foundHeader && headerIdx >= 0) ? rows.slice(headerIdx + 1) : rows;
+
+        const templatesVouchers = dataRows
+          .map((r, i) => {
+            const c = r.c || [];
+            const titulo = cellVal(c[idxTitulo]);
+            if (!titulo) return null;
+
+            return {
+              id: String(i + 1),
+              titulo,
+              instrucoes: cellVal(c[idxInstrucoes]) || ''
+            };
+          })
+          .filter(Boolean);
+
+        db.templates_vouchers = templatesVouchers;
+        nTemplatesVouchers = templatesVouchers.length;
+      }
+    } catch (e) {
+      console.warn('Aba de Modelos de Vouchers não encontrada ou vazia:', e.message);
+    }
 
 
     db.config.ultima_sincronizacao = new Date().toISOString();
     
-    // Grava apenas as tabelas alteradas em paralelo
+    // Grava apenas as tabelas alteradas em paralelo (apenas as que foram lidas sem erros)
     const syncPromises = [
-      supabase.from('config').upsert({ id: 'app_config', data: db.config || {} }).then(r => { if (r.error) throw r.error; }),
-      supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] }).then(r => { if (r.error) throw r.error; }),
-      supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] }).then(r => { if (r.error) throw r.error; }),
-      supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] }).then(r => { if (r.error) throw r.error; }),
-      supabase.from('config').upsert({ id: 'hoteis', data: db.hoteis || [] }).then(r => { if (r.error) throw r.error; })
+      supabase.from('config').upsert({ id: 'app_config', data: db.config || {} }).then(r => { if (r.error) throw r.error; })
     ];
-    
-    if (db.rotas?.['[PLANILHA] Base de Rotas']?.dias) {
-      syncPromises.push(
-        supabase.from('rotas_base').upsert({ id: 'base', data: db.rotas['[PLANILHA] Base de Rotas'].dias }).then(r => { if (r.error) throw r.error; })
-      );
+
+    if (db.transportes !== null) {
+      syncPromises.push(supabase.from('config').upsert({ id: 'transportes', data: db.transportes }).then(r => { if (r.error) throw r.error; }));
+    }
+    if (db.experiencias !== null) {
+      syncPromises.push(supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias }).then(r => { if (r.error) throw r.error; }));
+    }
+    if (db.atracoes !== null) {
+      syncPromises.push(supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes }).then(r => { if (r.error) throw r.error; }));
+    }
+    if (db.hoteis !== null) {
+      syncPromises.push(supabase.from('config').upsert({ id: 'hoteis', data: db.hoteis }).then(r => { if (r.error) throw r.error; }));
+    }
+    if (db.templates_vouchers !== null) {
+      syncPromises.push(supabase.from('config').upsert({ id: 'templates_vouchers', data: db.templates_vouchers }).then(r => { if (r.error) throw r.error; }));
+    }
+    if (db.rotas !== null && db.rotas['[PLANILHA] Base de Rotas']?.dias) {
+      syncPromises.push(supabase.from('rotas_base').upsert({ id: 'base', data: db.rotas['[PLANILHA] Base de Rotas'].dias }).then(r => { if (r.error) throw r.error; }));
     }
     
     await Promise.all(syncPromises);
 
-    res.json({ ok: true, ultima_sincronizacao: db.config.ultima_sincronizacao, nTransp, nExp, nAtracoes, nHoteis });
+    res.json({ ok: true, ultima_sincronizacao: db.config.ultima_sincronizacao, nTransp, nExp, nAtracoes, nHoteis, nTemplatesVouchers });
 
   } catch (err) {
     console.error('Erro no sync:', err);
@@ -4479,243 +4580,341 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
   }
 });
 
+// Cache e funções auxiliares para URLs amigáveis de Clientes
+let slugToIdCache = {};
+let lastCacheUpdate = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+function gerarSlug(text) {
+  if (!text) return '';
+  return text.toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-')
+    .trim();
+}
+
+async function getClientDataHelper(clientId) {
+  const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
+  const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+
+  if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
+    throw new Error('Configuração do Notion incompleta no arquivo .env.');
+  }
+
+  // 1. Buscar dados do cliente no Notion
+  const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28'
+    }
+  });
+
+  if (!notionClientRes.ok) {
+    throw new Error('Cliente não encontrado no Notion.');
+  }
+
+  const clientPage = await notionClientRes.json();
+  const p = clientPage.properties;
+
+  const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
+  const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
+  const getNumber = (prop) => prop?.number || 0;
+  const getSelect = (prop) => prop?.select?.name || '';
+  const getDateStart = (prop) => prop?.date?.start || '';
+  const getDateEnd = (prop) => prop?.date?.end || '';
+  const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+  const getFormulaString = (prop) => prop?.formula?.string || '';
+  const getRollupNumber = (prop) => prop?.rollup?.number || 0;
+
+  const clientInfo = {
+    id: clientPage.id,
+    nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
+    status: getSelect(p['Status do Cliente'] || p['Status']),
+    adultos: getNumber(p['Qtd Adultos']),
+    criancas: getNumber(p['Qtd Crianças']),
+    vooChegada: getRichText(p['Voo de Chegada']),
+    vooPartida: getRichText(p['Voo de Partida']),
+    dataInicio: getDateStart(p['Período da Viagem']),
+    dataFim: getDateEnd(p['Período da Viagem']),
+    hotel: getRichText(p['Hotel']),
+    viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+    briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
+    valorTotal: getNumber(p['Valor Total']),
+    totalPago: getRollupNumber(p['Total Pago']),
+    saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+    statusPagamento: getFormulaString(p['Status de pagamento'])
+  };
+
+  // 2. Buscar Entradas (pagamentos confirmados) do cliente no Notion
+  const entradasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_ENTRADAS_DB_ID}/query`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      filter: {
+        property: 'Cliente (Relação)',
+        relation: {
+          contains: clientId
+        }
+      }
+    })
+  });
+
+  let payments = [];
+  if (entradasRes.ok) {
+    const entradasData = await entradasRes.json();
+    payments = (entradasData.results || []).map(item => {
+      const ep = item.properties;
+      return {
+        id: item.id,
+        descricao: ep['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada',
+        valor: ep['Valor (JPY)']?.number || 0,
+        data: ep['Data do pagamento']?.date?.start || '',
+        moeda: ep['Moeda Original']?.select?.name || 'JPY'
+      };
+    }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  }
+
+  // 3. Buscar cotação local (orcamento) no Supabase
+  const { data: orcamentos } = await supabase.from('orcamentos').select('data');
+  let quote = null;
+  if (orcamentos && orcamentos.length > 0) {
+    const matched = orcamentos.find(o => {
+      if (!o.data) return false;
+      if (o.data.notionClienteId === clientId) return true;
+      if (clientInfo.nome) {
+        const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+        if (o.data.cliente?.nome) {
+          const orcClientName = o.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+          if (clientNameNormalized === orcClientName || clientNameNormalized.includes(orcClientName) || orcClientName.includes(clientNameNormalized)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+    if (matched && matched.data) {
+      const o = matched.data;
+      const sanitizeTours = (tours) => (tours || []).map(t => ({
+        id: t.id,
+        data: t.data,
+        valor: Number(t.valor) || 0,
+        duracao: t.duracao || '',
+        descricao: t.descricao || '',
+        pontos: t.pontos || '',
+        observacao: t.observacao || ''
+      }));
+      const sanitizeTransportes = (trans) => (trans || []).map(t => ({
+        id: t.id,
+        data: t.data,
+        descricao: t.descricao || '',
+        preco: Number(t.preco) || 0,
+        precoInfantil: Number(t.precoInfantil) || 0,
+        adultos: Number(t.adultos) || 0,
+        criancas: Number(t.criancas) || 0,
+        taxaAtiva: !!t.taxaAtiva,
+        taxaTipo: t.taxaTipo || 'pessoa',
+        taxaValor: Number(t.taxaValor) || 0,
+        compradoHeian: t.compradoHeian !== false,
+        observacao: t.observacao || ''
+      }));
+      const sanitizeExperiencias = (exps) => (exps || []).map(e => ({
+        id: e.id,
+        data: e.data,
+        nome: e.nome || '',
+        pessoas: Number(e.pessoas) || 1,
+        preco: Number(e.preco) || 0,
+        taxaAtiva: !!e.taxaAtiva,
+        taxaTipo: e.taxaTipo || 'pessoa',
+        taxaValor: Number(e.taxaValor) || 0,
+        compradoHeian: e.compradoHeian !== false,
+        observacao: e.observacao || '',
+        descricao: e.descricao || ''
+      }));
+      const sanitizeItens = (items) => (items || []).map(i => ({
+        data: i.data,
+        nome: i.nome,
+        valor: Number(i.valor) || 0
+      }));
+
+      quote = {
+        tours: sanitizeTours(o.tours),
+        transportes: sanitizeTransportes(o.transportes),
+        experiencias: sanitizeExperiencias(o.experiencias),
+        itensAdicionais: sanitizeItens(o.itensAdicionais),
+        consultoria: {
+          ativa: o.consultoria?.ativa || false,
+          valor: Number(o.consultoria?.valor) || 0,
+          descricao: o.consultoria?.descricao || ''
+        }
+      };
+    }
+  }
+
+  // 4. Buscar roteiro local no Supabase
+  const { data: roteiros } = await supabase.from('roteiros').select('*');
+  let itinerary = null;
+  if (roteiros && roteiros.length > 0) {
+    const matched = roteiros.find(r => {
+      if (!r.data) return false;
+      if (r.data.notionClienteId === clientId || r.data.cliente?.notionClienteId === clientId) return true;
+      if (clientInfo.nome) {
+        const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+        if (r.data.cliente?.nome) {
+          const rotClientName = r.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
+          if (clientNameNormalized === rotClientName || clientNameNormalized.includes(rotClientName) || rotClientName.includes(clientNameNormalized)) {
+            return true;
+          }
+        }
+        if (r.nome) {
+          const rotNameClean = r.nome.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
+          if (clientNameNormalized === rotNameClean || clientNameNormalized.includes(rotNameClean) || rotNameClean.includes(clientNameNormalized)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+    if (matched && matched.data) {
+      const r = matched.data;
+      const sanitizedDays = (r.dias || []).map(d => {
+        const sanitizedElements = (d.elementos || []).map(el => {
+          const { valorCusto, comissao, ...cleanEl } = el;
+          return cleanEl;
+        });
+        return {
+          data: d.data,
+          cidade: d.cidade,
+          tourGuiado: d.tourGuiado,
+          elementos: sanitizedElements
+        };
+      });
+      itinerary = {
+        nome: r.nome,
+        dias: sanitizedDays
+      };
+    }
+  }
+
+  // 5. Buscar Ficha Local (Supabase clientes_locais)
+  const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', clientId).single();
+  const clientLocalInfo = localData && localData.data ? localData.data : { estadias: [], viajantes: [] };
+
+  // 6. Buscar lista de Hotéis ricos cadastrados no Supabase
+  let hoteis = [];
+  try {
+    const { data: cfgHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    if (cfgHoteis && cfgHoteis.data) {
+      hoteis = cfgHoteis.data;
+    }
+  } catch (e) {
+    console.error('Erro ao buscar hotéis no Supabase:', e.message);
+  }
+
+  return {
+    clientInfo,
+    payments,
+    quote,
+    itinerary,
+    clientLocalInfo,
+    hoteis
+  };
+}
+
+app.get('/cliente/:slug', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
+});
+
 app.get('/api/public/client-data/:clientId', async (req, res) => {
   try {
     const { clientId } = req.params;
-    const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
-    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
-
-    if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
-      return res.status(400).json({ error: 'Configuração do Notion incompleta no arquivo .env.' });
-    }
-
-    // 1. Buscar dados do cliente no Notion
-    const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28'
-      }
-    });
-
-    if (!notionClientRes.ok) {
-      return res.status(notionClientRes.status).json({ error: 'Cliente não encontrado no Notion.' });
-    }
-
-    const clientPage = await notionClientRes.json();
-    const p = clientPage.properties;
-
-    const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
-    const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
-    const getNumber = (prop) => prop?.number || 0;
-    const getSelect = (prop) => prop?.select?.name || '';
-    const getDateStart = (prop) => prop?.date?.start || '';
-    const getDateEnd = (prop) => prop?.date?.end || '';
-    const getFormulaNumber = (prop) => prop?.formula?.number || 0;
-    const getFormulaString = (prop) => prop?.formula?.string || '';
-    const getRollupNumber = (prop) => prop?.rollup?.number || 0;
-
-    const clientInfo = {
-      id: clientPage.id,
-      nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
-      status: getSelect(p['Status do Cliente'] || p['Status']),
-      adultos: getNumber(p['Qtd Adultos']),
-      criancas: getNumber(p['Qtd Crianças']),
-      vooChegada: getRichText(p['Voo de Chegada']),
-      vooPartida: getRichText(p['Voo de Partida']),
-      dataInicio: getDateStart(p['Período da Viagem']),
-      dataFim: getDateEnd(p['Período da Viagem']),
-      hotel: getRichText(p['Hotel']),
-      viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
-      briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
-      valorTotal: getNumber(p['Valor Total']),
-      totalPago: getRollupNumber(p['Total Pago']),
-      saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
-      statusPagamento: getFormulaString(p['Status de pagamento'])
-    };
-
-    // 2. Buscar Entradas (pagamentos confirmados) do cliente no Notion
-    const entradasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_ENTRADAS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: {
-          property: 'Cliente (Relação)',
-          relation: {
-            contains: clientId
-          }
-        }
-      })
-    });
-
-    let payments = [];
-    if (entradasRes.ok) {
-      const entradasData = await entradasRes.json();
-      payments = (entradasData.results || []).map(item => {
-        const ep = item.properties;
-        return {
-          id: item.id,
-          descricao: ep['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada',
-          valor: ep['Valor (JPY)']?.number || 0,
-          data: ep['Data do pagamento']?.date?.start || '',
-          moeda: ep['Moeda Original']?.select?.name || 'JPY'
-        };
-      }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-    }
-
-    // 3. Buscar cotação local (orcamento) no Supabase
-    const { data: orcamentos } = await supabase.from('orcamentos').select('data');
-    let quote = null;
-    if (orcamentos && orcamentos.length > 0) {
-      const matched = orcamentos.find(o => {
-        if (!o.data) return false;
-        if (o.data.notionClienteId === clientId) return true;
-        if (clientInfo.nome) {
-          const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-          if (o.data.cliente?.nome) {
-            const orcClientName = o.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-            if (clientNameNormalized === orcClientName || clientNameNormalized.includes(orcClientName) || orcClientName.includes(clientNameNormalized)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-      if (matched && matched.data) {
-        const o = matched.data;
-        // Sanitizar a cotação (deletando margens, custos e dados confidenciais)
-        const sanitizeTours = (tours) => (tours || []).map(t => ({
-          id: t.id,
-          data: t.data,
-          valor: Number(t.valor) || 0,
-          duracao: t.duracao || '',
-          descricao: t.descricao || '',
-          pontos: t.pontos || '',
-          observacao: t.observacao || ''
-        }));
-        const sanitizeTransportes = (trans) => (trans || []).map(t => ({
-          id: t.id,
-          data: t.data,
-          descricao: t.descricao || '',
-          preco: Number(t.preco) || 0,
-          precoInfantil: Number(t.precoInfantil) || 0,
-          adultos: Number(t.adultos) || 0,
-          criancas: Number(t.criancas) || 0,
-          taxaAtiva: !!t.taxaAtiva,
-          taxaTipo: t.taxaTipo || 'pessoa',
-          taxaValor: Number(t.taxaValor) || 0,
-          compradoHeian: t.compradoHeian !== false,
-          observacao: t.observacao || ''
-        }));
-        const sanitizeExperiencias = (exps) => (exps || []).map(e => ({
-          id: e.id,
-          data: e.data,
-          nome: e.nome || '',
-          pessoas: Number(e.pessoas) || 1,
-          preco: Number(e.preco) || 0,
-          taxaAtiva: !!e.taxaAtiva,
-          taxaTipo: e.taxaTipo || 'pessoa',
-          taxaValor: Number(e.taxaValor) || 0,
-          compradoHeian: e.compradoHeian !== false,
-          observacao: e.observacao || '',
-          descricao: e.descricao || ''
-        }));
-        const sanitizeItens = (items) => (items || []).map(i => ({
-          data: i.data,
-          nome: i.nome,
-          valor: Number(i.valor) || 0
-        }));
-
-        quote = {
-          tours: sanitizeTours(o.tours),
-          transportes: sanitizeTransportes(o.transportes),
-          experiencias: sanitizeExperiencias(o.experiencias),
-          itensAdicionais: sanitizeItens(o.itensAdicionais),
-          consultoria: {
-            ativa: o.consultoria?.ativa || false,
-            valor: Number(o.consultoria?.valor) || 0,
-            descricao: o.consultoria?.descricao || ''
-          }
-        };
-      }
-    }
-
-    // 4. Buscar roteiro local no Supabase
-    const { data: roteiros } = await supabase.from('roteiros').select('*');
-    let itinerary = null;
-    if (roteiros && roteiros.length > 0) {
-      const matched = roteiros.find(r => {
-        if (!r.data) return false;
-        if (r.data.notionClienteId === clientId || r.data.cliente?.notionClienteId === clientId) return true;
-        if (clientInfo.nome) {
-          const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-          if (r.data.cliente?.nome) {
-            const rotClientName = r.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-            if (clientNameNormalized === rotClientName || clientNameNormalized.includes(rotClientName) || rotClientName.includes(clientNameNormalized)) {
-              return true;
-            }
-          }
-          if (r.nome) {
-            const rotNameClean = r.nome.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
-            if (clientNameNormalized === rotNameClean || clientNameNormalized.includes(rotNameClean) || rotNameClean.includes(clientNameNormalized)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-      if (matched && matched.data) {
-        const r = matched.data;
-        const sanitizedDays = (r.dias || []).map(d => {
-          const sanitizedElements = (d.elementos || []).map(el => {
-            const { valorCusto, comissao, ...cleanEl } = el;
-            return cleanEl;
-          });
-          return {
-            data: d.data,
-            cidade: d.cidade,
-            tourGuiado: d.tourGuiado,
-            elementos: sanitizedElements
-          };
-        });
-        itinerary = {
-          nome: r.nome,
-          dias: sanitizedDays
-        };
-      }
-    }
-
-    // 5. Buscar Ficha Local (Supabase clientes_locais)
-    const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', clientId).single();
-    const clientLocalInfo = localData && localData.data ? localData.data : { estadias: [], viajantes: [] };
-
-    // 6. Buscar lista de Hotéis ricos cadastrados no Supabase
-    let hoteis = [];
-    try {
-      const { data: cfgHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
-      if (cfgHoteis && cfgHoteis.data) {
-        hoteis = cfgHoteis.data;
-      }
-    } catch (e) {
-      console.error('Erro ao buscar hotéis no Supabase:', e.message);
-    }
-
+    const data = await getClientDataHelper(clientId);
     res.json({
       success: true,
-      clientInfo,
-      payments,
-      quote,
-      itinerary,
-      clientLocalInfo,
-      hoteis
+      ...data
     });
   } catch (error) {
     console.error('Erro na API pública da Área do Cliente:', error);
-    res.status(500).json({ error: 'Erro ao buscar dados do cliente', details: error.message });
+    res.status(500).json({ success: false, error: 'Erro ao buscar dados do cliente', details: error.message });
+  }
+});
+
+app.get('/api/public/client-data/slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const now = Date.now();
+
+    let clientId = slugToIdCache[slug];
+    
+    if (!clientId || (now - lastCacheUpdate) > CACHE_TTL) {
+      const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
+      if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID) {
+        return res.status(400).json({ success: false, error: 'Configuração do Notion incompleta no arquivo .env.' });
+      }
+
+      const queryAllNotion = async (dbId) => {
+        let results = [];
+        let hasMore = true;
+        let startCursor = undefined;
+        while (hasMore) {
+          const body = {};
+          if (startCursor) body.start_cursor = startCursor;
+          const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${NOTION_TOKEN}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          });
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
+          }
+          const data = await response.json();
+          results = results.concat(data.results || []);
+          hasMore = data.has_more;
+          startCursor = data.next_cursor;
+        }
+        return { results };
+      };
+
+      const clientesData = await queryAllNotion(NOTION_CLIENTS_DB_ID);
+      const newCache = {};
+      (clientesData.results || []).forEach(item => {
+        const p = item.properties;
+        const nomeProp = p['Nome do Cliente'] || p['Name'] || p['Nome'];
+        const nome = nomeProp?.title?.map(t => t.plain_text).join('') || '';
+        if (nome) {
+          const clientSlug = gerarSlug(nome);
+          newCache[clientSlug] = item.id;
+        }
+      });
+
+      slugToIdCache = newCache;
+      lastCacheUpdate = now;
+      clientId = slugToIdCache[slug];
+    }
+
+    if (!clientId) {
+      return res.status(404).json({ success: false, error: 'Cliente não encontrado com o slug fornecido.' });
+    }
+
+    const data = await getClientDataHelper(clientId);
+    res.json({
+      success: true,
+      ...data
+    });
+  } catch (error) {
+    console.error('Erro na API pública da Área do Cliente por slug:', error);
+    res.status(500).json({ success: false, error: 'Erro ao buscar dados do cliente por slug', details: error.message });
   }
 });
 

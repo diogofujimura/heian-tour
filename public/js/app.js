@@ -521,6 +521,15 @@ function navToPage(pg) {
   if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
   if (targetPg === 'colaboradores' && typeof setupColaboradoresTab === 'function') setupColaboradoresTab();
   if (targetPg === 'lixeira' && typeof window.carregarLixeira === 'function') window.carregarLixeira();
+
+  if (targetPg === 'clientes') {
+    const paneList = document.querySelector('#page-clientes .pane-list');
+    if (paneList) {
+      if (!window.clienteAtualVisualizado) {
+        paneList.style.display = 'flex';
+      }
+    }
+  }
 }
 
 function setupMenuCambio() {
@@ -3064,6 +3073,7 @@ let currentEditingClienteId = null;
 let currentEditingEstadias = [];
 let currentEditingViajantes = [];
 let currentEditingEmails = [];
+let currentEditingVouchers = [];
 let editFotoPerfilBase64 = "";
 
 window.previewEditFotoPerfil = function(input) {
@@ -3159,6 +3169,9 @@ function setupClientesTab() {
 
   // Load clients when clicking the menu item
   document.querySelector('.nav-item[data-page="clientes"]')?.addEventListener('click', () => {
+    const paneList = document.querySelector('#page-clientes .pane-list');
+    if (paneList) paneList.style.display = 'flex';
+    
     if (notionClients.length === 0) loadClientesTabela();
     else renderClientesTabela();
   });
@@ -3469,6 +3482,7 @@ function abrirClienteModal(cliente = null) {
 
     fetch(`/api/clientes/local/${cliente.id}`).then(r=>r.json()).then(d => {
       currentEditingEstadias = d.estadias || [];
+      currentEditingVouchers = d.vouchers || [];
       if (currentEditingEstadias.length === 0 && cliente.hotel) {
         cliente.hotel.split('\n').filter(l => l.trim()).forEach(line => {
           let cidade = ''; let hotel = line.trim(); let dataInicio = ''; let dataFim = '';
@@ -3532,6 +3546,7 @@ function abrirClienteModal(cliente = null) {
       console.error(e); 
       currentEditingEstadias = []; 
       currentEditingViajantes = [];
+      currentEditingVouchers = [];
       currentEditingEmails = [];
       editFotoPerfilBase64 = "";
       if (cliente.hotel) {
@@ -3598,6 +3613,7 @@ function abrirClienteModal(cliente = null) {
     currentEditingEstadias = [];
     currentEditingViajantes = [];
     currentEditingEmails = [];
+    currentEditingVouchers = [];
     renderEstadiasForm();
     renderViajantesForm();
     renderEmailsForm();
@@ -3714,7 +3730,8 @@ async function salvarClienteNotion() {
           estadias: currentEditingEstadias,
           viajantes: currentEditingViajantes,
           emails: currentEditingEmails,
-          fotoPerfil: editFotoPerfilBase64
+          fotoPerfil: editFotoPerfilBase64,
+          vouchers: currentEditingVouchers
         }
       })
     });
@@ -4218,6 +4235,12 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
   if (!c) return;
   
   window.clienteAtualVisualizado = id;
+
+  // Ocultar a barra lateral de clientes para focar nos detalhes do cliente selecionado APENAS se não for hover
+  if (!isHover) {
+    const paneList = document.querySelector('#page-clientes .pane-list');
+    if (paneList) paneList.style.display = 'none';
+  }
   
   // Atualiza classe selected de forma performática
   const listContainer = document.getElementById('tabelaClientesList');
@@ -4338,6 +4361,7 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
       <button class="tab-client-btn active" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
       <button class="tab-client-btn" data-tab="roteiros" onclick="window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Roteiros</button>
       <button class="tab-client-btn" data-tab="cotacoes" onclick="window.switchClientTab('cotacoes', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Cotações</button>
+      <button class="tab-client-btn" data-tab="vouchers" onclick="window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">🎟️ Vouchers & Ingressos</button>
     </div>
 
     <!-- Conteúdo da Aba Ativa -->
@@ -4348,7 +4372,7 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
   renderAbaDadosCliente(cliente, estadias, viajantes, emails);
 };
 
-window.switchClientTab = function(tabName, clienteId, estadiasJson, viajantesJson, emailsJson) {
+window.switchClientTab = async function(tabName, clienteId, estadiasJson, viajantesJson, emailsJson) {
   const nav = document.querySelector('.tabs-client-nav');
   if (nav) {
     nav.querySelectorAll('.tab-client-btn').forEach(btn => {
@@ -4367,12 +4391,684 @@ window.switchClientTab = function(tabName, clienteId, estadiasJson, viajantesJso
   const viajantes = JSON.parse(decodeURIComponent(viajantesJson));
   const emails = JSON.parse(decodeURIComponent(emailsJson));
 
+  // Pré-carrega vouchers em background para garantir dados atualizados nas abas
+  try {
+    const localRes = await fetch(`/api/clientes/local/${clienteId}?t=${Date.now()}`);
+    const localData = await localRes.json();
+    window.currentEditingVouchers = localData.vouchers || [];
+  } catch (e) {
+    console.error("Erro ao pré-carregar vouchers:", e);
+  }
+
   if (tabName === 'dados') {
     renderAbaDadosCliente(cliente, estadias, viajantes, emails);
   } else if (tabName === 'roteiros') {
     renderAbaRoteiros(cliente);
   } else if (tabName === 'cotacoes') {
     renderAbaCotacoes(cliente);
+  } else if (tabName === 'vouchers') {
+    window.renderAbaVouchersCliente(cliente);
+  }
+};
+
+window.renderAbaVouchersCliente = async function(cliente) {
+  const contentDiv = document.getElementById('clientTabContent');
+  if (!contentDiv) return;
+
+  contentDiv.innerHTML = `<div style="text-align:center; padding: 20px;"><strong style="color:var(--crimson)">Carregando Vouchers...</strong></div>`;
+
+  try {
+    const localRes = await fetch(`/api/clientes/local/${cliente.id}?t=${Date.now()}`);
+    const localData = await localRes.json();
+    const vouchers = localData.vouchers || [];
+    
+    window.currentEditingVouchers = vouchers;
+
+    const templatesRes = await fetch('/api/templates-vouchers');
+    const templates = await templatesRes.json();
+
+    const clienteNome = cliente.nome || '';
+    const roteiroVinculado = typeof dbRotas !== 'undefined' ? Object.values(dbRotas).find(rot => {
+      return rot.notionClienteId === cliente.id || (rot.cliente && rot.cliente.nome === clienteNome);
+    }) : null;
+
+    let itensRoteiro = [];
+    if (roteiroVinculado && roteiroVinculado.dias) {
+      roteiroVinculado.dias.forEach((dia, dIdx) => {
+        const diaLabel = `Dia ${dIdx + 1} (${dia.cidade || ''})`;
+        itensRoteiro.push({ val: `dia:${dIdx + 1}`, label: `📅 ${diaLabel}` });
+
+        if (dia.elementos) {
+          dia.elementos.forEach(el => {
+            if (el.tipo === 'sequencia' && el.atracoesDoDia) {
+              el.atracoesDoDia.forEach(atr => {
+                itensRoteiro.push({ val: `atracao:${atr}`, label: `📍 Atração: ${atr} (${diaLabel})` });
+              });
+            } else if (el.tipo === 'experiencia') {
+              itensRoteiro.push({ val: `experiencia:${el.nomeExp}`, label: `🎟️ Exp: ${el.nomeExp} (${diaLabel})` });
+            } else if (el.tipo === 'transporte') {
+              const desc = `${el.tipoTransporte || 'Transporte'}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
+              itensRoteiro.push({ val: `transporte:${el.tipoTransporte}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
+            }
+          });
+        }
+      });
+    }
+
+    let vouchersHTML = '';
+    if (vouchers.length === 0) {
+      vouchersHTML = `<p style="text-align:center; color:var(--ink-lt); padding: 20px; font-size:13.5px;">Nenhum voucher cadastrado para este cliente.</p>`;
+    } else {
+      vouchersHTML = `
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Nome / Item</th>
+                <th>Tipo</th>
+                <th>Associação</th>
+                <th>Data</th>
+                <th style="width: 80px; text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vouchers.map(v => {
+                let badgeColor = '#6b7280';
+                if (v.tipo === 'qr_code') badgeColor = '#10b981';
+                else if (v.tipo === 'pdf') badgeColor = '#ef4444';
+                else if (v.tipo === 'link') badgeColor = '#3b82f6';
+                else if (v.tipo === 'instrucao') badgeColor = '#f59e0b';
+
+                let assocLabel = 'Nenhuma';
+                if (v.atracaoNome) {
+                  if (v.atracaoNome.startsWith('dia:')) assocLabel = `Dia ${v.atracaoNome.split(':')[1]}`;
+                  else if (v.atracaoNome.startsWith('atracao:')) assocLabel = v.atracaoNome.split(':')[1];
+                  else if (v.atracaoNome.startsWith('experiencia:')) assocLabel = v.atracaoNome.split(':')[1];
+                  else if (v.atracaoNome.startsWith('transporte:')) assocLabel = v.atracaoNome.split(':')[1];
+                  else assocLabel = v.atracaoNome;
+                }
+
+                let filesCount = 1;
+                if (v.arquivos && Array.isArray(v.arquivos)) {
+                  filesCount = v.arquivos.length;
+                } else if (v.url) {
+                  filesCount = 1;
+                } else {
+                  filesCount = 0;
+                }
+                const filesLabel = filesCount > 1 ? `<span style="font-size:10.5px; padding: 2px 5px; background: #eee; border-radius: 4px; color: #555; margin-left: 6px; font-weight: normal;">📦 ${filesCount} arquivos</span>` : '';
+
+                return `
+                  <tr>
+                    <td>
+                      <strong>${v.nome}</strong> ${filesLabel}
+                      ${v.instrucao ? `<div style="font-size:11px; color:var(--ink-lt); margin-top:2px; white-space:pre-line;">💬 ${v.instrucao.substring(0, 100)}${v.instrucao.length > 100 ? '...' : ''}</div>` : ''}
+                    </td>
+                    <td><span class="meta-badge" style="background:${badgeColor}22; color:${badgeColor}; border:none; padding:2px 8px; font-size:11px; font-weight:600;">${v.tipo.toUpperCase()}</span></td>
+                    <td style="font-size:12.5px;">${assocLabel}</td>
+                    <td style="font-size:12.5px;">${v.dataUso ? fmtDateBR(v.dataUso) : '—'}</td>
+                    <td style="text-align:center;">
+                      <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center;">
+                        <button class="btn-secondary" onclick="window.uploadRapidoVoucherAdmin('${cliente.id}', '${v.atracaoNome || ''}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#3b82f6; border-color:#eff6ff; cursor:pointer;" title="Editar">✏️</button>
+                        <button class="btn-secondary" onclick="window.excluirVoucherCliente('${cliente.id}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#c00; border-color:#fee; cursor:pointer;" title="Excluir">❌</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    contentDiv.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        
+        <!-- Lista de Vouchers -->
+        <div class="info-card" style="padding:16px;">
+          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+            <span>🎟️ Ingressos e Vouchers Enviados</span>
+            <span style="font-size:11px; color:var(--ink-lt); font-weight:normal;">${vouchers.length} item(ns)</span>
+          </h3>
+          ${vouchersHTML}
+        </div>
+
+        <!-- Formulário de Cadastro -->
+        <div class="info-card" style="padding:16px; border:1px dashed var(--border); background:#fdfdfd;">
+          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson);">➕ Cadastrar Novo Voucher</h3>
+          
+          <form id="formNovoVoucher" onsubmit="window.salvarNovoVoucherCliente(event, '${cliente.id}')" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            
+            <div style="display:flex; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Nome do Ingresso / Reserva</label>
+              <input type="text" id="vchNome" required placeholder="Ex: Entrada Disneyland Tokyo, Bilhete Shinkansen Kyoto" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Tipo de Voucher</label>
+              <select id="vchTipo" onchange="window.toggleVchFields()" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;">
+                <option value="qr_code">QR Code (Imagem)</option>
+                <option value="pdf">Documento PDF</option>
+                <option value="link">Link Externo (Google Drive, etc)</option>
+                <option value="instrucao">Apenas Instruções por escrito</option>
+              </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Data de Uso (Opcional)</label>
+              <input type="date" id="vchDataUso" style="padding:7px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+            </div>
+
+            <!-- Campo de Arquivo (Imagens/PDF) -->
+            <div id="vchFileWrapper" style="display:flex; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Upload do Arquivo (Imagem ou PDF)</label>
+              <input type="file" id="vchFile" accept="image/*,application/pdf" multiple style="padding:6px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;">
+              <span style="font-size:11px; color:var(--ink-lt);">Selecione um ou mais arquivos (imagens de QR Code ou PDFs). Tamanho máximo individual recomendado: 3MB.</span>
+            </div>
+
+            <!-- Campo de URL (Para Links) -->
+            <div id="vchUrlWrapper" style="display:none; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Link Externo (URL)</label>
+              <input type="url" id="vchUrl" placeholder="https://drive.google.com/..." style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Vincular a Item do Roteiro (Opcional)</label>
+              <select id="vchAtracaoNome" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;">
+                <option value="">-- Selecionar item do roteiro --</option>
+                ${itensRoteiro.map(item => `<option value="${item.val}">${item.label}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Dropdown de Templates de Instruções do Sheets -->
+            <div style="display:flex; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Carregar Modelo de Instrução do Google Sheets</label>
+              <select id="vchTemplate" onchange="window.aplicarTemplateInstrucao()" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff; border-color:var(--accent);">
+                <option value="">-- Escolha um modelo para autocompletar --</option>
+                ${templates.map(t => `<option value="${t.id}">${t.titulo}</option>`).join('')}
+              </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; grid-column:span 2;">
+              <label style="font-size:12px; font-weight:600; color:var(--ink-mid);">Instruções Específicas para o Cliente</label>
+              <textarea id="vchInstrucao" rows="4" placeholder="Ex: Apresente o QR code no celular para entrar..." style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:var(--ff-body); resize:vertical;"></textarea>
+            </div>
+
+            <div style="grid-column:span 2; display:flex; justify-content:flex-end; margin-top:8px;">
+              <button type="submit" class="btn-primary" style="padding:10px 20px; font-size:13px; font-weight:600; border-radius:6px;">
+                🚀 Adicionar e Salvar Ficha
+              </button>
+            </div>
+            
+          </form>
+        </div>
+
+      </div>
+    `;
+
+    window.vchTemplatesCache = templates;
+
+  } catch(e) {
+    console.error(e);
+    contentDiv.innerHTML = `<div style="text-align:center; padding: 20px; color:#c00;">Erro ao carregar a aba de Vouchers: ${e.message}</div>`;
+  }
+};
+
+window.toggleVchFields = function() {
+  const tipo = document.getElementById('vchTipo').value;
+  const fileWrapper = document.getElementById('vchFileWrapper');
+  const urlWrapper = document.getElementById('vchUrlWrapper');
+
+  if (tipo === 'qr_code' || tipo === 'pdf') {
+    if (fileWrapper) fileWrapper.style.display = 'flex';
+    if (urlWrapper) urlWrapper.style.display = 'none';
+  } else if (tipo === 'link') {
+    if (fileWrapper) fileWrapper.style.display = 'none';
+    if (urlWrapper) urlWrapper.style.display = 'flex';
+  } else {
+    if (fileWrapper) fileWrapper.style.display = 'none';
+    if (urlWrapper) urlWrapper.style.display = 'none';
+  }
+};
+
+window.aplicarTemplateInstrucao = function() {
+  const templateId = document.getElementById('vchTemplate').value;
+  if (!templateId || !window.vchTemplatesCache) return;
+  const template = window.vchTemplatesCache.find(t => t.id === templateId);
+  if (template) {
+    const el = document.getElementById('vchInstrucao');
+    if (el) el.value = template.instrucoes || '';
+  }
+};
+
+window.excluirVoucherCliente = async function(clienteId, voucherId) {
+  if (!confirm('Deseja realmente excluir este voucher/ingresso? Isso não poderá ser desfeito.')) return;
+
+  try {
+    const resLocal = await fetch(`/api/clientes/local/${clienteId}?t=${Date.now()}`);
+    const localData = await resLocal.json();
+    
+    localData.vouchers = (localData.vouchers || []).filter(v => v.id !== voucherId);
+    
+    window.currentEditingVouchers = localData.vouchers;
+
+    const saveRes = await fetch('/api/clientes/local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(localData)
+    });
+
+    if (!saveRes.ok) throw new Error('Erro ao persistir exclusão');
+    alert('Voucher excluído com sucesso!');
+    
+    const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : { id: clienteId };
+    window.renderAbaVouchersCliente(cliente);
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao excluir voucher: ' + err.message);
+  }
+};
+
+window.salvarNovoVoucherCliente = async function(e, clienteId) {
+  e.preventDefault();
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  const oldText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Processando e Salvando...';
+
+  try {
+    const nome = document.getElementById('vchNome').value.trim();
+    const tipo = document.getElementById('vchTipo').value;
+    const dataUso = document.getElementById('vchDataUso').value;
+    const atracaoNome = document.getElementById('vchAtracaoNome').value;
+    const instrucao = document.getElementById('vchInstrucao').value.trim();
+    
+    let url = '';
+    let fileName = '';
+    let arquivos = [];
+
+    if (tipo === 'qr_code' || tipo === 'pdf') {
+      const fileInput = document.getElementById('vchFile');
+      if (fileInput.files.length > 0) {
+        const promessasLeitura = Array.from(fileInput.files).map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({
+              id: String(Date.now() + Math.random()),
+              url: reader.result,
+              fileName: file.name
+            });
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+          });
+        });
+        
+        arquivos = await Promise.all(promessasLeitura);
+        
+        // Mantém compatibilidade com campos raiz de arquivo único (compatibilidade de fallback)
+        url = arquivos[0].url;
+        fileName = arquivos[0].fileName;
+      } else {
+        throw new Error('Por favor, selecione ao menos um arquivo de imagem ou PDF para fazer upload.');
+      }
+    } else if (tipo === 'link') {
+      url = document.getElementById('vchUrl').value.trim();
+      if (!url) throw new Error('Por favor, digite a URL para o link externo.');
+      arquivos = [{ id: String(Date.now()), url, fileName: 'Link Externo' }];
+    }
+
+    const resLocal = await fetch(`/api/clientes/local/${clienteId}?t=${Date.now()}`);
+    const localData = await resLocal.json();
+    
+    if (!localData.vouchers) localData.vouchers = [];
+
+    const novoVoucher = {
+      id: String(Date.now() + Math.random()),
+      nome,
+      tipo,
+      url,
+      fileName,
+      arquivos, // Injeta o array de múltiplos arquivos
+      atracaoNome,
+      dataUso,
+      instrucao
+    };
+
+    localData.vouchers.push(novoVoucher);
+    
+    window.currentEditingVouchers = localData.vouchers;
+
+    const saveRes = await fetch('/api/clientes/local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(localData)
+    });
+
+    if (!saveRes.ok) throw new Error('Erro ao salvar no banco');
+    
+    alert('Voucher cadastrado e salvo com sucesso!');
+    
+    const cliente = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : { id: clienteId };
+    window.renderAbaVouchersCliente(cliente);
+
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao salvar voucher: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = oldText;
+  }
+};
+
+// Modal dinâmico de upload rápido de voucher (Suporta Criação e Edição)
+window.uploadRapidoVoucherAdmin = async function(clienteId, atracaoNome, nomeSugestionado, dataUso, voucherId = null) {
+  let modal = document.getElementById('modalUploadRapidoVoucher');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modalUploadRapidoVoucher';
+    modal.style.position = 'fixed';
+    modal.style.zIndex = '9999';
+    modal.style.left = '0';
+    modal.style.top = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    document.body.appendChild(modal);
+  }
+
+  // Feedback visual de carregamento
+  modal.innerHTML = `
+    <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:center; min-height:200px;">
+      <strong style="color:var(--crimson)">Carregando informações do voucher...</strong>
+    </div>
+  `;
+  modal.style.display = 'flex';
+
+  let templates = [];
+  let voucherExistente = null;
+  
+  try {
+    const templatesRes = await fetch('/api/templates-vouchers');
+    templates = await templatesRes.json();
+    
+    const resLocal = await fetch(`/api/clientes/local/${clienteId}?t=${Date.now()}`);
+    const localData = await resLocal.json();
+    if (voucherId && localData.vouchers) {
+      voucherExistente = localData.vouchers.find(v => v.id === voucherId);
+    }
+  } catch(e) {
+    console.error(e);
+  }
+
+  const isEdit = !!voucherExistente;
+  const nomeVal = isEdit ? voucherExistente.nome : nomeSugestionado;
+  const tipoVal = isEdit ? voucherExistente.tipo : 'qr_code';
+  const dataVal = isEdit ? (voucherExistente.dataUso || '') : (dataUso || '');
+  const instrucoesVal = isEdit ? (voucherExistente.instrucao || '') : '';
+  const urlVal = (isEdit && voucherExistente.tipo === 'link') ? (voucherExistente.url || '') : '';
+  const targetAtracao = isEdit ? (voucherExistente.atracaoNome || atracaoNome) : atracaoNome;
+
+  let labelVinculo = 'Nenhum';
+  if (targetAtracao) {
+    if (targetAtracao.startsWith('dia:')) labelVinculo = `📅 Dia ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('atracao:')) labelVinculo = `📍 Atração: ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('experiencia:')) labelVinculo = `🎟️ Experiência: ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('transporte:')) labelVinculo = `🚄 Transporte: ${targetAtracao.split(':')[1]}`;
+    else labelVinculo = targetAtracao;
+  }
+
+  let arquivosFeedbackHTML = '';
+  if (isEdit && (tipoVal === 'qr_code' || tipoVal === 'pdf') && voucherExistente.arquivos && voucherExistente.arquivos.length > 0) {
+    const nomesFls = voucherExistente.arquivos.map(a => a.fileName || 'Arquivo').join(', ');
+    arquivosFeedbackHTML = `
+      <div id="vchRapidoFileFeedback" style="font-size:11px; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; padding:8px 10px; border-radius:6px; margin-top:4px;">
+        <strong>Arquivos atuais:</strong> ${nomesFls}
+        <br><span style="color:#6b7280; font-size:10px;">Selecione novos arquivos para substituir, ou deixe em branco para manter os atuais.</span>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = `
+    <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:16px; position:relative;" onclick="event.stopPropagation()">
+      <span onclick="window.fecharModalUploadRapido()" style="position:absolute; top:12px; right:16px; font-size:20px; font-weight:bold; cursor:pointer; color:#7f7f7f;">✕</span>
+      <h3 style="margin:0; font-family:var(--ff-display); color:var(--crimson); font-size:16px; font-weight:600;">
+        ${isEdit ? '✏️ Editar Ingresso / Passagem' : '🎟️ Enviar Ingresso / Passagem'}
+      </h3>
+      
+      <div style="font-size:12px; color:var(--text-sec); border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:4px;">
+        <strong>Vínculo:</strong> <span style="color:var(--crimson); font-weight:600;">${labelVinculo}</span>
+      </div>
+      
+      <form id="formUploadRapido" onsubmit="window.salvarUploadRapidoVoucher(event, '${clienteId}', '${targetAtracao.replace(/'/g, "\\'")}', '${voucherId || ''}')" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Nome do Ingresso / Voucher</label>
+          <input type="text" id="vchRapidoNome" required value="${nomeVal.replace(/"/g, '&quot;')}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Tipo</label>
+            <select id="vchRapidoTipo" onchange="window.toggleVchRapidoFields()" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;">
+              <option value="qr_code" ${tipoVal === 'qr_code' ? 'selected' : ''}>QR Code (Imagem)</option>
+              <option value="pdf" ${tipoVal === 'pdf' ? 'selected' : ''}>Documento PDF</option>
+              <option value="link" ${tipoVal === 'link' ? 'selected' : ''}>Link Externo</option>
+            </select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Data de Uso (Opcional)</label>
+            <input type="date" id="vchRapidoData" value="${dataVal}" style="padding:7px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+          </div>
+        </div>
+
+        <div id="vchRapidoFileWrapper" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Upload de Arquivos</label>
+          <input type="file" id="vchRapidoFile" accept="image/*,application/pdf" multiple style="padding:6px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;">
+          ${arquivosFeedbackHTML}
+        </div>
+
+        <div id="vchRapidoUrlWrapper" style="display:none; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Link do Documento (URL)</label>
+          <input type="url" id="vchRapidoUrl" value="${urlVal}" placeholder="https://drive.google.com/..." style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Modelo de Instrução (Sheets)</label>
+          <select id="vchRapidoTemplate" onchange="window.aplicarTemplateRapido()" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff; border-color:var(--accent);">
+            <option value="">-- Escolha um modelo para preencher --</option>
+            ${templates.map(t => `<option value="${t.id}">${t.titulo}</option>`).join('')}
+          </select>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Instruções ao Cliente</label>
+          <textarea id="vchRapidoInstrucoes" rows="3" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:var(--ff-body); resize:vertical;">${instrucoesVal}</textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+          <button type="button" onclick="window.fecharModalUploadRapido()" class="btn-secondary" style="padding:8px 16px; font-size:12.5px;">Cancelar</button>
+          <button type="submit" class="btn-primary" style="padding:8px 20px; font-size:12.5px; font-weight:600;">
+            ${isEdit ? '💾 Salvar Alterações' : '🚀 Enviar'}
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  window.vchRapidoTemplatesCache = templates;
+  window.toggleVchRapidoFields();
+};
+
+window.fecharModalUploadRapido = function() {
+  const modal = document.getElementById('modalUploadRapidoVoucher');
+  if (modal) modal.style.display = 'none';
+};
+
+window.toggleVchRapidoFields = function() {
+  const tipo = document.getElementById('vchRapidoTipo').value;
+  const fileWrapper = document.getElementById('vchRapidoFileWrapper');
+  const urlWrapper = document.getElementById('vchRapidoUrlWrapper');
+  if (tipo === 'qr_code' || tipo === 'pdf') {
+    fileWrapper.style.display = 'flex';
+    urlWrapper.style.display = 'none';
+  } else {
+    fileWrapper.style.display = 'none';
+    urlWrapper.style.display = 'flex';
+  }
+};
+
+window.aplicarTemplateRapido = function() {
+  const tId = document.getElementById('vchRapidoTemplate').value;
+  if (!tId || !window.vchRapidoTemplatesCache) return;
+  const template = window.vchRapidoTemplatesCache.find(t => t.id === tId);
+  if (template) {
+    document.getElementById('vchRapidoInstrucoes').value = template.instrucoes || '';
+  }
+};
+
+window.salvarUploadRapidoVoucher = async function(e, clienteId, atracaoNome, voucherId = null) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerText = 'Processando...';
+
+  try {
+    const nome = document.getElementById('vchRapidoNome').value.trim();
+    const tipo = document.getElementById('vchRapidoTipo').value;
+    const dataUso = document.getElementById('vchRapidoData').value;
+    const instrucao = document.getElementById('vchRapidoInstrucoes').value.trim();
+    
+    // Obter dados locais atualizados do cliente
+    const resLocal = await fetch(`/api/clientes/local/${clienteId}?t=${Date.now()}`);
+    const localData = await resLocal.json();
+    if (!localData.vouchers) localData.vouchers = [];
+
+    let voucherExistente = null;
+    if (voucherId) {
+      voucherExistente = localData.vouchers.find(v => v.id === voucherId);
+    }
+
+    let url = '';
+    let fileName = '';
+    let arquivos = [];
+
+    if (tipo === 'qr_code' || tipo === 'pdf') {
+      const fileInput = document.getElementById('vchRapidoFile');
+      if (fileInput.files.length > 0) {
+        // Lemos novos arquivos em paralelo
+        const promessasLeitura = Array.from(fileInput.files).map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({
+              id: String(Date.now() + Math.random()),
+              url: reader.result,
+              fileName: file.name
+            });
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+          });
+        });
+        
+        arquivos = await Promise.all(promessasLeitura);
+        url = arquivos[0].url;
+        fileName = arquivos[0].fileName;
+      } else {
+        // Se for edição e não forneceu novos arquivos, mantém os arquivos anteriores
+        if (voucherExistente && (voucherExistente.tipo === 'qr_code' || voucherExistente.tipo === 'pdf')) {
+          arquivos = voucherExistente.arquivos || [];
+          url = voucherExistente.url || '';
+          fileName = voucherExistente.fileName || '';
+        } else {
+          throw new Error('Por favor, selecione ao menos um arquivo.');
+        }
+      }
+    } else if (tipo === 'link') {
+      url = document.getElementById('vchRapidoUrl').value.trim();
+      if (!url) throw new Error('Por favor, insira a URL.');
+      arquivos = [{ id: String(Date.now()), url, fileName: 'Link Externo' }];
+    }
+
+    if (voucherExistente) {
+      // Editar existente
+      voucherExistente.nome = nome;
+      voucherExistente.tipo = tipo;
+      voucherExistente.url = url;
+      voucherExistente.fileName = fileName;
+      voucherExistente.arquivos = arquivos;
+      voucherExistente.atracaoNome = atracaoNome;
+      voucherExistente.dataUso = dataUso;
+      voucherExistente.instrucao = instrucao;
+    } else {
+      // Criar novo
+      const novoVoucher = {
+        id: String(Date.now() + Math.random()),
+        nome,
+        tipo,
+        url,
+        fileName,
+        arquivos,
+        atracaoNome,
+        dataUso,
+        instrucao
+      };
+      localData.vouchers.push(novoVoucher);
+    }
+
+    window.currentEditingVouchers = localData.vouchers;
+
+    const saveRes = await fetch('/api/clientes/local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(localData)
+    });
+
+    if (!saveRes.ok) throw new Error('Erro ao salvar no banco');
+    
+    alert(voucherExistente ? 'Ingresso atualizado com sucesso!' : 'Ingresso anexado com sucesso!');
+    window.fecharModalUploadRapido();
+    
+    // Atualizar visualização baseada na aba ativa
+    const activeTabBtn = document.querySelector('.tab-client-btn.active');
+    const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'roteiros';
+    
+    const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : { id: clienteId };
+    if (activeTab === 'vouchers') {
+      window.renderAbaVouchersCliente(cli);
+    } else {
+      renderAbaRoteiros(cli);
+    }
+
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao salvar ingresso: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = voucherId ? '💾 Salvar Alterações' : '🚀 Enviar';
+  }
+};
+
+window.visualizarVoucherAdmin = function(voucherId) {
+  const tabBtn = document.querySelector('.tab-client-btn[data-tab="vouchers"]');
+  if (tabBtn) {
+    tabBtn.click();
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.data-table tbody tr');
+      rows.forEach(row => {
+        if (row.innerHTML.includes(voucherId) || row.innerHTML.includes(`excluirVoucherCliente`)) {
+          row.style.background = '#e6f7ed';
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            row.style.transition = 'background 1s';
+            row.style.background = '';
+          }, 3000);
+        }
+      });
+    }, 400);
   }
 };
 

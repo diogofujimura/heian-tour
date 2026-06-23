@@ -1554,7 +1554,19 @@ window.copiarLinkClienteFromId = function(clientId) {
     return;
   }
 
-  const link = `${window.location.origin}/cliente.html?id=${clientId}`;
+  const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+  let link = '';
+  if (clientInfo && clientInfo.nome) {
+    const slug = clientInfo.nome.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/--+/g, '-')
+      .trim();
+    link = `${window.location.origin}/cliente/${slug}`;
+  } else {
+    link = `${window.location.origin}/cliente.html?id=${clientId}`;
+  }
   
   navigator.clipboard.writeText(link).then(() => {
     alert('Link da Área do Cliente copiado com sucesso para a área de transferência!');
