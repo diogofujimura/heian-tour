@@ -1896,7 +1896,7 @@ app.post('/api/sync', async (req, res) => {
     const abaE = sheets_aba_experiencias || 'BaseEX';
     const abaA = sheets_aba_atracoes || 'Atracoes';
     const abaRotas = sheets_aba_rotas || 'Rotas';
-    const abaHoteis = sheets_aba_hoteis || 'Hotéis';
+    let abaHoteis = sheets_aba_hoteis || 'Hotéis';
 
     const db = {
       config,
@@ -2164,7 +2164,17 @@ app.post('/api/sync', async (req, res) => {
     // ── HOTÉIS (aba "Hotéis") ────────────────────────────────────────
     let nHoteis = 0;
     try {
-      const table = await fetchAba(abaHoteis);
+      let table;
+      try {
+        table = await fetchAba(abaHoteis);
+      } catch (err) {
+        if (!sheets_aba_hoteis && abaHoteis === 'Hotéis') {
+          abaHoteis = 'hoteis';
+          table = await fetchAba(abaHoteis);
+        } else {
+          throw err;
+        }
+      }
       const rows = table.rows || [];
 
       if (rows.length > 0) {
