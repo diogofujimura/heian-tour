@@ -4991,7 +4991,7 @@ window.renderAbaVouchersCliente = async function(cliente) {
                     </td>
                     <td><span class="meta-badge" style="background:${badgeColor}22; color:${badgeColor}; border:none; padding:2px 8px; font-size:11px; font-weight:600;">${v.tipo.toUpperCase()}</span></td>
                     <td style="font-size:12.5px;">${assocLabel}</td>
-                    <td style="font-size:12.5px;">${v.dataUso ? fmtDateBR(v.dataUso) : '—'}</td>
+                    <td style="font-size:12.5px;">${v.dataUso ? fmtDataBR(v.dataUso) : '—'}</td>
                     <td style="text-align:center;">
                       <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center;">
                         <button class="btn-secondary" onclick="window.uploadRapidoVoucherAdmin('${cliente.id}', '${v.atracaoNome || ''}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#3b82f6; border-color:#eff6ff; cursor:pointer;" title="Editar">✏️</button>
