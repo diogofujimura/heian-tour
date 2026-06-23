@@ -302,16 +302,34 @@ async function enviarEmailColaborador({ email, nomeColaborador, evento, tipo }) 
 
   // Buscar hotel do cliente para a data do serviço
   let hotelInfo = null;
+  let googleMapsUrl = '';
   try {
     hotelInfo = await buscarHotelPorData(evento);
+    if (hotelInfo && hotelInfo.hotel) {
+      // Buscar se existe esse hotel cadastrado no Supabase na tabela config com id: hoteis
+      const { data: cfgHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+      const hoteis = cfgHoteis && cfgHoteis.data ? cfgHoteis.data : [];
+      const hotelNomePlanilha = hotelInfo.hotel.trim().toLowerCase();
+      const hotelRico = hoteis.find(h => {
+        const hNome = (h['Nome do Hotel'] || '').trim().toLowerCase();
+        return hNome === hotelNomePlanilha || hotelNomePlanilha.includes(hNome) || hNome.includes(hotelNomePlanilha);
+      });
+      if (hotelRico && hotelRico['Link do Google Maps']) {
+        googleMapsUrl = hotelRico['Link do Google Maps'];
+      }
+    }
   } catch (e) {
-    console.error('[Email] Erro ao buscar hotel:', e.message);
+    console.error('[Email] Erro ao buscar hotel na base:', e.message);
+  }
+
+  // Fallback se não encontrou link específico cadastrado na base de dados
+  if (hotelInfo && hotelInfo.hotel && !googleMapsUrl) {
+    googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelInfo.hotel + (hotelInfo.cidade ? ', ' + hotelInfo.cidade + ', Japan' : ', Japan'))}`;
   }
 
   // Montar linha do hotel com link do Google Maps
   let hotelHtml = '';
   if (hotelInfo && hotelInfo.hotel) {
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelInfo.hotel + (hotelInfo.cidade ? ', ' + hotelInfo.cidade + ', Japan' : ', Japan'))}`;
     hotelHtml = `
             <tr>
               <td class="label-text" style="padding: 6px 0; padding-right: 12px; font-weight: 600; color: #666; font-size: 14px; vertical-align: top;">Hotel:</td>

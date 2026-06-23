@@ -821,16 +821,35 @@ function renderEstadiasForm() {
         <button class="btn-remove" onclick="rmEstadia(${est.id})">✕</button>
       </div>
       <div class="form-grid">
-        <div class="field"><label>Cidade</label><input type="text" value="${est.cidade}" placeholder="Ex: Tokyo" oninput="updEstadia(${est.id},'cidade',this.value)"></div>
+        <div class="field"><label>Cidade</label><input type="text" value="${est.cidade}" placeholder="Ex: Tokyo" oninput="updEstadia(${est.id},'cidade',this.value); filtrarDatalistHoteis(${est.id},this.value)"></div>
         <div class="field"><label>Data Início</label><input type="date" value="${est.dataInicio}" oninput="updEstadia(${est.id},'dataInicio',this.value)"></div>
         <div class="field"><label>Data Fim</label><input type="date" value="${est.dataFim}" oninput="updEstadia(${est.id},'dataFim',this.value)"></div>
-        <div class="field"><label>Hotel</label><input type="text" value="${est.hotel}" placeholder="Ex: The Celestine Tokyo" oninput="updEstadia(${est.id},'hotel',this.value)"></div>
-      </div>`;
+        <div class="field"><label>Hotel</label><input type="text" list="datalist-hoteis-${est.id}" value="${est.hotel}" placeholder="Busque na lista ou digite novo..." oninput="updEstadia(${est.id},'hotel',this.value)"></div>
+      </div>
+      <datalist id="datalist-hoteis-${est.id}"></datalist>`;
     cont.appendChild(div);
+    // Popula o datalist de hotéis com o filtro inicial da cidade
+    filtrarDatalistHoteis(est.id, est.cidade);
   });
 }
 function rmEstadia(id) { currentEditingEstadias = currentEditingEstadias.filter(e => e.id !== id); renderEstadiasForm(); }
 function updEstadia(id, f, v) { const e = currentEditingEstadias.find(x => x.id === id); if (e) e[f] = v; }
+
+function filtrarDatalistHoteis(estId, cidadeDigitada) {
+  const datalist = document.getElementById(`datalist-hoteis-${estId}`);
+  if (!datalist) return;
+  const cidadeNorm = (cidadeDigitada || '').trim().toLowerCase();
+  const hoteisCadastrados = state.hoteisDB || [];
+  
+  const hoteisFiltrados = cidadeNorm 
+    ? hoteisCadastrados.filter(h => {
+        const hCid = (h.Cidade || '').trim().toLowerCase();
+        return hCid.includes(cidadeNorm) || cidadeNorm.includes(hCid);
+      })
+    : hoteisCadastrados;
+    
+  datalist.innerHTML = hoteisFiltrados.map(h => `<option value="${h['Nome do Hotel']}"></option>`).join('');
+}
 
 // ── TOURS ─────────────────────────────────────────────────────────────────────
 // CORREÇÃO: sem re-render durante digitação — só atualiza estado e subtotal
