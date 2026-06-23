@@ -5343,6 +5343,7 @@ window.uploadRapidoVoucherAdmin = async function(clienteId, atracaoNome, nomeSug
               <option value="qr_code" ${tipoVal === 'qr_code' ? 'selected' : ''}>QR Code (Imagem)</option>
               <option value="pdf" ${tipoVal === 'pdf' ? 'selected' : ''}>Documento PDF</option>
               <option value="link" ${tipoVal === 'link' ? 'selected' : ''}>Link Externo</option>
+              <option value="instrucao" ${tipoVal === 'instrucao' ? 'selected' : ''}>Apenas Instruções por escrito</option>
             </select>
           </div>
           <div style="display:flex; flex-direction:column; gap:4px;">
@@ -5399,11 +5400,14 @@ window.toggleVchRapidoFields = function() {
   const fileWrapper = document.getElementById('vchRapidoFileWrapper');
   const urlWrapper = document.getElementById('vchRapidoUrlWrapper');
   if (tipo === 'qr_code' || tipo === 'pdf') {
-    fileWrapper.style.display = 'flex';
-    urlWrapper.style.display = 'none';
+    if (fileWrapper) fileWrapper.style.display = 'flex';
+    if (urlWrapper) urlWrapper.style.display = 'none';
+  } else if (tipo === 'link') {
+    if (fileWrapper) fileWrapper.style.display = 'none';
+    if (urlWrapper) urlWrapper.style.display = 'flex';
   } else {
-    fileWrapper.style.display = 'none';
-    urlWrapper.style.display = 'flex';
+    if (fileWrapper) fileWrapper.style.display = 'none';
+    if (urlWrapper) urlWrapper.style.display = 'none';
   }
 };
 
@@ -5517,14 +5521,12 @@ window.salvarUploadRapidoVoucher = async function(e, clienteId, atracaoNome, vou
     alert(voucherExistente ? 'Ingresso atualizado com sucesso!' : 'Ingresso anexado com sucesso!');
     window.fecharModalUploadRapido();
     
-    // Atualizar visualização baseada na aba ativa
+    // Atualizar visualização simulando o clique do botão ativo de abas para recarregar com dados novos
     const activeTabBtn = document.querySelector('.tab-client-btn.active');
-    const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'roteiros';
-    
-    const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : { id: clienteId };
-    if (activeTab === 'vouchers') {
-      window.renderAbaVouchersCliente(cli);
+    if (activeTabBtn) {
+      activeTabBtn.click();
     } else {
+      const cli = typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === clienteId) : { id: clienteId };
       renderAbaRoteiros(cli);
     }
 
