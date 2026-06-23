@@ -2693,3 +2693,190 @@ html, body {
   border: 2px dashed var(--gold) !important;
   box-shadow: inset 0 0 8px rgba(196, 163, 90, 0.15);
 }
+
+/* ── CLIENT PROCESS FLOW & UP NEXT ───────────────────────────────────────── */
+.client-process-flow {
+  display: flex;
+  width: 100%;
+  margin: 16px 0 20px 0;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.client-process-flow::-webkit-scrollbar {
+  display: none;
+}
+
+.process-step {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 30px; /* Pílula premium */
+  font-family: var(--ff-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  user-select: none;
+  text-align: center;
+}
+
+/* Concluído */
+.process-step.completed {
+  background-color: #f0fdf4;
+  color: #166534;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+.process-step.completed:hover {
+  background-color: #dcfce7;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Ativo */
+.process-step.active {
+  background-color: var(--crimson);
+  color: white;
+  border-color: var(--crimson-dk);
+  box-shadow: 0 4px 12px rgba(107, 31, 42, 0.16);
+  position: relative;
+}
+.process-step.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--gold);
+  animation: pulse-gold 2s infinite;
+}
+
+/* Pendente */
+.process-step.pending {
+  background-color: rgba(0, 0, 0, 0.02);
+  color: #94a3b8;
+  border-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Checklist "Up Next" */
+.client-up-next-checklist {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(107, 31, 42, 0.05);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin: 0 0 24px 0;
+  box-shadow: var(--shadow);
+  transition: all 0.3s;
+}
+
+.up-next-title {
+  font-family: var(--ff-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--crimson);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.up-next-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.up-next-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-mid);
+  transition: all 0.2s;
+}
+.up-next-item:hover {
+  border-color: rgba(196, 163, 90, 0.2);
+  transform: translateX(2px);
+  background: #ffffff;
+}
+
+.up-next-item.done {
+  opacity: 0.55;
+}
+.up-next-item.done .up-next-item-text {
+  text-decoration: line-through;
+  color: var(--ink-lt);
+}
+
+.up-next-item-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.up-next-item-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.up-next-item-badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+.up-next-item-badge.info {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.up-next-btn-action {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(196, 163, 90, 0.08);
+  border: 1px solid rgba(196, 163, 90, 0.25);
+  color: var(--gold-dk);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.up-next-btn-action:hover {
+  background: var(--gold);
+  color: white;
+  border-color: var(--gold-dk);
+}
+
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 0 0 rgba(196, 163, 90, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(196, 163, 90, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(196, 163, 90, 0);
+  }
+}
+

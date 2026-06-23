@@ -4280,7 +4280,7 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
     const estadias = d.estadias || [];
     const viajantes = d.viajantes || [];
     const emails = d.emails || [];
-    renderPreviewCliente(c, estadias, viajantes, emails, d.fotoPerfil || "");
+    renderPreviewCliente(c, estadias, viajantes, emails, d.fotoPerfil || "", d.vouchers || []);
   }).catch(e => {
     console.error(e);
     const estadias = [];
@@ -4298,7 +4298,7 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
         estadias.push({ id: Date.now() + Math.random(), cidade, dataInicio, dataFim, hotel });
       });
     }
-    renderPreviewCliente(c, estadias, [], [], "");
+    renderPreviewCliente(c, estadias, [], [], "", []);
   });
 };
 
@@ -4321,7 +4321,128 @@ window.editarClienteCard = function(id) {
   abrirClienteModal(c);
 };
 
-window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], emails = [], fotoPerfil = "") {
+window.calcularEstagioCliente = function(cliente, estadias = [], viajantes = [], vouchers = []) {
+  const etapas = [
+    { id: 'cotacao', label: 'Cotação', status: 'pending', pendencias: [] },
+    { id: 'passageiros', label: 'Passageiros', status: 'pending', pendencias: [] },
+    { id: 'hoteis', label: 'Hotéis', status: 'pending', pendencias: [] },
+    { id: 'emissoes', label: 'Emissões', status: 'pending', pendencias: [] },
+    { id: 'pronto', label: 'Viagem', status: 'pending', pendencias: [] }
+  ];
+
+  // 1. COTAÇÃO
+  const statusCli = (cliente.status || '').toLowerCase().trim();
+  const isCotacao = statusCli === 'cotação' || statusCli === 'cotacao' || statusCli === 'leads' || statusCli === 'novo' || statusCli === '';
+  if (isCotacao) {
+    etapas[0].status = 'active';
+    etapas[0].pendencias.push({ texto: 'Aprovar orçamento e alterar o status do cliente (atualmente em Cotação).', acao: 'editar', labelAcao: 'Alterar Status' });
+    return { etapaAtiva: 'cotacao', etapas };
+  } else {
+    etapas[0].status = 'completed';
+  }
+
+  // 2. PASSAGEIROS
+  const viajantesPendentes = viajantes.filter(v => !v.passaporte || v.passaporte.trim().length < 5);
+  if (viajantes.length === 0) {
+    etapas[1].status = 'active';
+    etapas[1].pendencias.push({ texto: 'Nenhum viajante cadastrado para esta viagem.', acao: 'dados', labelAcao: 'Adicionar Viajantes' });
+    return { etapaAtiva: 'passageiros', etapas };
+  } else if (viajantesPendentes.length > 0) {
+    etapas[1].status = 'active';
+    viajantesPendentes.forEach(vp => {
+      etapas[1].pendencias.push({ texto: `Falta cadastrar passaporte para o viajante: ${vp.nome || 'Sem Nome'}.`, acao: 'dados', labelAcao: 'Preencher' });
+    });
+    return { etapaAtiva: 'passageiros', etapas };
+  } else {
+    etapas[1].status = 'completed';
+  }
+
+  // 3. HOTÉIS (ESTADIAS)
+  if (!cliente.dataInicio || !cliente.dataFim) {
+    etapas[2].status = 'active';
+    etapas[2].pendencias.push({ texto: 'Definir as datas de início e fim da viagem no cadastro do cliente.', acao: 'editar', labelAcao: 'Definir Datas' });
+    return { etapaAtiva: 'hoteis', etapas };
+  }
+
+  const dInicio = new Date(cliente.dataInicio);
+  const dFim = new Date(cliente.dataFim);
+  const noitesViagem = Math.ceil((dFim - dInicio) / (1000 * 60 * 60 * 24));
+
+  // Calcular noites cobertas pelas estadias
+  let noitesCobertas = 0;
+  estadias.forEach(est => {
+    if (est.dataInicio && est.dataFim) {
+      const estInicio = new Date(est.dataInicio);
+      const estFim = new Date(est.dataFim);
+      const noites = Math.ceil((estFim - estInicio) / (1000 * 60 * 60 * 24));
+      if (noites > 0) noitesCobertas += noites;
+    }
+  });
+
+  if (noitesCobertas < noitesViagem) {
+    etapas[2].status = 'active';
+    const noitesFaltantes = noitesViagem - noitesCobertas;
+    etapas[2].pendencias.push({ 
+      texto: `Faltam cobrir ${noitesFaltantes} noite(s) de hotel na viagem (Cobertura: ${noitesCobertas} de ${noitesViagem} noites).`, 
+      acao: 'dados', 
+      labelAcao: 'Adicionar Hotel' 
+    });
+    return { etapaAtiva: 'hoteis', etapas };
+  } else {
+    etapas[2].status = 'completed';
+  }
+
+  // 4. EMISSÕES (TICKETS E INGRESSOS)
+  const clienteNome = cliente.nome || '';
+  const roteiro = typeof window.dbRotas !== 'undefined' ? Object.values(window.dbRotas).find(rot => {
+    return rot.notionClienteId === cliente.id || (rot.cliente && rot.cliente.nome === clienteNome);
+  }) : null;
+
+  if (!roteiro) {
+    etapas[3].status = 'active';
+    etapas[3].pendencias.push({ texto: 'Roteiro do cliente ainda não foi criado no montador de roteiros.', acao: 'roteiros', labelAcao: 'Criar Roteiro' });
+    return { etapaAtiva: 'emissoes', etapas };
+  }
+
+  let pendenciasEmissao = [];
+  if (roteiro && roteiro.dias) {
+    roteiro.dias.forEach((dia, dIdx) => {
+      const diaLabel = `Dia ${dIdx + 1} (${dia.cidade || ''})`;
+      if (dia.elementos) {
+        dia.elementos.forEach(el => {
+          if (el.tipo === 'transporte') {
+            const emitido = el.compradoHeian === true;
+            const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('transporte:') && v.atracaoNome.includes(el.tipoTransporte));
+            if (!emitido && !temVoucher) {
+              const desc = `${el.tipoTransporte || 'Transporte'}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
+              pendenciasEmissao.push({ texto: `Pendente emitir ticket de Transporte: ${desc} (${diaLabel}).`, acao: 'vouchers', labelAcao: 'Anexar Voucher' });
+            }
+          } else if (el.tipo === 'experiencia') {
+            const emitido = el.compradoHeian === true;
+            const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('experiencia:') && v.atracaoNome.includes(el.nomeExp));
+            if (!emitido && !temVoucher) {
+              pendenciasEmissao.push({ texto: `Pendente emitir voucher de Experiência: ${el.nomeExp} (${diaLabel}).`, acao: 'vouchers', labelAcao: 'Anexar Voucher' });
+            }
+          }
+        });
+      }
+    });
+  }
+
+  if (pendenciasEmissao.length > 0) {
+    etapas[3].status = 'active';
+    etapas[3].pendencias = pendenciasEmissao;
+    return { etapaAtiva: 'emissoes', etapas };
+  } else {
+    etapas[3].status = 'completed';
+  }
+
+  // 5. VIAGEM PRONTA
+  etapas[4].status = 'active';
+  return { etapaAtiva: 'pronto', etapas };
+};
+
+window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], emails = [], fotoPerfil = "", vouchers = []) {
   const container = document.getElementById('clientesPreviewContainer');
   if (!container) return;
 
@@ -4331,6 +4452,10 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
   const estadiasStr = encodeURIComponent(JSON.stringify(estadias));
   const viajantesStr = encodeURIComponent(JSON.stringify(viajantes));
   const emailsStr = encodeURIComponent(JSON.stringify(emails));
+
+  // Calcular estágios dinâmicos do cliente
+  const { etapaAtiva, etapas } = window.calcularEstagioCliente(cliente, estadias, viajantes, vouchers);
+  window.currentClientProcessStages = etapas;
 
   // Renderizar o cabeçalho estático (Dynamics 365 Style)
   let avatarHTML = "";
@@ -4370,6 +4495,30 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
       </div>
     </div>
 
+    <!-- Barra de Processo (Dynamics 365 Style) -->
+    <div class="client-process-flow" id="processFlowContainer">
+      ${etapas.map(et => {
+        let statusClass = 'pending';
+        let icon = '🔒';
+        if (et.status === 'completed') {
+          statusClass = 'completed';
+          icon = '✔️';
+        } else if (et.status === 'active') {
+          statusClass = 'active';
+          icon = '🎯';
+        }
+        return `
+          <div class="process-step ${statusClass}" data-etapa="${et.id}" onclick="window.selecionarEstagioProcesso('${et.id}', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">
+            <span>${icon}</span>
+            <span>${et.label}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- Painel de Tarefas Pendentes (Up Next) -->
+    <div class="client-up-next-checklist" id="upNextChecklistContainer" style="display:none;"></div>
+
     <!-- Barra de Navegação de Abas -->
     <div class="tabs-client-nav">
       <button class="tab-client-btn active" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
@@ -4384,6 +4533,92 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
 
   // Renderizar a primeira aba por padrão
   renderAbaDadosCliente(cliente, estadias, viajantes, emails);
+  
+  // Iniciar e preencher o box de tarefas para a etapa ativa
+  window.selecionarEstagioProcesso(etapaAtiva, cliente.id, estadiasStr, viajantesStr, emailsStr);
+};
+
+window.selecionarEstagioProcesso = function(etapaId, clienteId, estadiasJson, viajantesJson, emailsJson) {
+  const container = document.getElementById('upNextChecklistContainer');
+  if (!container) return;
+
+  const etapas = window.currentClientProcessStages || [];
+  const etapa = etapas.find(e => e.id === etapaId);
+  if (!etapa) return;
+
+  // Atualizar visualmente o stepper (marca a borda do selecionado)
+  const steps = document.querySelectorAll('.process-step');
+  steps.forEach(st => {
+    if (st.dataset.etapa === etapaId) {
+      st.style.borderColor = 'var(--gold)';
+      st.style.borderWidth = '2px';
+    } else {
+      st.style.borderWidth = '1px';
+      // Restaura borda original
+      if (st.classList.contains('completed')) {
+        st.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+      } else if (st.classList.contains('active')) {
+        st.style.borderColor = 'var(--crimson-dk)';
+      } else {
+        st.style.borderColor = 'rgba(0, 0, 0, 0.04)';
+      }
+    }
+  });
+
+  // Renderizar o conteúdo de pendências
+  container.style.display = 'block';
+  
+  if (etapa.pendencias.length === 0) {
+    let msgSucesso = "Todos os requisitos desta etapa foram concluídos com sucesso!";
+    let icon = "✔️";
+    if (etapaId === 'pronto') {
+      msgSucesso = "Viagem Pronta! Roteiro enviado e cliente pronto para embarcar! Bon Voyage! 🇯🇵";
+      icon = "🎉";
+    }
+    container.innerHTML = `
+      <div class="up-next-title" style="color:#166534;">
+        <span>${icon}</span> Estágio: ${etapa.label} — Concluído
+      </div>
+      <div style="font-size:13px; color:#15803d; background:#f0fdf4; border:1px solid rgba(34,197,94,0.15); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:8px;">
+        <span>✨</span> <strong>${msgSucesso}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  const listHTML = etapa.pendencias.map(p => {
+    let badgeClass = 'warning';
+    if (p.acao === 'vouchers' || p.acao === 'roteiros') badgeClass = 'error';
+    else if (p.acao === 'editar') badgeClass = 'info';
+
+    let actionOnclick = "";
+    if (p.acao === 'dados') {
+      actionOnclick = `window.switchClientTab('dados', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
+    } else if (p.acao === 'vouchers') {
+      actionOnclick = `window.switchClientTab('vouchers', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
+    } else if (p.acao === 'roteiros') {
+      actionOnclick = `window.switchClientTab('roteiros', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
+    } else if (p.acao === 'editar') {
+      actionOnclick = `editarClienteCard('${clienteId}')`;
+    }
+
+    return `
+      <div class="up-next-item">
+        <span class="up-next-item-badge ${badgeClass}">${p.acao === 'vouchers' ? 'Pendente' : 'Requisito'}</span>
+        <span class="up-next-item-text" style="font-size:12.5px;">${p.texto}</span>
+        ${p.labelAcao ? `<button class="up-next-btn-action" onclick="${actionOnclick}">${p.labelAcao}</button>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="up-next-title">
+      <span>📋</span> Pendências da Etapa: ${etapa.label}
+    </div>
+    <div class="up-next-list">
+      ${listHTML}
+    </div>
+  `;
 };
 
 window.switchClientTab = async function(tabName, clienteId, estadiasJson, viajantesJson, emailsJson) {
