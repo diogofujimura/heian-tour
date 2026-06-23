@@ -85,19 +85,15 @@
       margin-bottom: 40px;
     }
 
-    .logo-text {
-      font-family: var(--ff-display);
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: white;
+    .logo-container {
       display: flex;
       align-items: center;
-      gap: 8px;
     }
 
-    .logo-text span {
-      color: var(--accent);
+    .logo-img {
+      height: 38px;
+      width: auto;
+      object-fit: contain;
     }
 
     .hero-content {
@@ -998,7 +994,9 @@
     <header class="hero">
       <div class="container">
         <div class="hero-header">
-          <div class="logo-text">⛩️ Heian<span>Tour</span></div>
+          <div class="logo-container">
+            <img class="logo-img" src="/assets/heian-logo-transparent.png" alt="Heian Tour Logo">
+          </div>
           <div class="meta-badge" style="background: rgba(255,255,255,0.15)">Área do Viajante</div>
         </div>
         
