@@ -119,6 +119,9 @@ async function loadConfig() {
   document.getElementById('abaTransportes').value = state?.config?.sheets_aba_transportes || 'Transportes';
   document.getElementById('abaExperiencias').value = state?.config?.sheets_aba_experiencias || 'Experiências';
   document.getElementById('abaAtracoes').value = state?.config?.sheets_aba_atracoes || 'Atracoes';
+  if (document.getElementById('abaHoteis')) {
+    document.getElementById('abaHoteis').value = state?.config?.sheets_aba_hoteis || 'Hotéis';
+  }
   const setText = (id, val) => {
     document.getElementById(id).value = val;
     if (window.quillEditors && window.quillEditors[id]) {
@@ -1428,6 +1431,7 @@ function setupBase() {
   document.getElementById('btnNovoTransporte')?.addEventListener('click', () => abrirModalTransporte());
   document.getElementById('btnNovaExperiencia')?.addEventListener('click', () => abrirModalExperiencia());
   document.getElementById('btnNovaAtracao')?.addEventListener('click', () => abrirModalAtracao());
+  document.getElementById('btnNovoHotel')?.addEventListener('click', () => abrirModalHotel());
 }
 function renderTabelaTransportes(filtro) {
   if (filtro === undefined) {
@@ -1622,8 +1626,88 @@ function renderTabelaHoteis(filtro) {
       <td>${h.Comodidades||'—'}</td>
       <td style="text-align:center;">${fotoHtml}</td>
       <td>${mapsLink}</td>
+      <td>
+        <button class="btn-icon" onclick="abrirModalHotel('${h.id}')">✎</button> 
+        <button class="btn-icon" onclick="deletarHotel('${h.id}')">✕</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+window.abrirModalHotel = abrirModalHotel;
+function abrirModalHotel(id) {
+  const item = id ? state.hoteisDB.find(h=>h.id == id) : {};
+  document.getElementById('modalContent').innerHTML = `
+    <h3 class="modal-title">${id?'Editar':'Novo'} Hotel</h3>
+    <div class="form-grid">
+      <div class="field"><label>Cidade</label><input id="m_h_cidade" value="${item.Cidade||''}"></div>
+      <div class="field full-width"><label>Nome do Hotel</label><input id="m_h_nome" value="${item['Nome do Hotel']||''}"></div>
+      <div class="field full-width"><label>Link do Google Maps</label><input id="m_h_maps" value="${item['Link do Google Maps']||''}"></div>
+      <div class="field full-width"><label>Foto (URL da Imagem)</label><input id="m_h_foto" placeholder="https://exemplo.com/foto.jpg" value="${item['Foto (URL)']||''}"></div>
+      <div class="field full-width"><label>Comodidades (Separadas por vírgula)</label><input id="m_h_comodidades" placeholder="Ex: Wi-Fi gratuito, Café da manhã, Spa" value="${item.Comodidades||''}"></div>
+      <div class="field full-width"><label>Descrição</label><textarea id="m_h_desc" rows="4">${item['Descrição']||''}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="salvarHotel('${id||'null'}')">Salvar</button>
+    </div>`;
+  openModal();
+}
+
+window.salvarHotel = salvarHotel;
+async function salvarHotel(id) {
+  const dados = {
+    'Cidade': v('m_h_cidade'),
+    'Nome do Hotel': v('m_h_nome'),
+    'Link do Google Maps': v('m_h_maps'),
+    'Foto (URL)': v('m_h_foto').trim(),
+    'Comodidades': v('m_h_comodidades'),
+    'Descrição': v('m_h_desc').trim()
+  };
+
+  const parsedId = id !== 'null' ? id : null;
+  const btn = document.querySelector('#modalBox .btn-primary');
+  btn.disabled = true;
+  btn.innerText = 'Salvando...';
+
+  try {
+    if (parsedId) {
+      await fetch(`/api/hoteis/${parsedId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      const i = state.hoteisDB.find(h => h.id == parsedId);
+      if (i) Object.assign(i, dados);
+    } else {
+      const n = await fetch('/api/hoteis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      }).then(r => r.json());
+      state.hoteisDB.push(n);
+    }
+    await loadDB();
+    closeModal();
+  } catch (err) {
+    console.error('Erro ao salvar hotel:', err);
+    alert('Erro ao salvar hotel!');
+    btn.disabled = false;
+    btn.innerText = 'Salvar';
+  }
+}
+
+window.deletarHotel = deletarHotel;
+async function deletarHotel(id) {
+  if (!confirm('Remover hotel da base de dados?')) return;
+  try {
+    await fetch(`/api/hoteis/${id}`, { method: 'DELETE' });
+    state.hoteisDB = state.hoteisDB.filter(h => h.id != id);
+    renderTabelaHoteis();
+  } catch (err) {
+    console.error('Erro ao deletar hotel:', err);
+    alert('Erro ao deletar hotel!');
+  }
 }
 
 // ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
@@ -1669,7 +1753,8 @@ function setupConfig() {
       sheets_script_url:document.getElementById('sheetsScriptUrl').value.trim(),
       sheets_aba_transportes:document.getElementById('abaTransportes').value.trim(),
       sheets_aba_experiencias:document.getElementById('abaExperiencias').value.trim(),
-      sheets_aba_atracoes:document.getElementById('abaAtracoes').value.trim()
+      sheets_aba_atracoes:document.getElementById('abaAtracoes').value.trim(),
+      sheets_aba_hoteis:document.getElementById('abaHoteis')?.value.trim() || 'Hotéis'
     };
     await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
     Object.assign(state.config,dados);showToast('Configurações salvas!');

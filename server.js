@@ -892,7 +892,7 @@ console.error = function(...args) {
 // Auxiliar para sincronização em duas vias com o Google Sheets via Apps Script Web App
 async function syncToGoogleSheets(type, action, data, oldData = null) {
   const db = await readDB();
-  const { sheets_script_url, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas } = db.config;
+  const { sheets_script_url, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas, sheets_aba_hoteis } = db.config;
   if (!sheets_script_url) return; // Se não houver URL configurada, ignora silenciosamente
 
   let sheetName = '';
@@ -900,6 +900,7 @@ async function syncToGoogleSheets(type, action, data, oldData = null) {
   else if (type === 'experiencias') sheetName = sheets_aba_experiencias || 'BaseEX';
   else if (type === 'atracoes') sheetName = sheets_aba_atracoes || 'Atracoes';
   else if (type === 'rotas') sheetName = sheets_aba_rotas || 'Rotas';
+  else if (type === 'hoteis') sheetName = sheets_aba_hoteis || 'Hotéis';
 
   try {
     const payload = { action, type, sheetName, data, oldData };
@@ -1405,6 +1406,77 @@ app.get('/api/hoteis', async (req, res) => {
     res.json(data && data.data ? data.data : []);
   } catch(e) {
     console.error('Error getting hoteis:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/hoteis', async (req, res) => {
+  try {
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    
+    const novo = { ...req.body, id: String(Date.now()) };
+    list.push(novo);
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    await syncToGoogleSheets('hoteis', 'insert', novo);
+    
+    res.json(novo);
+  } catch(e) {
+    console.error('Error saving hotel:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.put('/api/hoteis/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    if (fetchErr) throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    
+    const idx = list.findIndex(h => h.id == id);
+    if (idx === -1) return res.status(404).json({ error: 'Hotel não encontrado' });
+    
+    const oldItem = { ...list[idx] };
+    const updated = { ...list[idx], ...req.body, id };
+    list[idx] = updated;
+    
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: list });
+    if (upsertErr) throw upsertErr;
+    
+    await syncToGoogleSheets('hoteis', 'update', updated, oldItem);
+    
+    res.json(updated);
+  } catch(e) {
+    console.error('Error updating hotel:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
+app.delete('/api/hoteis/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    if (fetchErr) throw fetchErr;
+    const list = data && data.data ? data.data : [];
+    
+    const idx = list.findIndex(h => h.id == id);
+    if (idx === -1) return res.status(404).json({ error: 'Hotel não encontrado' });
+    
+    const oldItem = list[idx];
+    const filteredList = list.filter(h => h.id != id);
+    
+    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: filteredList });
+    if (upsertErr) throw upsertErr;
+    
+    await syncToGoogleSheets('hoteis', 'delete', oldItem);
+    
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Error deleting hotel:', e);
     res.status(500).json({error: e.message});
   }
 });
