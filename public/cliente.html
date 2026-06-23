@@ -1358,9 +1358,10 @@
             card.className = 'hotel-premium-card';
             
             // Foto com fallback automático se falhar no carregamento (onerror)
-            const fotoUrl = hotelRico['Foto (URL)'] || '';
-            const fotoHtml = fotoUrl 
-              ? `<img class="hotel-photo" src="${fotoUrl}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600'" alt="${hotelRico['Nome do Hotel']}">`
+            const fotoRaw = hotelRico['Foto (URL)'] || '';
+            const primeiraFoto = fotoRaw ? fotoRaw.split(',')[0].trim() : '';
+            const fotoHtml = primeiraFoto 
+              ? `<img class="hotel-photo" src="${primeiraFoto}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600'" alt="${hotelRico['Nome do Hotel']}">`
               : `<img class="hotel-photo" src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600" alt="Hotel de Luxo">`;
             
             // Comodidades (tags/badges)

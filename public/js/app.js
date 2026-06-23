@@ -1616,7 +1616,9 @@ function renderTabelaHoteis(filtro) {
   const listaFiltrada = filtro ? lista.filter(h=>[h['Nome do Hotel'], h.Cidade, h.Comodidades].join(' ').toLowerCase().includes(filtro.toLowerCase())) : lista;
   
   tbody.innerHTML = listaFiltrada.map(h=>{
-    const fotoHtml = h['Foto (URL)'] ? `<img src="${h['Foto (URL)']}" style="width: 50px; height: 35px; object-fit: cover; border-radius: 4px;" onerror="this.src='https://via.placeholder.com/50x35?text=Sem+Foto'">` : '—';
+    const fotoRaw = h['Foto (URL)'] || '';
+    const primeiraFoto = fotoRaw ? fotoRaw.split(',')[0].trim() : '';
+    const fotoHtml = primeiraFoto ? `<img src="${primeiraFoto}" style="width: 50px; height: 35px; object-fit: cover; border-radius: 4px;" onerror="this.src='https://via.placeholder.com/50x35?text=Sem+Foto'">` : '—';
     const mapsLink = h['Link do Google Maps'] ? `<a href="${h['Link do Google Maps']}" target="_blank" style="color:var(--crimson); text-decoration:underline; font-weight:500;">Ver no Maps</a>` : '—';
     
     return `<tr>
