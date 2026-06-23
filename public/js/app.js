@@ -4480,7 +4480,7 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
         <button class="btn-secondary" onclick="window.location.href='mailto:${emails && emails[0] ? emails[0].email : (cliente.email || '')}'" title="Enviar E-mail" ${!(emails && emails[0] || cliente.email) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
           ✉️ E-mail
         </button>
-        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\\D/g,'')}', '_blank');" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\D/g,'')}', '_blank');" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
           💬 WhatsApp
         </button>
         <button class="btn-secondary" onclick="if(typeof copiarLinkClienteFromId === 'function') copiarLinkClienteFromId('${cliente.id}');" title="Copiar Link da Área do Cliente">
@@ -4495,33 +4495,10 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
       </div>
     </div>
 
-    <!-- Barra de Processo (Dynamics 365 Style) -->
-    <div class="client-process-flow" id="processFlowContainer">
-      ${etapas.map(et => {
-        let statusClass = 'pending';
-        let icon = '🔒';
-        if (et.status === 'completed') {
-          statusClass = 'completed';
-          icon = '✔️';
-        } else if (et.status === 'active') {
-          statusClass = 'active';
-          icon = '🎯';
-        }
-        return `
-          <div class="process-step ${statusClass}" data-etapa="${et.id}" onclick="window.selecionarEstagioProcesso('${et.id}', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">
-            <span>${icon}</span>
-            <span>${et.label}</span>
-          </div>
-        `;
-      }).join('')}
-    </div>
-
-    <!-- Painel de Tarefas Pendentes (Up Next) -->
-    <div class="client-up-next-checklist" id="upNextChecklistContainer" style="display:none;"></div>
-
     <!-- Barra de Navegação de Abas -->
     <div class="tabs-client-nav">
-      <button class="tab-client-btn active" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
+      <button class="tab-client-btn active" data-tab="resumo" onclick="window.switchClientTab('resumo', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">📋 Resumo de Pendências</button>
+      <button class="tab-client-btn" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
       <button class="tab-client-btn" data-tab="roteiros" onclick="window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Roteiros</button>
       <button class="tab-client-btn" data-tab="cotacoes" onclick="window.switchClientTab('cotacoes', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Cotações</button>
       <button class="tab-client-btn" data-tab="vouchers" onclick="window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">🎟️ Vouchers & Ingressos</button>
@@ -4531,94 +4508,351 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
     <div id="clientTabContent" class="tab-client-content"></div>
   `;
 
-  // Renderizar a primeira aba por padrão
-  renderAbaDadosCliente(cliente, estadias, viajantes, emails);
-  
-  // Iniciar e preencher o box de tarefas para a etapa ativa
-  window.selecionarEstagioProcesso(etapaAtiva, cliente.id, estadiasStr, viajantesStr, emailsStr);
+  // Renderizar a primeira aba por padrão (Resumo de Pendências)
+  window.switchClientTab('resumo', cliente.id, estadiasStr, viajantesStr, emailsStr);
 };
 
-window.selecionarEstagioProcesso = function(etapaId, clienteId, estadiasJson, viajantesJson, emailsJson) {
-  const container = document.getElementById('upNextChecklistContainer');
-  if (!container) return;
+window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes = []) {
+  const contentDiv = document.getElementById('clientTabContent');
+  if (!contentDiv) return;
 
-  const etapas = window.currentClientProcessStages || [];
-  const etapa = etapas.find(e => e.id === etapaId);
-  if (!etapa) return;
+  contentDiv.innerHTML = `
+    <div style="display:flex; justify-content:center; align-items:center; padding: 40px; gap: 8px;">
+      <div class="spinner-mini" style="border: 2px solid rgba(107,31,42,0.1); border-top-color: var(--crimson); width: 16px; height: 16px; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <strong style="color:var(--crimson); font-size:13px; font-weight:500;">Carregando resumo de pendências...</strong>
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+  `;
 
-  // Atualizar visualmente o stepper (marca a borda do selecionado)
-  const steps = document.querySelectorAll('.process-step');
-  steps.forEach(st => {
-    if (st.dataset.etapa === etapaId) {
-      st.style.borderColor = 'var(--gold)';
-      st.style.borderWidth = '2px';
-    } else {
-      st.style.borderWidth = '1px';
-      // Restaura borda original
-      if (st.classList.contains('completed')) {
-        st.style.borderColor = 'rgba(34, 197, 94, 0.2)';
-      } else if (st.classList.contains('active')) {
-        st.style.borderColor = 'var(--crimson-dk)';
-      } else {
-        st.style.borderColor = 'rgba(0, 0, 0, 0.04)';
-      }
-    }
-  });
-
-  // Renderizar o conteúdo de pendências
-  container.style.display = 'block';
-  
-  if (etapa.pendencias.length === 0) {
-    let msgSucesso = "Todos os requisitos desta etapa foram concluídos com sucesso!";
-    let icon = "✔️";
-    if (etapaId === 'pronto') {
-      msgSucesso = "Viagem Pronta! Roteiro enviado e cliente pronto para embarcar! Bon Voyage! 🇯🇵";
-      icon = "🎉";
-    }
-    container.innerHTML = `
-      <div class="up-next-title" style="color:#166534;">
-        <span>${icon}</span> Estágio: ${etapa.label} — Concluído
-      </div>
-      <div style="font-size:13px; color:#15803d; background:#f0fdf4; border:1px solid rgba(34,197,94,0.15); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:8px;">
-        <span>✨</span> <strong>${msgSucesso}</strong>
-      </div>
-    `;
-    return;
+  let vouchers = [];
+  try {
+    const localRes = await fetch(`/api/clientes/local/${cliente.id}?t=${Date.now()}`);
+    const localData = await localRes.json();
+    vouchers = localData.vouchers || [];
+    window.currentEditingVouchers = vouchers;
+  } catch (e) {
+    console.error("Erro ao carregar vouchers para resumo:", e);
   }
 
-  const listHTML = etapa.pendencias.map(p => {
-    let badgeClass = 'warning';
-    if (p.acao === 'vouchers' || p.acao === 'roteiros') badgeClass = 'error';
-    else if (p.acao === 'editar') badgeClass = 'info';
+  const estadiasStr = encodeURIComponent(JSON.stringify(estadias));
+  const viajantesStr = encodeURIComponent(JSON.stringify(viajantes));
+  const emailsStr = encodeURIComponent(JSON.stringify(cliente.emails || []));
 
-    let actionOnclick = "";
-    if (p.acao === 'dados') {
-      actionOnclick = `window.switchClientTab('dados', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
-    } else if (p.acao === 'vouchers') {
-      actionOnclick = `window.switchClientTab('vouchers', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
-    } else if (p.acao === 'roteiros') {
-      actionOnclick = `window.switchClientTab('roteiros', '${clienteId}', '${estadiasJson}', '${viajantesJson}', '${emailsJson}')`;
-    } else if (p.acao === 'editar') {
-      actionOnclick = `editarClienteCard('${clienteId}')`;
+  // --- SEÇÃO 1: VIAJANTES E DADOS GERAIS ---
+  const pendenciasDados = [];
+  if (!cliente.email || cliente.email.trim() === '') {
+    pendenciasDados.push({
+      texto: "E-mail de contato principal não cadastrado.",
+      tipo: "warning",
+      labelAcao: "Preencher",
+      onclick: `editarClienteCard('${cliente.id}')`
+    });
+  }
+  if (!cliente.telefone || cliente.telefone.trim() === '') {
+    pendenciasDados.push({
+      texto: "Telefone de contato principal não cadastrado.",
+      tipo: "warning",
+      labelAcao: "Preencher",
+      onclick: `editarClienteCard('${cliente.id}')`
+    });
+  }
+
+  const statusCli = (cliente.status || '').toLowerCase().trim();
+  const isCotacao = statusCli === 'cotação' || statusCli === 'cotacao' || statusCli === 'leads' || statusCli === 'novo' || statusCli === '';
+  if (isCotacao) {
+    pendenciasDados.push({
+      texto: `Orçamento pendente de aprovação (Status: ${cliente.status || 'Novo'}).`,
+      tipo: "warning",
+      labelAcao: "Alterar",
+      onclick: `editarClienteCard('${cliente.id}')`
+    });
+  }
+
+  if (!viajantes || viajantes.length === 0) {
+    pendenciasDados.push({
+      texto: "Nenhum viajante cadastrado para esta viagem.",
+      tipo: "error",
+      labelAcao: "Adicionar",
+      onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+    });
+  } else {
+    viajantes.forEach(v => {
+      if (!v.passaporte || v.passaporte.trim().length < 5) {
+        pendenciasDados.push({
+          texto: `Falta passaporte para o viajante: ${v.nome || 'Sem Nome'}.`,
+          tipo: "error",
+          labelAcao: "Preencher",
+          onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+        });
+      }
+      if (!v.validadePassaporte) {
+        pendenciasDados.push({
+          texto: `Falta validade do passaporte para o viajante: ${v.nome || 'Sem Nome'}.`,
+          tipo: "error",
+          labelAcao: "Preencher",
+          onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+        });
+      } else {
+        try {
+          const valDate = new Date(v.validadePassaporte);
+          const limitDate = new Date();
+          limitDate.setMonth(limitDate.getMonth() + 6);
+          if (valDate < new Date()) {
+            pendenciasDados.push({
+              texto: `Passaporte do viajante ${v.nome || 'Sem Nome'} está VENCIDO (${v.validadePassaporte}).`,
+              tipo: "error",
+              labelAcao: "Preencher",
+              onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+            });
+          } else if (valDate < limitDate) {
+            pendenciasDados.push({
+              texto: `Passaporte do viajante ${v.nome || 'Sem Nome'} expira em < 6 meses (${v.validadePassaporte}).`,
+              tipo: "warning",
+              labelAcao: "Preencher",
+              onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+            });
+          }
+        } catch (e) {
+          console.error("Erro ao validar passaporte:", e);
+        }
+      }
+    });
+  }
+
+  // --- SEÇÃO 2: HOSPEDAGEM (ESTADIAS) ---
+  const pendenciasHospedagem = [];
+  if (!cliente.dataInicio || !cliente.dataFim) {
+    pendenciasHospedagem.push({
+      texto: "Definir as datas de início e fim da viagem no cadastro do cliente.",
+      tipo: "error",
+      labelAcao: "Definir Datas",
+      onclick: `editarClienteCard('${cliente.id}')`
+    });
+  } else {
+    const dInicio = new Date(cliente.dataInicio);
+    const dFim = new Date(cliente.dataFim);
+    const noitesViagem = Math.ceil((dFim - dInicio) / (1000 * 60 * 60 * 24));
+
+    let noitesCobertas = 0;
+    let temEstadiaSemHotel = false;
+    let temEstadiaSemCidade = false;
+    let temEstadiaSemData = false;
+
+    estadias.forEach(est => {
+      if (!est.hotelNome || est.hotelNome.trim() === '') {
+        temEstadiaSemHotel = true;
+      }
+      if (!est.cidade || est.cidade.trim() === '') {
+        temEstadiaSemCidade = true;
+      }
+      if (est.dataInicio && est.dataFim) {
+        const estInicio = new Date(est.dataInicio);
+        const estFim = new Date(est.dataFim);
+        const noites = Math.ceil((estFim - estInicio) / (1000 * 60 * 60 * 24));
+        if (noites > 0) noitesCobertas += noites;
+      } else {
+        temEstadiaSemData = true;
+      }
+    });
+
+    if (temEstadiaSemHotel) {
+      pendenciasHospedagem.push({
+        texto: "Existem estadias adicionadas sem nome de hotel definido.",
+        tipo: "error",
+        labelAcao: "Gerenciar",
+        onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+      });
+    }
+    if (temEstadiaSemCidade) {
+      pendenciasHospedagem.push({
+        texto: "Existem estadias cadastradas sem cidade definida.",
+        tipo: "error",
+        labelAcao: "Gerenciar",
+        onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+      });
+    }
+    if (temEstadiaSemData) {
+      pendenciasHospedagem.push({
+        texto: "Uma ou mais estadias cadastradas estão sem data definida.",
+        tipo: "error",
+        labelAcao: "Gerenciar",
+        onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+      });
     }
 
-    return `
-      <div class="up-next-item">
-        <span class="up-next-item-badge ${badgeClass}">${p.acao === 'vouchers' ? 'Pendente' : 'Requisito'}</span>
-        <span class="up-next-item-text" style="font-size:12.5px;">${p.texto}</span>
-        ${p.labelAcao ? `<button class="up-next-btn-action" onclick="${actionOnclick}">${p.labelAcao}</button>` : ''}
+    if (noitesCobertas < noitesViagem) {
+      const noitesFaltantes = noitesViagem - noitesCobertas;
+      pendenciasHospedagem.push({
+        texto: `Faltam cobrir ${noitesFaltantes} noite(s) de hotel (Cobertura: ${noitesCobertas} de ${noitesViagem} noites).`,
+        tipo: "error",
+        labelAcao: "Adicionar Hotel",
+        onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+      });
+    }
+  }
+
+  // --- SEÇÃO 3: ROTEIRO & EMISSÕES ---
+  const pendenciasEmissoes = [];
+  const clienteNome = cliente.nome || '';
+  const roteiro = typeof window.dbRotas !== 'undefined' ? Object.values(window.dbRotas).find(rot => {
+    return rot.notionClienteId === cliente.id || (rot.cliente && rot.cliente.nome === clienteNome);
+  }) : null;
+
+  if (!roteiro) {
+    pendenciasEmissoes.push({
+      texto: "Roteiro do cliente ainda não foi criado no montador.",
+      tipo: "error",
+      labelAcao: "Criar Roteiro",
+      onclick: `window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+    });
+  } else if (roteiro.dias) {
+    roteiro.dias.forEach((dia, dIdx) => {
+      const diaLabel = `Dia ${dIdx + 1} (${dia.cidade || ''})`;
+      if (dia.elementos) {
+        dia.elementos.forEach(el => {
+          if (el.tipo === 'transporte') {
+            const t = el.transportInfo || {};
+            const desc = `${t.tipoTransporte || el.tipoServico || 'Transporte'}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
+            const hora = t.horario || el.horaEncontro;
+
+            // 1. Shinkansen/trem sem horário
+            const isTrem = (t.tipoTransporte || '').toLowerCase().includes('shinkansen') || (t.tipoTransporte || '').toLowerCase().includes('trem') || (el.tipoServico || '').toLowerCase().includes('shinkansen') || (el.tipoServico || '').toLowerCase().includes('trem');
+            if (isTrem && (!hora || hora === 'Definir' || hora.trim() === '')) {
+              pendenciasEmissoes.push({
+                texto: `Shinkansen/Trem sem horário: ${desc} (${diaLabel}).`,
+                tipo: "error",
+                labelAcao: "Ver Roteiro",
+                onclick: `window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+              });
+            }
+
+            // 2. Comprado Heian sem voucher anexado
+            const compradoPelaHeian = t.compradoHeian !== false;
+            if (compradoPelaHeian) {
+              const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('transporte:') && v.atracaoNome.includes(t.tipoTransporte || el.tipoServico));
+              if (!temVoucher) {
+                pendenciasEmissoes.push({
+                  texto: `Falta anexo do voucher de Transporte Heian: ${desc} (${diaLabel}).`,
+                  tipo: "error",
+                  labelAcao: "Anexar",
+                  onclick: `window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+                });
+              }
+            }
+          } else if (el.tipo === 'experiencia') {
+            const e = el.expInfo || {};
+            const nomeExp = e.nomeExp || el.titulo || 'Experiência';
+            const hora = e.horaPartida || el.horaEncontro;
+
+            // 1. Experiência sem horário
+            if (!hora || hora === 'Definir' || hora.trim() === '') {
+              pendenciasEmissoes.push({
+                texto: `Experiência sem horário: ${nomeExp} (${diaLabel}).`,
+                tipo: "warning",
+                labelAcao: "Ver Roteiro",
+                onclick: `window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+              });
+            }
+
+            // 2. Comprado Heian sem voucher anexado
+            const compradoPelaHeian = e.compradoHeian !== false;
+            if (compradoPelaHeian) {
+              const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('experiencia:') && v.atracaoNome.includes(nomeExp));
+              if (!temVoucher) {
+                pendenciasEmissoes.push({
+                  texto: `Falta anexo do voucher de Experiência Heian: ${nomeExp} (${diaLabel}).`,
+                  tipo: "error",
+                  labelAcao: "Anexar",
+                  onclick: `window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
+                });
+              }
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // --- RENDERIZAÇÃO DO GRID ---
+  let html = `<div class="pendencias-grid">`;
+
+  // 1. Coluna Viajantes & Dados
+  html += `
+    <div class="pendencias-block">
+      <div class="pendencias-block-title">👥 Viajantes & Dados Gerais</div>
+      <div class="pendencias-list">
+  `;
+  if (pendenciasDados.length === 0) {
+    html += `
+      <div class="pendencia-empty-state">
+        <span>✔️</span> Viajantes e dados 100% preenchidos!
       </div>
     `;
-  }).join('');
+  } else {
+    pendenciasDados.forEach(p => {
+      html += `
+        <div class="pendencia-item-row">
+          <span class="pendencia-item-badge ${p.tipo}">${p.tipo === 'error' ? 'Pendente' : 'Aviso'}</span>
+          <span style="flex:1;">${p.texto}</span>
+          <button class="pendencia-btn-action" onclick="${p.onclick}">${p.labelAcao}</button>
+        </div>
+      `;
+    });
+  }
+  html += `</div></div>`;
 
-  container.innerHTML = `
-    <div class="up-next-title">
-      <span>📋</span> Pendências da Etapa: ${etapa.label}
-    </div>
-    <div class="up-next-list">
-      ${listHTML}
-    </div>
+  // 2. Coluna Hospedagem
+  html += `
+    <div class="pendencias-block">
+      <div class="pendencias-block-title">🏨 Hospedagem (Estadias)</div>
+      <div class="pendencias-list">
   `;
+  if (pendenciasHospedagem.length === 0) {
+    html += `
+      <div class="pendencia-empty-state">
+        <span>✔️</span> Hotéis e estadias 100% cobertos!
+      </div>
+    `;
+  } else {
+    pendenciasHospedagem.forEach(p => {
+      html += `
+        <div class="pendencia-item-row">
+          <span class="pendencia-item-badge ${p.tipo}">${p.tipo === 'error' ? 'Pendente' : 'Aviso'}</span>
+          <span style="flex:1;">${p.texto}</span>
+          <button class="pendencia-btn-action" onclick="${p.onclick}">${p.labelAcao}</button>
+        </div>
+      `;
+    });
+  }
+  html += `</div></div>`;
+
+  // 3. Coluna Roteiro & Emissões
+  html += `
+    <div class="pendencias-block">
+      <div class="pendencias-block-title">🚄 Roteiro & Emissões (Heian)</div>
+      <div class="pendencias-list">
+  `;
+  if (pendenciasEmissoes.length === 0) {
+    html += `
+      <div class="pendencia-empty-state">
+        <span>✔️</span> Roteiro e emissões concluídos com sucesso!
+      </div>
+    `;
+  } else {
+    pendenciasEmissoes.forEach(p => {
+      html += `
+        <div class="pendencia-item-row">
+          <span class="pendencia-item-badge ${p.tipo}">${p.tipo === 'error' ? 'Pendente' : 'Aviso'}</span>
+          <span style="flex:1;">${p.texto}</span>
+          <button class="pendencia-btn-action" onclick="${p.onclick}">${p.labelAcao}</button>
+        </div>
+      `;
+    });
+  }
+  html += `</div></div>`;
+
+  html += `</div>`;
+  contentDiv.innerHTML = html;
 };
 
 window.switchClientTab = async function(tabName, clienteId, estadiasJson, viajantesJson, emailsJson) {
@@ -4649,7 +4883,9 @@ window.switchClientTab = async function(tabName, clienteId, estadiasJson, viajan
     console.error("Erro ao pré-carregar vouchers:", e);
   }
 
-  if (tabName === 'dados') {
+  if (tabName === 'resumo') {
+    window.renderAbaResumoCliente(cliente, estadias, viajantes);
+  } else if (tabName === 'dados') {
     renderAbaDadosCliente(cliente, estadias, viajantes, emails);
   } else if (tabName === 'roteiros') {
     renderAbaRoteiros(cliente);
