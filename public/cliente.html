@@ -600,10 +600,53 @@
       display: flex;
       flex-direction: column;
       text-align: left;
+      cursor: pointer;
+      user-select: none;
     }
     .hotel-premium-card:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-hover);
+    }
+    .hotel-collapsible-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      opacity: 0;
+      margin-top: 0;
+      border-top: 1px dashed transparent;
+      padding-top: 0;
+    }
+    .hotel-premium-card.expanded .hotel-collapsible-details {
+      max-height: 500px;
+      opacity: 1;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top-color: var(--border);
+    }
+    .hotel-toggle-icon {
+      font-size: 14px;
+      color: var(--ink-light);
+      transition: transform 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .hotel-premium-card.expanded .hotel-toggle-icon {
+      transform: rotate(180deg);
+      color: var(--primary);
+      background: var(--primary-light);
+      border-color: rgba(142, 28, 28, 0.2);
+    }
+    .hotel-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
     }
     .hotel-photo-wrapper {
       width: 100%;
@@ -1314,10 +1357,10 @@
             const card = document.createElement('div');
             card.className = 'hotel-premium-card';
             
-            // Foto
+            // Foto com fallback automático se falhar no carregamento (onerror)
             const fotoUrl = hotelRico['Foto (URL)'] || '';
             const fotoHtml = fotoUrl 
-              ? `<img class="hotel-photo" src="${fotoUrl}" alt="${hotelRico['Nome do Hotel']}">`
+              ? `<img class="hotel-photo" src="${fotoUrl}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600'" alt="${hotelRico['Nome do Hotel']}">`
               : `<img class="hotel-photo" src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600" alt="Hotel de Luxo">`;
             
             // Comodidades (tags/badges)
@@ -1334,17 +1377,29 @@
                 <div class="hotel-city-badge">${hotelRico['Cidade'] || s.cidade || 'Japão'}</div>
               </div>
               <div class="hotel-content">
-                <h3 class="hotel-title">${hotelRico['Nome do Hotel']}</h3>
-                ${periodStr ? `<div class="hotel-period">📅 &nbsp;${periodStr}</div>` : ''}
-                ${hotelRico['Descrição'] ? `<p class="hotel-description">${hotelRico['Descrição']}</p>` : ''}
-                ${comodidadesList ? `<div class="hotel-badges-container">${comodidadesList}</div>` : ''}
-                <div class="hotel-actions">
-                  <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank">
-                    📍 Como Chegar / Ver Rota
-                  </a>
+                <div class="hotel-header-row">
+                  <div style="flex: 1;">
+                    <h3 class="hotel-title" style="margin-bottom: 4px;">${hotelRico['Nome do Hotel']}</h3>
+                    ${periodStr ? `<div class="hotel-period" style="margin-bottom: 0;">📅 &nbsp;${periodStr}</div>` : ''}
+                  </div>
+                  <div class="hotel-toggle-icon">▼</div>
+                </div>
+                
+                <div class="hotel-collapsible-details">
+                  ${hotelRico['Descrição'] ? `<p class="hotel-description" style="margin-bottom: 16px;">${hotelRico['Descrição']}</p>` : ''}
+                  ${comodidadesList ? `<div class="hotel-badges-container" style="margin-bottom: 16px;">${comodidadesList}</div>` : ''}
+                  <div class="hotel-actions" style="margin-top: 8px;">
+                    <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank" onclick="event.stopPropagation();">
+                      📍 Como Chegar / Ver Rota
+                    </a>
+                  </div>
                 </div>
               </div>
             `;
+            
+            card.addEventListener('click', () => {
+              card.classList.toggle('expanded');
+            });
             staysList.appendChild(card);
           } else {
             // Fallback: renderizar um card limpo mas apresentável se não achar na base
