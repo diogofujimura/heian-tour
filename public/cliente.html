@@ -883,6 +883,99 @@
         margin-top: auto;
       }
     }
+
+    /* Botão Flutuante de Dias (FAB) */
+    .days-fab-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      font-family: var(--ff-display);
+    }
+    .days-fab-trigger {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 24px rgba(142, 28, 28, 0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: var(--transition);
+    }
+    .days-fab-trigger:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 30px rgba(142, 28, 28, 0.45);
+    }
+    .days-fab-panel {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: 1px solid var(--border);
+      width: 240px;
+      max-height: 280px;
+      overflow-y: auto;
+      display: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .days-fab-panel.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .days-fab-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .day-select-btn {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .day-select-btn:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: rgba(142, 28, 28, 0.2);
+    }
+    .day-select-btn.active-day {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -1097,6 +1190,22 @@
     </div>
   </div>
 
+  <!-- BOTÃO FLUTUANTE DE DIAS (FAB) -->
+  <div id="days-fab-container" class="days-fab-container" style="display: flex;">
+    <div id="days-fab-panel" class="days-fab-panel">
+      <div class="days-fab-title">
+        <span>Selecione o Dia</span>
+        <span style="font-size: 11px; color: var(--ink-light); cursor: pointer;" onclick="toggleDaysPanel()">✕</span>
+      </div>
+      <div class="days-grid" id="days-fab-grid">
+        <!-- Injetado dinamicamente -->
+      </div>
+    </div>
+    <button class="days-fab-trigger" onclick="toggleDaysPanel()">
+      📅
+    </button>
+  </div>
+
   <!-- Render and tab control script -->
   <script>
     // Tab controller
@@ -1113,7 +1222,68 @@
       
       document.getElementById(tabId).classList.add("active");
       evt.currentTarget.classList.add("active");
+
+      // Controle do FAB
+      const fabContainer = document.getElementById("days-fab-container");
+      if (fabContainer) {
+        if (tabId === "tab-itinerary") {
+          fabContainer.style.display = "flex";
+        } else {
+          fabContainer.style.display = "none";
+          const fabPanel = document.getElementById("days-fab-panel");
+          if (fabPanel) fabPanel.classList.remove("visible");
+        }
+      }
     }
+
+    window.toggleDaysPanel = function() {
+      const panel = document.getElementById('days-fab-panel');
+      if (panel) {
+        panel.classList.toggle('visible');
+      }
+    };
+
+    window.scrollToDay = function(dayNum) {
+      const dayEl = document.getElementById(`itinerary-day-${dayNum}`);
+      if (dayEl) {
+        const offset = 80;
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = dayEl.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+      
+      // Fecha o painel
+      const panel = document.getElementById('days-fab-panel');
+      if (panel) {
+        panel.classList.remove('visible');
+      }
+
+      // Adiciona classe active-day no botão selecionado e remove dos outros
+      document.querySelectorAll('.day-select-btn').forEach((btn, idx) => {
+        if (idx === (dayNum - 1)) {
+          btn.classList.add('active-day');
+        } else {
+          btn.classList.remove('active-day');
+        }
+      });
+    };
+
+    // Fechar ao clicar fora do painel do FAB
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('days-fab-panel');
+      const container = document.getElementById('days-fab-container');
+      if (panel && container && panel.classList.contains('visible')) {
+        if (!container.contains(e.target)) {
+          panel.classList.remove('visible');
+        }
+      }
+    });
 
     // Date formatting helper
     function fmtDateBR(dateStr) {
@@ -1205,6 +1375,9 @@
       const timeline = document.getElementById('itinerary-timeline');
       timeline.innerHTML = '';
       
+      const daysGrid = document.getElementById('days-fab-grid');
+      if (daysGrid) daysGrid.innerHTML = '';
+      
       if (itinerary && itinerary.dias && itinerary.dias.length > 0) {
         const dataInicioStr = clientInfo.dataInicio;
         const somarDias = (dataStr, dias) => {
@@ -1221,6 +1394,15 @@
         itinerary.dias.forEach((dia, index) => {
           const item = document.createElement('div');
           item.className = `timeline-item ${dia.tourGuiado ? '' : 'no-tour'}`;
+          item.id = `itinerary-day-${index + 1}`;
+          
+          if (daysGrid) {
+            const dayBtn = document.createElement('button');
+            dayBtn.className = 'day-select-btn';
+            dayBtn.textContent = index + 1;
+            dayBtn.onclick = () => scrollToDay(index + 1);
+            daysGrid.appendChild(dayBtn);
+          }
           
           const diaData = somarDias(dataInicioStr, index);
           const headerTag = dia.tourGuiado 
