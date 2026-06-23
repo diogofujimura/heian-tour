@@ -4955,7 +4955,11 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
 
               const compradoPelaHeian = el.compradoHeian !== false && e.compradoHeian !== false;
               if (compradoPelaHeian) {
-                const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('experiencia:') && x.atracaoNome.includes(nomeExp));
+                // Chave única: tipo + nome + dia — evita falso match entre itens iguais em dias diferentes
+                const expKey = `experiencia:${nomeExp}:d${dIdx}`;
+                // Compatibilidade retroativa: aceita chave nova (com dia) OU chave antiga (sem dia, apenas includes)
+                const v = vouchers.find(x => x.atracaoNome === expKey)
+                  || vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('experiencia:') && x.atracaoNome === `experiencia:${nomeExp}`);
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'experiencia',
@@ -4963,7 +4967,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                   tituloItem: nomeExp,
                   desc: nomeExp,
                   diaLabel: diaLabel,
-                  key: `experiencia:${nomeExp}`,
+                  key: expKey,
                   voucher: v,
                   dataSugerida: el.dataDoTour || e.dataDoTour || dataDoDiaStr || '',
                   horario: el.horaPartida || e.horaPartida || '',
@@ -4976,21 +4980,28 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               const t = el.transportInfo || {};
               // tipoTransporte vive direto em el.tipoTransporte
               const transpNome = el.tipoTransporte || t.tipoTransporte || el.tipoServico || 'Transporte';
-              const desc = `${transpNome}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
+              const origem = el.cidadeOrigem || t.origem || '';
+              const destino = el.cidadeDestino || t.destino || '';
+              const desc = `${transpNome}${origem && destino ? ` (${origem} ➔ ${destino})` : ''}`;
               itensRoteiro.push({ val: `transporte:${transpNome}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
 
               const compradoPelaHeian = el.compradoHeian !== false && t.compradoHeian !== false;
               if (compradoPelaHeian) {
-                const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('transporte:') && x.atracaoNome.includes(transpNome));
+                // Chave única: tipo + nome + trecho + dia — cada trecho em cada dia é independente
+                const trechoSlug = origem && destino ? `|${origem}>${destino}` : '';
+                const transpKey = `transporte:${transpNome}${trechoSlug}:d${dIdx}`;
+                // Compatibilidade retroativa: aceita chave nova (com dia+trecho) OU chave antiga (só tipo, sem dia)
+                const v = vouchers.find(x => x.atracaoNome === transpKey)
+                  || vouchers.find(x => x.atracaoNome && x.atracaoNome === `transporte:${transpNome}` && emissoesHeian.every(prev => prev.voucher?.atracaoNome !== x.atracaoNome));
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'transporte',
                   tipoLabel: `🚄 ${transpNome}`,
                   tituloItem: transpNome,
                   desc: desc,
-                  origemDestino: `${el.cidadeOrigem || t.origem || 'A definir'} ➔ ${el.cidadeDestino || t.destino || 'A definir'}`,
+                  origemDestino: `${origem || 'A definir'} ➔ ${destino || 'A definir'}`,
                   diaLabel: diaLabel,
-                  key: `transporte:${transpNome}`,
+                  key: transpKey,
                   voucher: v,
                   dataSugerida: el.data || dataDoDiaStr || '',
                   linha: el.linha || t.linha || '',
