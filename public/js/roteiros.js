@@ -2092,10 +2092,16 @@ window.renderRotEstadias = function() {
   roteiroEmEdicao.cliente.estadias.forEach((est, i) => {
     const div = document.createElement('div');
     div.className = 'item-row';
+    const isFirst = i === 0;
+    const isLast = i === roteiroEmEdicao.cliente.estadias.length - 1;
     div.innerHTML = `
-      <div class="item-row-header">
+      <div class="item-row-header" style="display: flex; align-items: center; justify-content: space-between;">
         <span class="item-row-num">Estadia ${i+1}</span>
-        <button class="btn-remove" onclick="rmRotEstadia(${est.id})">✕</button>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button type="button" class="btn-move-up" onclick="moverRotEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔼</button>
+          <button type="button" class="btn-move-down" onclick="moverRotEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔽</button>
+          <button type="button" class="btn-remove" onclick="rmRotEstadia(${est.id})">✕</button>
+        </div>
       </div>
       <div class="form-grid-4">
         <div class="field"><label>Cidade</label><input type="text" value="${est.cidade}" placeholder="Ex: Tokyo" oninput="updRotEstadia(${est.id},'cidade',this.value)"></div>
@@ -2105,6 +2111,26 @@ window.renderRotEstadias = function() {
       </div>`;
     cont.appendChild(div);
   });
+};
+
+window.moverRotEstadia = function(index, direcao) {
+  if (!roteiroEmEdicao.cliente || !roteiroEmEdicao.cliente.estadias) return;
+  const targetIndex = index + direcao;
+  if (targetIndex < 0 || targetIndex >= roteiroEmEdicao.cliente.estadias.length) return;
+  const temp = roteiroEmEdicao.cliente.estadias[index];
+  roteiroEmEdicao.cliente.estadias[index] = roteiroEmEdicao.cliente.estadias[targetIndex];
+  roteiroEmEdicao.cliente.estadias[targetIndex] = temp;
+  window.renderRotEstadias();
+};
+
+window.ordenarRotEstadiasPorData = function() {
+  if (!roteiroEmEdicao.cliente || !roteiroEmEdicao.cliente.estadias) return;
+  roteiroEmEdicao.cliente.estadias.sort((a, b) => {
+    if (!a.dataInicio) return 1;
+    if (!b.dataInicio) return -1;
+    return a.dataInicio.localeCompare(b.dataInicio);
+  });
+  window.renderRotEstadias();
 };
 
 window.rmRotEstadia = function(id) { 
@@ -2124,6 +2150,8 @@ window.updRotEstadia = function(id, f, v) {
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnRotAddEstadia');
   if (btn) btn.addEventListener('click', window.addRotEstadia);
+  const btnOrdenar = document.getElementById('btnRotOrdenarEstadias');
+  if (btnOrdenar) btnOrdenar.addEventListener('click', window.ordenarRotEstadiasPorData);
 });
 
 let _roteiroAutoSaveTimer = null;

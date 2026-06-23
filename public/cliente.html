@@ -1281,7 +1281,11 @@
       const staysList = document.getElementById('info-stays-list');
       staysList.innerHTML = '';
       
-      const stays = clientLocalInfo.estadias || [];
+      const stays = (clientLocalInfo.estadias || []).slice().sort((a, b) => {
+        if (!a.dataInicio) return 1;
+        if (!b.dataInicio) return -1;
+        return a.dataInicio.localeCompare(b.dataInicio);
+      });
       if (stays.length > 0) {
         stays.forEach(s => {
           // Busca correspondência de hotel na base de dados de hotéis ricos

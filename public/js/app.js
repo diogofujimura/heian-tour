@@ -815,10 +815,16 @@ function renderEstadiasForm() {
   currentEditingEstadias.forEach((est, i) => {
     const div = document.createElement('div');
     div.className = 'item-row';
+    const isFirst = i === 0;
+    const isLast = i === currentEditingEstadias.length - 1;
     div.innerHTML = `
-      <div class="item-row-header">
+      <div class="item-row-header" style="display: flex; align-items: center; justify-content: space-between;">
         <span class="item-row-num">Estadia ${i+1}</span>
-        <button class="btn-remove" onclick="rmEstadia(${est.id})">✕</button>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button type="button" class="btn-move-up" onclick="moverEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔼</button>
+          <button type="button" class="btn-move-down" onclick="moverEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔽</button>
+          <button type="button" class="btn-remove" onclick="rmEstadia(${est.id})">✕</button>
+        </div>
       </div>
       <div class="form-grid">
         <div class="field"><label>Cidade</label><input type="text" value="${est.cidade}" placeholder="Ex: Tokyo" oninput="updEstadia(${est.id},'cidade',this.value); filtrarDatalistHoteis(${est.id},this.value)"></div>
@@ -834,6 +840,24 @@ function renderEstadiasForm() {
 }
 function rmEstadia(id) { currentEditingEstadias = currentEditingEstadias.filter(e => e.id !== id); renderEstadiasForm(); }
 function updEstadia(id, f, v) { const e = currentEditingEstadias.find(x => x.id === id); if (e) e[f] = v; }
+
+window.moverEstadia = function(index, direcao) {
+  const targetIndex = index + direcao;
+  if (targetIndex < 0 || targetIndex >= currentEditingEstadias.length) return;
+  const temp = currentEditingEstadias[index];
+  currentEditingEstadias[index] = currentEditingEstadias[targetIndex];
+  currentEditingEstadias[targetIndex] = temp;
+  renderEstadiasForm();
+};
+
+window.ordenarEstadiasPorData = function() {
+  currentEditingEstadias.sort((a, b) => {
+    if (!a.dataInicio) return 1;
+    if (!b.dataInicio) return -1;
+    return a.dataInicio.localeCompare(b.dataInicio);
+  });
+  renderEstadiasForm();
+};
 
 function filtrarDatalistHoteis(estId, cidadeDigitada) {
   const datalist = document.getElementById(`datalist-hoteis-${estId}`);
@@ -3026,6 +3050,10 @@ function setupClientesTab() {
   if(btnAdd) btnAdd.addEventListener('click', () => {
     currentEditingEstadias.push({ id: Date.now(), cidade: '', dataInicio: '', dataFim: '', hotel: '' });
     renderEstadiasForm();
+  });
+  const btnOrdenar = document.getElementById('btnOrdenarEstadias');
+  if(btnOrdenar) btnOrdenar.addEventListener('click', () => {
+    window.ordenarEstadiasPorData();
   });
 
   // Viajantes

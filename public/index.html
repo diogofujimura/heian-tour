@@ -391,10 +391,12 @@ window.addEventListener('unhandledrejection', function(e) {
                    <button class="btn-primary" id="btnGerarDiasAutomaticamente" style="font-size:11px; padding: 6px 12px; border-radius:4px;" title="Cria automaticamente todos os dias baseado na Data de Início e Data Final.">✨ Gerar Dias Automaticamente</button>
                  </div>
                  <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
-                 <div id="rotEstadiasList"></div>
-                 <button class="btn-add" id="btnRotAddEstadia" style="margin-top:8px; border-style:dashed">+ Adicionar Estadia</button>
-                 
-               </div>
+                  <div id="rotEstadiasList"></div>
+                  <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="btn-add" id="btnRotAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
+                    <button class="btn-secondary" id="btnRotOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;">📅 Ordenar por Data</button>
+                  </div>
+                </div>
 
                <div id="editRoteiroDiasList"></div>
                <button class="btn-add" id="btnAddDiaRoteiro" style="margin-top:12px">+ Adicionar Dia</button>
@@ -808,7 +810,10 @@ window.addEventListener('unhandledrejection', function(e) {
 
                   <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
                   <div id="estadiasList"></div>
-                  <button class="btn-add" id="btnAddEstadia" style="margin-top:8px; border-style:dashed">+ Adicionar Estadia</button>
+                  <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="btn-add" id="btnAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
+                    <button class="btn-secondary" id="btnOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;">📅 Ordenar por Data</button>
+                  </div>
                   <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button id="btnAcessoCotacao" class="btn-secondary" style="flex: 1; display: none;">Cotação</button>
                     <button id="btnAcessoRoteiro" class="btn-secondary" style="flex: 1; display: none;">Roteiro</button>
