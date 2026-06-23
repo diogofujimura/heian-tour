@@ -4918,10 +4918,28 @@ window.renderAbaVouchersCliente = async function(cliente) {
     }) : null;
 
     let itensRoteiro = [];
+    let emissoesHeian = [];
+
     if (roteiroVinculado && roteiroVinculado.dias) {
       roteiroVinculado.dias.forEach((dia, dIdx) => {
         const diaLabel = `Dia ${dIdx + 1} (${dia.cidade || ''})`;
         itensRoteiro.push({ val: `dia:${dIdx + 1}`, label: `📅 ${diaLabel}` });
+
+        let dataDoDiaStr = '';
+        if (cliente.dataInicio) {
+          try {
+            const dt = new Date(cliente.dataInicio + 'T00:00:00');
+            if (!isNaN(dt.getTime())) {
+              dt.setDate(dt.getDate() + dIdx);
+              const y = dt.getFullYear();
+              const m = String(dt.getMonth() + 1).padStart(2, '0');
+              const d = String(dt.getDate()).padStart(2, '0');
+              dataDoDiaStr = `${y}-${m}-${d}`;
+            }
+          } catch(err) {
+            console.error("Erro ao calcular data do dia na aba vouchers:", err);
+          }
+        }
 
         if (dia.elementos) {
           dia.elementos.forEach(el => {
@@ -4930,16 +4948,122 @@ window.renderAbaVouchersCliente = async function(cliente) {
                 itensRoteiro.push({ val: `atracao:${atr}`, label: `📍 Atração: ${atr} (${diaLabel})` });
               });
             } else if (el.tipo === 'experiencia') {
-              itensRoteiro.push({ val: `experiencia:${el.nomeExp}`, label: `🎟️ Exp: ${el.nomeExp} (${diaLabel})` });
+              const e = el.expInfo || {};
+              const nomeExp = e.nomeExp || el.titulo || 'Experiência';
+              itensRoteiro.push({ val: `experiencia:${nomeExp}`, label: `🎟️ Exp: ${nomeExp} (${diaLabel})` });
+
+              const compradoPelaHeian = e.compradoHeian !== false;
+              if (compradoPelaHeian) {
+                const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('experiencia:') && x.atracaoNome.includes(nomeExp));
+                emissoesHeian.push({
+                  tipo: 'experiencia',
+                  tipoLabel: '🎟️ Experiência',
+                  desc: nomeExp,
+                  diaLabel: diaLabel,
+                  key: `experiencia:${nomeExp}`,
+                  voucher: v,
+                  dataSugerida: e.dataDoTour || el.dataDoTour || dataDoDiaStr || ''
+                });
+              }
             } else if (el.tipo === 'transporte') {
-              const desc = `${el.tipoTransporte || 'Transporte'}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
-              itensRoteiro.push({ val: `transporte:${el.tipoTransporte}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
+              const t = el.transportInfo || {};
+              const transpNome = t.tipoTransporte || el.tipoServico || 'Transporte';
+              const desc = `${transpNome}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
+              itensRoteiro.push({ val: `transporte:${transpNome}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
+
+              const compradoPelaHeian = t.compradoHeian !== false;
+              if (compradoPelaHeian) {
+                const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('transporte:') && x.atracaoNome.includes(transpNome));
+                emissoesHeian.push({
+                  tipo: 'transporte',
+                  tipoLabel: '🚄 Transporte',
+                  desc: desc,
+                  diaLabel: diaLabel,
+                  key: `transporte:${transpNome}`,
+                  voucher: v,
+                  dataSugerida: el.data || dataDoDiaStr || ''
+                });
+              }
             }
           });
         }
       });
     }
 
+    // --- RENDERIZAR TABELA DE EMISSÕES HEIAN ---
+    let emissoesHTML = '';
+    if (emissoesHeian.length === 0) {
+      emissoesHTML = `<p style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Não há nenhum item marcado para emissão pela Heian neste roteiro.</p>`;
+    } else {
+      emissoesHTML = `
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%; margin-bottom: 0;">
+            <thead>
+              <tr>
+                <th>Item do Roteiro Heian</th>
+                <th>Setor</th>
+                <th style="width:130px; text-align:center;">Status</th>
+                <th style="width:140px; text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${emissoesHeian.map(eh => {
+                let statusBadge = '';
+                let acaoHTML = '';
+                
+                if (eh.voucher) {
+                  statusBadge = `<span class="meta-badge" style="background:#d1fae5; color:#065f46; border:none; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase;">✔️ Emitido</span>`;
+                  
+                  let linkHTML = '';
+                  if (eh.voucher.arquivos && eh.voucher.arquivos.length > 0) {
+                    linkHTML = eh.voucher.arquivos.map((arq, idx) => {
+                      return `<a href="${arq.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">Visualizar Doc ${idx+1}</a>`;
+                    }).join('');
+                  } else if (eh.voucher.url) {
+                    linkHTML = `<a href="${eh.voucher.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">Abrir Link Externo</a>`;
+                  } else {
+                    linkHTML = `<span style="color:var(--ink-lt); font-size:11px; font-style:italic;">Instrução escrita</span>`;
+                  }
+                  
+                  const editAction = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.voucher.atracaoNome.replace(/'/g, "\\'")}', '${eh.voucher.nome.replace(/'/g, "\\'")}', '${eh.voucher.dataUso || ''}', '${eh.voucher.id}')`;
+                  acaoHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                      ${linkHTML}
+                      <button class="btn-secondary" onclick="${editAction}" style="padding:2px 8px; font-size:10px; margin-top:4px; cursor:pointer;">✏️ Alterar</button>
+                    </div>
+                  `;
+                } else {
+                  statusBadge = `<span class="meta-badge" style="background:#fee2e2; color:#991b1b; border:none; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase;">⚠️ Pendente</span>`;
+                  
+                  const suggestionsName = eh.tipo === 'transporte' ? `Bilhete - ${eh.desc}` : `Ingresso - ${eh.desc}`;
+                  const actionClick = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.key.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${eh.dataSugerida}')`;
+                  
+                  acaoHTML = `
+                    <button class="btn-primary" onclick="${actionClick}" style="padding:4px 10px; font-size:11px; border-radius:4px; font-weight:600; cursor:pointer; background:var(--crimson); border-color:var(--crimson); color:white;">
+                      ➕ Anexar Voucher
+                    </button>
+                  `;
+                }
+                
+                return `
+                  <tr>
+                    <td>
+                      <div style="font-size:11px; color:var(--ink-lt);">${eh.diaLabel}</div>
+                      <strong style="font-size:13px; color:var(--ink-dk);">${eh.desc}</strong>
+                    </td>
+                    <td style="font-size:12px; font-weight:500; color:var(--ink-mid);">${eh.tipoLabel}</td>
+                    <td style="text-align:center;">${statusBadge}</td>
+                    <td style="text-align:center;">${acaoHTML}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // --- RENDERIZAR TABELA DE VOUCHERS GERAIS ---
     let vouchersHTML = '';
     if (vouchers.length === 0) {
       vouchersHTML = `<p style="text-align:center; color:var(--ink-lt); padding: 20px; font-size:13.5px;">Nenhum voucher cadastrado para este cliente.</p>`;
@@ -5010,10 +5134,19 @@ window.renderAbaVouchersCliente = async function(cliente) {
     contentDiv.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:20px;">
         
+        <!-- Controle de Emissões Heian (Roteiro) -->
+        <div class="info-card" style="padding:16px; border: 1px solid rgba(196,163,90,0.22); background: linear-gradient(to bottom, #fdfaf5, #ffffff);">
+          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson); display:flex; justify-content:space-between; align-items:center;">
+            <span>📋 Controle de Emissões Heian (Roteiro)</span>
+            <span style="font-size:11px; color:var(--ink-lt); font-weight:normal;">Mapeado dinamicamente do roteiro</span>
+          </h3>
+          ${emissoesHTML}
+        </div>
+
         <!-- Lista de Vouchers -->
         <div class="info-card" style="padding:16px;">
           <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
-            <span>🎟️ Ingressos e Vouchers Enviados</span>
+            <span>🎟️ Todos os Ingressos e Vouchers Enviados</span>
             <span style="font-size:11px; color:var(--ink-lt); font-weight:normal;">${vouchers.length} item(ns)</span>
           </h3>
           ${vouchersHTML}
@@ -5021,7 +5154,7 @@ window.renderAbaVouchersCliente = async function(cliente) {
 
         <!-- Formulário de Cadastro -->
         <div class="info-card" style="padding:16px; border:1px dashed var(--border); background:#fdfdfd;">
-          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson);">➕ Cadastrar Novo Voucher</h3>
+          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson);">➕ Cadastrar Novo Voucher Avulso</h3>
           
           <form id="formNovoVoucher" onsubmit="window.salvarNovoVoucherCliente(event, '${cliente.id}')" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
             
