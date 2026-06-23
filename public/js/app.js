@@ -1476,12 +1476,26 @@ function abrirModalTransporte(id) {
       <div class="field"><label>Tempo</label><input id="m_tempo" value="${item.tempo||''}"></div>
       <div class="field full-width"><label>Observações</label><input id="m_obs" value="${item.observacao||''}"></div>
       <div class="field full-width"><label>Link</label><input id="m_link" value="${item.link||''}"></div>
+      <div class="field full-width"><label>Instrução de Compra (Pré-compra)</label><textarea id="m_compra" rows="3" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:8px; font-family:inherit;">${item.compra||''}</textarea></div>
+      <div class="field full-width"><label>Instrução de Uso (Embarque)</label><textarea id="m_uso" rows="3" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:8px; font-family:inherit;">${item.uso||''}</textarea></div>
     </div>
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarTransporte(${id||'null'})">Salvar</button></div>`;
   openModal();
 }
 async function salvarTransporte(id) {
-  const dados={trecho:v('m_trecho'),idade:v('m_idade'),tipo:v('m_tipo'),linha:v('m_linha'),categoria:v('m_categoria'),preco_jpy:parseFloat(v('m_preco'))||0,tempo:v('m_tempo'),observacao:v('m_obs'),link:v('m_link')};
+  const dados={
+    trecho:v('m_trecho'),
+    idade:v('m_idade'),
+    tipo:v('m_tipo'),
+    linha:v('m_linha'),
+    categoria:v('m_categoria'),
+    preco_jpy:parseFloat(v('m_preco'))||0,
+    tempo:v('m_tempo'),
+    observacao:v('m_obs'),
+    link:v('m_link'),
+    compra:v('m_compra').trim(),
+    uso:v('m_uso').trim()
+  };
   if(id){await fetch(`/api/transportes/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});const i=state.transportesDB.find(t=>t.id==id);if(i)Object.assign(i,dados);}
   else{const n=await fetch('/api/transportes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)}).then(r=>r.json());state.transportesDB.push(n);}
   await loadDB();closeModal();

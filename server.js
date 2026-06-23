@@ -1982,6 +1982,8 @@ app.post('/api/sync', async (req, res) => {
       const idxObs = headers.findIndex(h => h.includes('observação') || h.includes('observacao'));
       const idxLink = headers.findIndex(h => h.includes('link'));
       const idxId = headers.findIndex(h => h === 'id');
+      const idxCompra = headers.findIndex(h => h === 'compra' || h.includes('compra') || h.includes('instrução de compra') || h.includes('instrucao de compra'));
+      const idxUso = headers.findIndex(h => h === 'uso' || h.includes('uso') || h.includes('instrução de uso') || h.includes('instrucao de uso'));
 
       const dataRows = headerIdx >= 0 ? rows.slice(headerIdx + 1) : rows;
 
@@ -2004,7 +2006,9 @@ app.post('/api/sync', async (req, res) => {
             preco_jpy:  cellNum(c[idxPreco > -1 ? idxPreco : 4 + offset]),
             tempo:      (idxTempo > -1 ? cellVal(c[idxTempo]) : cellVal(c[5 + offset])),
             observacao: (idxObs > -1 ? cellVal(c[idxObs]) : cellVal(c[6 + offset])),
-            link:       (idxLink > -1 ? cellVal(c[idxLink]) : cellVal(c[7 + offset]))
+            link:       (idxLink > -1 ? cellVal(c[idxLink]) : cellVal(c[7 + offset])),
+            compra:     (idxCompra > -1 ? cellVal(c[idxCompra]) : ''),
+            uso:        (idxUso > -1 ? cellVal(c[idxUso]) : '')
           };
         })
         .filter(Boolean);

@@ -1947,6 +1947,8 @@ window.selecionarTransporte = function(idx, eIdx, idTransp) {
       el.linha = t.linha;
       el.categoria = t.categoria;
       el.tempo = t.tempo;
+      el.instrucoesPreCompra = t.compra || '';
+      el.instrucoesPosCompra = t.uso || '';
       if (el.adultos === undefined) el.adultos = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.adultos) || 2);
       if (el.criancas === undefined) el.criancas = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0);
       renderEditDias();
