@@ -2007,7 +2007,7 @@ app.post('/api/sync', async (req, res) => {
           const offset = idxIdade > -1 ? 1 : 0;
           
           return {
-            id: (idxId > -1 ? cellVal(c[idxId]) : null) || cellVal(c[12 + offset]) || (i + 1),
+            id: (idxId > -1 ? cellVal(c[idxId]) : null) || cellVal(c[12]) || (i + 1),
             trecho,
             idade:      (idxIdade > -1 ? cellVal(c[idxIdade]) : ''),
             tipo:       (idxTipo > -1 ? cellVal(c[idxTipo]) : cellVal(c[1 + offset])),
