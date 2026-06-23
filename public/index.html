@@ -834,6 +834,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="tab" data-tab="experiencias-tab">Experiências</button>
       <button class="tab" data-tab="atracoes-tab">Atrações (Roteiros)</button>
       <button class="tab" data-tab="rotas-tab">Rotas (Sequências)</button>
+      <button class="tab" data-tab="hoteis-tab">Hotéis</button>
     </div>
     <div id="transportes-tab" class="tab-content active">
       <div class="table-header">
@@ -879,6 +880,17 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="table-wrapper">
         <table id="tabelaRotas" class="data-table">
           <thead><tr><th>Cidade</th><th>Nome da Rota</th><th>Atrações</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="hoteis-tab" class="tab-content">
+      <div class="table-header">
+        <input type="text" id="searchHotel" placeholder="Buscar hotel..." class="search-input">
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaHoteis" class="data-table">
+          <thead><tr><th>Cidade</th><th>Nome do Hotel</th><th>Descrição</th><th>Comodidades</th><th>Foto</th><th>Ações</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

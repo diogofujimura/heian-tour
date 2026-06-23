@@ -594,6 +594,146 @@
     .popover-desc { font-size: 12px; color: var(--ink-mid); line-height: 1.5; margin-bottom: 12px; }
     .popover-preco { font-size: 13px; font-weight: 500; color: var(--ink); border-top: 1px solid rgba(142, 28, 28, 0.12); padding-top: 10px; display: flex; justify-content: space-between; }
     .preco-brt { color: var(--accent); font-weight: 600; }
+
+    /* Estilos Premium para Cards de Hotéis PWA/Mobile */
+    .hotel-premium-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+    .hotel-premium-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+    .hotel-photo-wrapper {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      background-color: #eae5de;
+      overflow: hidden;
+    }
+    .hotel-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .hotel-premium-card:hover .hotel-photo {
+      transform: scale(1.05);
+    }
+    .hotel-city-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(142, 28, 28, 0.9);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .hotel-content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hotel-title {
+      font-family: var(--ff-display);
+      font-size: 22px;
+      color: var(--primary);
+      font-weight: 700;
+      line-height: 1.3;
+      margin: 0;
+    }
+    .hotel-period {
+      font-size: 13px;
+      color: var(--ink-mid);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hotel-description {
+      font-size: 13.5px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      text-align: justify;
+      margin: 4px 0;
+    }
+    .hotel-badges-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 4px 0;
+    }
+    .hotel-meta-badge {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid rgba(142, 28, 28, 0.1);
+    }
+    .hotel-actions {
+      display: flex;
+      justify-content: flex-end;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin-top: 4px;
+    }
+    .hotel-maps-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary);
+      color: white !important;
+      text-decoration: none !important;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: var(--transition);
+      box-shadow: 0 4px 10px rgba(142, 28, 28, 0.15);
+    }
+    .hotel-maps-btn:hover {
+      background: #4c0d0d;
+      box-shadow: 0 6px 15px rgba(142, 28, 28, 0.25);
+      transform: translateY(-1px);
+    }
+
+    @media (min-width: 768px) {
+      .hotel-premium-card {
+        flex-direction: row;
+        height: auto;
+        min-height: 220px;
+      }
+      .hotel-photo-wrapper {
+        width: 35%;
+        height: auto;
+        min-height: 220px;
+      }
+      .hotel-content {
+        width: 65%;
+        padding: 24px 30px;
+        justify-content: center;
+      }
+      .hotel-actions {
+        margin-top: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -854,7 +994,7 @@
     }
 
     function renderClientData(data) {
-      const { clientInfo, payments, quote, itinerary, clientLocalInfo } = data;
+      const { clientInfo, payments, quote, itinerary, clientLocalInfo, hoteis } = data;
       
       // Hide loader and show content
       document.getElementById('loader').style.display = 'none';
@@ -1144,24 +1284,85 @@
       const stays = clientLocalInfo.estadias || [];
       if (stays.length > 0) {
         stays.forEach(s => {
-          const item = document.createElement('div');
-          item.style.marginBottom = '12px';
-          
+          // Busca correspondência de hotel na base de dados de hotéis ricos
+          const hotelNomePlanilha = (s.hotel || '').trim().toLowerCase();
+          const hotelRico = (hoteis || []).find(h => {
+            const hNome = (h['Nome do Hotel'] || '').trim().toLowerCase();
+            return hNome === hotelNomePlanilha || hotelNomePlanilha.includes(hNome) || hNome.includes(hotelNomePlanilha);
+          });
+
           const dtStart = s.dataInicio ? fmtDateBR(s.dataInicio) : '';
           const dtEnd = s.dataFim ? fmtDateBR(s.dataFim) : '';
-          const periodStr = dtStart && dtEnd ? ` (${dtStart} a ${dtEnd})` : '';
-          
-          item.innerHTML = `
-            <div style="font-weight:600; color:var(--ink);">${s.cidade || 'Cidade'}</div>
-            <div style="font-size:13px; color:var(--ink-mid);">${s.hotel || 'Não especificado'}${periodStr}</div>
-          `;
-          staysList.appendChild(item);
+          const periodStr = dtStart && dtEnd ? `${dtStart} a ${dtEnd}` : '';
+
+          if (hotelRico) {
+            // Renderiza o card premium
+            const card = document.createElement('div');
+            card.className = 'hotel-premium-card';
+            
+            // Foto
+            const fotoUrl = hotelRico['Foto (URL)'] || '';
+            const fotoHtml = fotoUrl 
+              ? `<img class="hotel-photo" src="${fotoUrl}" alt="${hotelRico['Nome do Hotel']}">`
+              : `<img class="hotel-photo" src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600" alt="Hotel de Luxo">`;
+            
+            // Comodidades (tags/badges)
+            const comodidadesList = hotelRico['Comodidades'] 
+              ? hotelRico['Comodidades'].split(',').map(item => `<span class="hotel-meta-badge">${item.trim()}</span>`).join('')
+              : '';
+
+            // Link Google Maps
+            const mapsUrl = hotelRico['Link do Google Maps'] || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelRico['Nome do Hotel'] + ', Japan')}`;
+            
+            card.innerHTML = `
+              <div class="hotel-photo-wrapper">
+                ${fotoHtml}
+                <div class="hotel-city-badge">${hotelRico['Cidade'] || s.cidade || 'Japão'}</div>
+              </div>
+              <div class="hotel-content">
+                <h3 class="hotel-title">${hotelRico['Nome do Hotel']}</h3>
+                ${periodStr ? `<div class="hotel-period">📅 &nbsp;${periodStr}</div>` : ''}
+                ${hotelRico['Descrição'] ? `<p class="hotel-description">${hotelRico['Descrição']}</p>` : ''}
+                ${comodidadesList ? `<div class="hotel-badges-container">${comodidadesList}</div>` : ''}
+                <div class="hotel-actions">
+                  <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank">
+                    📍 Como Chegar / Ver Rota
+                  </a>
+                </div>
+              </div>
+            `;
+            staysList.appendChild(card);
+          } else {
+            // Fallback: renderizar um card limpo mas apresentável se não achar na base
+            const item = document.createElement('div');
+            item.style.marginBottom = '20px';
+            item.style.padding = '20px';
+            item.style.background = '#ffffff';
+            item.style.borderRadius = '14px';
+            item.style.border = '1px solid var(--border)';
+            item.style.boxShadow = 'var(--shadow)';
+            item.style.textAlign = 'left';
+            
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((s.hotel || '') + (s.cidade ? ', ' + s.cidade + ', Japan' : ', Japan'))}`;
+
+            item.innerHTML = `
+              <div style="font-size: 11px; text-transform: uppercase; color: var(--primary); letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">${s.cidade || 'Hospedagem'}</div>
+              <h3 style="font-family: var(--ff-display); font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 8px;">${s.hotel || 'Não especificado'}</h3>
+              ${periodStr ? `<div style="font-size: 13px; color: var(--ink-mid); margin-bottom: 12px;">📅 Período: ${periodStr}</div>` : ''}
+              <div style="display:flex; justify-content:flex-end;">
+                <a href="${googleMapsUrl}" target="_blank" style="font-size:12px; color: var(--primary); font-weight:600; text-decoration:none;">📍 Ver no Google Maps →</a>
+              </div>
+            `;
+            staysList.appendChild(item);
+          }
         });
       } else {
         const rawHotel = clientInfo.hotel || '-';
         staysList.innerHTML = `
-          <div style="font-weight:600; color:var(--ink);">Hotéis reservados</div>
-          <div style="font-size:13px; color:var(--ink-mid);">${rawHotel}</div>
+          <div class="hotel-premium-card" style="padding: 24px;">
+            <div style="font-family: var(--ff-display); font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Hotéis Reservados</div>
+            <div style="font-size: 13.5px; color: var(--ink-mid); white-space: pre-line; line-height: 1.6;">${rawHotel}</div>
+          </div>
         `;
       }
 

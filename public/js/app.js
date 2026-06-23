@@ -138,20 +138,24 @@ async function loadConfig() {
 }
 
 async function loadDB() {
-  const [tRes, eRes, aRes, rRes] = await Promise.all([
+  const [tRes, eRes, aRes, rRes, hRes] = await Promise.all([
     fetch('/api/transportes'),
     fetch('/api/experiencias'),
     fetch('/api/atracoes'),
-    fetch('/api/rotas-base')
+    fetch('/api/rotas-base'),
+    fetch('/api/hoteis')
   ]);
   state.transportesDB = await tRes.json();
   state.experienciasDB = await eRes.json();
   state.atracoesDB = await aRes.json();
   state.rotasDB = await rRes.json();
+  const hoteisJson = await hRes.json().catch(() => []);
+  state.hoteisDB = Array.isArray(hoteisJson) ? hoteisJson : [];
   renderTabelaTransportes();
   renderTabelaExperiencias();
   renderTabelaAtracoes();
   renderTabelaRotas();
+  renderTabelaHoteis();
 }
 
 // ── ORÇAMENTOS SALVOS ─────────────────────────────────────────────────────────
@@ -1376,6 +1380,7 @@ function setupBase() {
   document.getElementById('searchTransporte')?.addEventListener('input', e => renderTabelaTransportes(e.target.value));
   document.getElementById('searchExperiencia')?.addEventListener('input', e => renderTabelaExperiencias(e.target.value));
   document.getElementById('searchAtracao')?.addEventListener('input', e => renderTabelaAtracoes(e.target.value));
+  document.getElementById('searchHotel')?.addEventListener('input', e => renderTabelaHoteis(e.target.value));
   if(document.getElementById('searchRota')) document.getElementById('searchRota').addEventListener('input', e => renderTabelaRotas(e.target.value));
   document.getElementById('btnNovoTransporte')?.addEventListener('click', () => abrirModalTransporte());
   document.getElementById('btnNovaExperiencia')?.addEventListener('click', () => abrirModalExperiencia());
@@ -1553,6 +1558,32 @@ async function deletarAtracao(idOrName){
   if (typeof carregarBases === 'function') await carregarBases();
 }
 
+function renderTabelaHoteis(filtro) {
+  if (filtro === undefined) {
+    const el = document.getElementById('searchHotel');
+    filtro = el ? el.value : '';
+  }
+  const tbody = document.querySelector('#tabelaHoteis tbody');
+  if(!tbody) return;
+  const lista = state.hoteisDB || [];
+  const listaFiltrada = filtro ? lista.filter(h=>[h['Nome do Hotel'], h.Cidade, h.Comodidades].join(' ').toLowerCase().includes(filtro.toLowerCase())) : lista;
+  
+  tbody.innerHTML = listaFiltrada.map(h=>{
+    const fotoHtml = h['Foto (URL)'] ? `<img src="${h['Foto (URL)']}" style="width: 50px; height: 35px; object-fit: cover; border-radius: 4px;" onerror="this.src='https://via.placeholder.com/50x35?text=Sem+Foto'">` : '—';
+    const mapsLink = h['Link do Google Maps'] ? `<a href="${h['Link do Google Maps']}" target="_blank" style="color:var(--crimson); text-decoration:underline; font-weight:500;">Ver no Maps</a>` : '—';
+    
+    return `<tr>
+      <td>${h.Cidade||''}</td>
+      <td><strong>${h['Nome do Hotel']||''}</strong></td>
+      <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${(h['Descrição']||'').replace(/"/g, '&quot;')}">${h['Descrição']||'—'}</td>
+      <td>${h.Comodidades||'—'}</td>
+      <td style="text-align:center;">${fotoHtml}</td>
+      <td>${mapsLink}</td>
+    </tr>`;
+  }).join('');
+}
+}
+
 // ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
 function setupConfig() {
   // Initialize Rich Text Editors for Config Textareas
@@ -1629,7 +1660,7 @@ function setupSync() {
     try{const res=await fetch('/api/sync',{method:'POST'});const data=await res.json();
       if(data.ok){
         document.getElementById('syncStatus').textContent='Sync: '+fmtDate(data.ultima_sincronizacao);
-        await loadDB(); window.dbTransportesCache = null; window.dbExperienciasCache = null; showToast(`Base atualizada! ${data.nTransp||0} transportes, ${data.nExp||0} experiências, ${data.nAtracoes||0} atrações.`);
+        await loadDB(); window.dbTransportesCache = null; window.dbExperienciasCache = null; showToast(`Base atualizada! ${data.nTransp||0} transportes, ${data.nExp||0} experiências, ${data.nAtracoes||0} atrações, ${data.nHoteis||0} hotéis.`);
       }
       else alert('Erro: '+data.error);
     }catch{alert('Erro ao sincronizar.');}

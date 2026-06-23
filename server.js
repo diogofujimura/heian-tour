@@ -1380,6 +1380,17 @@ app.get('/api/atracoes', async (req, res) => {
   }
 });
 
+app.get('/api/hoteis', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data && data.data ? data.data : []);
+  } catch(e) {
+    console.error('Error getting hoteis:', e);
+    res.status(500).json({error: e.message});
+  }
+});
+
 app.post('/api/atracoes', async (req, res) => {
   try {
     const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
@@ -1785,7 +1796,7 @@ app.post('/api/sync', async (req, res) => {
     const { data: cfgData, error: cfgErr } = await supabase.from('config').select('data').eq('id', 'app_config').single();
     if (cfgErr) throw cfgErr;
     const config = cfgData?.data || {};
-    const { sheets_id, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas } = config;
+    const { sheets_id, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas, sheets_aba_hoteis } = config;
 
     if (!sheets_id) {
       return res.status(400).json({ error: 'ID do Google Sheets não configurado nas Configurações.' });
@@ -1795,12 +1806,14 @@ app.post('/api/sync', async (req, res) => {
     const abaE = sheets_aba_experiencias || 'BaseEX';
     const abaA = sheets_aba_atracoes || 'Atracoes';
     const abaRotas = sheets_aba_rotas || 'Rotas';
+    const abaHoteis = sheets_aba_hoteis || 'Hotéis';
 
     const db = {
       config,
       transportes: [],
       experiencias: [],
       atracoes: [],
+      hoteis: [],
       rotas: {}
     };
 
@@ -2058,6 +2071,71 @@ app.post('/api/sync', async (req, res) => {
       }
     } catch (e) { console.error('Erro aba Rotas:', e.message); }
 
+    // ── HOTÉIS (aba "Hotéis") ────────────────────────────────────────
+    let nHoteis = 0;
+    try {
+      const table = await fetchAba(abaHoteis);
+      const rows = table.rows || [];
+
+      if (rows.length > 0) {
+        // Encontra a linha de cabeçalho (procura nas primeiras 5 linhas)
+        let headerIdx = 0;
+        let foundHeader = false;
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const cells = rows[i].c || [];
+          const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
+          if (rowVals.some(v => v.includes('hotel') || v.includes('hotéis') || v.includes('hoteis') || v.includes('nome'))) {
+            headerIdx = i;
+            foundHeader = true;
+            break;
+          }
+        }
+
+        const headerCells = rows[headerIdx]?.c || [];
+        const headerVals = headerCells.map(cellVal).map(v => v.toLowerCase());
+
+        const getIdx = (keywords, defaultVal) => {
+          let idx = headerVals.findIndex(h => keywords.some(k => h === k));
+          if (idx >= 0) return idx;
+          idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
+          return idx >= 0 ? idx : defaultVal;
+        };
+
+        const idxNome = getIdx(['nome do hotel', 'hotel', 'nome', 'name'], 0);
+        const idxCidade = getIdx(['cidade', 'city', 'local'], 1);
+        const idxDescricao = getIdx(['descrição', 'descricao', 'description', 'sobre'], 2);
+        const idxFoto = getIdx(['foto (url)', 'foto', 'imagem', 'image', 'foto_url'], 3);
+        const idxLinkMaps = getIdx(['link do google maps', 'link maps', 'maps', 'google maps', 'link'], 4);
+        const idxComodidades = getIdx(['comodidades', 'tags', 'facilidades', 'comodidade'], 5);
+        const idxId = getIdx(['id'], 6);
+
+        const dataRows = foundHeader ? rows.slice(headerIdx + 1) : rows;
+
+        const hoteis = dataRows
+          .map((r, i) => {
+            const c = r.c || [];
+            const nome = cellVal(c[idxNome]);
+            if (!nome) return null;
+
+            return {
+              id: cellVal(c[idxId]) || String(i + 1),
+              'Nome do Hotel': nome,
+              Cidade: cellVal(c[idxCidade]) || '',
+              'Descrição': cellVal(c[idxDescricao]) || '',
+              'Foto (URL)': cellVal(c[idxFoto]) || '',
+              'Link do Google Maps': cellVal(c[idxLinkMaps]) || '',
+              Comodidades: cellVal(c[idxComodidades]) || ''
+            };
+          })
+          .filter(Boolean);
+
+        if (hoteis.length > 0) {
+          db.hoteis = hoteis;
+          nHoteis = hoteis.length;
+        }
+      }
+    } catch (e) { console.error('Erro aba hotéis:', e.message); }
+
 
     db.config.ultima_sincronizacao = new Date().toISOString();
     
@@ -2066,7 +2144,8 @@ app.post('/api/sync', async (req, res) => {
       supabase.from('config').upsert({ id: 'app_config', data: db.config || {} }).then(r => { if (r.error) throw r.error; }),
       supabase.from('config').upsert({ id: 'transportes', data: db.transportes || [] }).then(r => { if (r.error) throw r.error; }),
       supabase.from('config').upsert({ id: 'experiencias', data: db.experiencias || [] }).then(r => { if (r.error) throw r.error; }),
-      supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] }).then(r => { if (r.error) throw r.error; })
+      supabase.from('config').upsert({ id: 'atracoes', data: db.atracoes || [] }).then(r => { if (r.error) throw r.error; }),
+      supabase.from('config').upsert({ id: 'hoteis', data: db.hoteis || [] }).then(r => { if (r.error) throw r.error; })
     ];
     
     if (db.rotas?.['[PLANILHA] Base de Rotas']?.dias) {
@@ -2077,7 +2156,7 @@ app.post('/api/sync', async (req, res) => {
     
     await Promise.all(syncPromises);
 
-    res.json({ ok: true, ultima_sincronizacao: db.config.ultima_sincronizacao, nTransp, nExp, nAtracoes });
+    res.json({ ok: true, ultima_sincronizacao: db.config.ultima_sincronizacao, nTransp, nExp, nAtracoes, nHoteis });
 
   } catch (err) {
     console.error('Erro no sync:', err);
@@ -4514,13 +4593,25 @@ app.get('/api/public/client-data/:clientId', async (req, res) => {
     const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', clientId).single();
     const clientLocalInfo = localData && localData.data ? localData.data : { estadias: [], viajantes: [] };
 
+    // 6. Buscar lista de Hotéis ricos cadastrados no Supabase
+    let hoteis = [];
+    try {
+      const { data: cfgHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+      if (cfgHoteis && cfgHoteis.data) {
+        hoteis = cfgHoteis.data;
+      }
+    } catch (e) {
+      console.error('Erro ao buscar hotéis no Supabase:', e.message);
+    }
+
     res.json({
       success: true,
       clientInfo,
       payments,
       quote,
       itinerary,
-      clientLocalInfo
+      clientLocalInfo,
+      hoteis
     });
   } catch (error) {
     console.error('Erro na API pública da Área do Cliente:', error);
