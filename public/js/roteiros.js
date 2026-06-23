@@ -621,7 +621,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
     const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
     const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
 
-    let elementosHtml = rota.elementos.map(el => {
+    let elementosHtml = rota.elementos.map((el, elIdx) => {
       if (el.tipo === 'info') {
         const parts = [];
         if (el.dataDoTour) {
@@ -678,7 +678,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         }
         
         return `
-          <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+          <div onclick="window.editarElementoRoteiroRapido('${roteiroNome.replace(/'/g, "\\'")}', ${index}, ${elIdx})" style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px; cursor:pointer;" title="Clique para editar este deslocamento">
             <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
               <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
             </div>
@@ -723,7 +723,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         }
 
         return `
-          <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+          <div onclick="window.editarElementoRoteiroRapido('${roteiroNome.replace(/'/g, "\\'")}', ${index}, ${elIdx})" style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px; cursor:pointer;" title="Clique para editar este ingresso/experiência">
             <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
               <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
             </div>
@@ -2733,6 +2733,209 @@ window.gerarRoteiroComIA = async function() {
   } finally {
     if (spinner) spinner.style.display = 'none';
     if (btn) btn.disabled = false;
+  }
+};
+
+window.editarElementoRoteiroRapido = function(roteiroNome, diaIdx, elIdx) {
+  const roteiro = dbRotas[roteiroNome];
+  if (!roteiro || !roteiro.dias || !roteiro.dias[diaIdx]) return;
+  
+  const el = roteiro.dias[diaIdx].elementos[elIdx];
+  if (!el) return;
+
+  let modal = document.getElementById('modalEditarElementoRoteiroRapido');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modalEditarElementoRoteiroRapido';
+    modal.style.position = 'fixed';
+    modal.style.zIndex = '10000';
+    modal.style.left = '0';
+    modal.style.top = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    document.body.appendChild(modal);
+  }
+
+  let formHTML = '';
+
+  if (el.tipo === 'transporte') {
+    const t = el.transportInfo || {};
+    formHTML = `
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Meio de Transporte</label>
+          <input type="text" id="editElTipoTransp" value="${el.tipoTransporte || t.tipoTransporte || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Origem</label>
+            <input type="text" id="editElOrigem" value="${el.cidadeOrigem || t.origem || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Destino</label>
+            <input type="text" id="editElDestino" value="${el.cidadeDestino || t.destino || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Horário</label>
+            <input type="text" id="editElHorario" value="${el.horario || t.horario || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" placeholder="Ex: 14:30">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:11.5px; font-weight:600; color:#555;">Linha / Voo</label>
+            <input type="text" id="editElLinha" value="${el.linha || t.linha || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Instruções Pré-compra (Mensagem de Compra)</label>
+          <textarea id="editElInstrucoesPre" rows="2" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:var(--ff-body);">${el.instrucoesPreCompra || ''}</textarea>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Instruções Pós-compra (Mensagem de Uso)</label>
+          <textarea id="editElInstrucoesPos" rows="2" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:var(--ff-body);">${el.instrucoesPosCompra || ''}</textarea>
+        </div>
+      </div>
+    `;
+  } else if (el.tipo === 'experiencia') {
+    const e = el.expInfo || {};
+    formHTML = `
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Nome da Experiência</label>
+          <input type="text" id="editElNomeExp" value="${el.nomeExp || e.nomeExp || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Horário</label>
+          <input type="text" id="editElHoraPartida" value="${el.horaPartida || e.horaPartida || ''}" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" placeholder="Ex: 10:00">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Instruções Pré-compra (Mensagem de Compra)</label>
+          <textarea id="editElInstrucoesPre" rows="2" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:var(--ff-body);">${el.instrucoesPreCompra || ''}</textarea>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11.5px; font-weight:600; color:#555;">Instruções Pós-compra (Mensagem de Uso)</label>
+          <textarea id="editElInstrucoesPos" rows="2" style="padding:8px; border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:var(--ff-body);">${el.instrucoesPosCompra || ''}</textarea>
+        </div>
+      </div>
+    `;
+  } else {
+    alert("Este tipo de elemento não suporta edição rápida por aqui. Por favor, use o Editor de Roteiros completo clicando em 'Abrir Editor'.");
+    return;
+  }
+
+  modal.innerHTML = `
+    <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:16px; position:relative;" onclick="event.stopPropagation()">
+      <span onclick="window.fecharModalEditarElementoRoteiroRapido()" style="position:absolute; top:12px; right:16px; font-size:20px; font-weight:bold; cursor:pointer; color:#7f7f7f;">✕</span>
+      <h3 style="margin:0; font-family:var(--ff-display); color:var(--crimson); font-size:16px; font-weight:600;">
+        ✏️ Editar Item do Roteiro (Dia ${diaIdx + 1})
+      </h3>
+      
+      <form id="formEditarElementoRoteiroRapido" onsubmit="window.salvarEditarElementoRoteiroRapido(event, '${roteiroNome.replace(/'/g, "\\'")}', ${diaIdx}, ${elIdx})" style="display:flex; flex-direction:column; gap:16px;">
+        ${formHTML}
+        
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+          <button type="button" onclick="window.fecharModalEditarElementoRoteiroRapido()" class="btn-secondary" style="padding:8px 16px; font-size:12.5px;">Cancelar</button>
+          <button type="submit" class="btn-primary" style="padding:8px 20px; font-size:12.5px; font-weight:600;">
+            💾 Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  
+  modal.style.display = 'flex';
+};
+
+window.fecharModalEditarElementoRoteiroRapido = function() {
+  const modal = document.getElementById('modalEditarElementoRoteiroRapido');
+  if (modal) modal.style.display = 'none';
+};
+
+window.salvarEditarElementoRoteiroRapido = async function(e, roteiroNome, diaIdx, elIdx) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerText = 'Processando...';
+
+  try {
+    const roteiro = dbRotas[roteiroNome];
+    if (!roteiro || !roteiro.dias || !roteiro.dias[diaIdx]) throw new Error("Roteiro inválido");
+    
+    const el = roteiro.dias[diaIdx].elementos[elIdx];
+    if (!el) throw new Error("Elemento inválido");
+
+    if (el.tipo === 'transporte') {
+      const tipoTransp = document.getElementById('editElTipoTransp').value.trim();
+      const orig = document.getElementById('editElOrigem').value.trim();
+      const dest = document.getElementById('editElDestino').value.trim();
+      const horario = document.getElementById('editElHorario').value.trim();
+      const linha = document.getElementById('editElLinha').value.trim();
+      const pre = document.getElementById('editElInstrucoesPre').value.trim();
+      const pos = document.getElementById('editElInstrucoesPos').value.trim();
+
+      el.tipoTransporte = tipoTransp;
+      el.cidadeOrigem = orig;
+      el.cidadeDestino = dest;
+      el.horario = horario;
+      el.linha = linha;
+      el.instrucoesPreCompra = pre;
+      el.instrucoesPosCompra = pos;
+
+      if (!el.transportInfo) el.transportInfo = {};
+      el.transportInfo.tipoTransporte = tipoTransp;
+      el.transportInfo.origem = orig;
+      el.transportInfo.destino = dest;
+      el.transportInfo.horario = horario;
+      el.transportInfo.linha = linha;
+    } else if (el.tipo === 'experiencia') {
+      const nomeExp = document.getElementById('editElNomeExp').value.trim();
+      const horaPartida = document.getElementById('editElHoraPartida').value.trim();
+      const pre = document.getElementById('editElInstrucoesPre').value.trim();
+      const pos = document.getElementById('editElInstrucoesPos').value.trim();
+
+      el.nomeExp = nomeExp;
+      el.horaPartida = horaPartida;
+      el.instrucoesPreCompra = pre;
+      el.instrucoesPosCompra = pos;
+
+      if (!el.expInfo) el.expInfo = {};
+      el.expInfo.nomeExp = nomeExp;
+      el.expInfo.horaPartida = horaPartida;
+    }
+
+    const saveRes = await fetch(`/api/roteiros/${encodeURIComponent(roteiroNome)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(roteiro)
+    });
+
+    if (!saveRes.ok) throw new Error('Erro ao salvar no banco');
+
+    alert('Roteiro atualizado com sucesso!');
+    window.fecharModalEditarElementoRoteiroRapido();
+
+    // Recarregar a prévia do roteiro na tela
+    const previewDiv = document.getElementById('roteiroActivePreview');
+    if (previewDiv && window.renderizarRoteiroNoElemento) {
+      window.renderizarRoteiroNoElemento(roteiroNome, previewDiv);
+    }
+
+    // Recarregar também a aba de pendências se ela for a ativa para recalcular e sumir alertas
+    const activeTabBtn = document.querySelector('.tab-client-btn.active');
+    if (activeTabBtn && activeTabBtn.dataset.tab === 'resumo') {
+      activeTabBtn.click();
+    }
+
+  } catch(err) {
+    console.error(err);
+    alert('Erro ao salvar alterações no roteiro: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '💾 Salvar Alterações';
   }
 };
 
