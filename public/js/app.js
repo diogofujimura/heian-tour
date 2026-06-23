@@ -4892,11 +4892,11 @@ window.switchClientTab = async function(tabName, clienteId, estadiasJson, viajan
   } else if (tabName === 'cotacoes') {
     renderAbaCotacoes(cliente);
   } else if (tabName === 'vouchers') {
-    window.renderAbaVouchersCliente(cliente);
+    window.renderAbaVouchersCliente(cliente, viajantes);
   }
 };
 
-window.renderAbaVouchersCliente = async function(cliente) {
+window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
   const contentDiv = document.getElementById('clientTabContent');
   if (!contentDiv) return;
 
@@ -4955,14 +4955,20 @@ window.renderAbaVouchersCliente = async function(cliente) {
               const compradoPelaHeian = e.compradoHeian !== false;
               if (compradoPelaHeian) {
                 const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('experiencia:') && x.atracaoNome.includes(nomeExp));
+                const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'experiencia',
                   tipoLabel: '🎟️ Experiência',
+                  tituloItem: nomeExp,
                   desc: nomeExp,
                   diaLabel: diaLabel,
                   key: `experiencia:${nomeExp}`,
                   voucher: v,
-                  dataSugerida: e.dataDoTour || el.dataDoTour || dataDoDiaStr || ''
+                  dataSugerida: e.dataDoTour || el.dataDoTour || dataDoDiaStr || '',
+                  horario: e.horaPartida || el.horaPartida || '',
+                  local: e.localEncontro || el.localEncontro || '',
+                  pessoasText: pText,
+                  instrucoesPreCompra: el.instrucoesPreCompra || ''
                 });
               }
             } else if (el.tipo === 'transporte') {
@@ -4974,14 +4980,22 @@ window.renderAbaVouchersCliente = async function(cliente) {
               const compradoPelaHeian = t.compradoHeian !== false;
               if (compradoPelaHeian) {
                 const v = vouchers.find(x => x.atracaoNome && x.atracaoNome.startsWith('transporte:') && x.atracaoNome.includes(transpNome));
+                const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'transporte',
                   tipoLabel: '🚄 Transporte',
+                  tituloItem: transpNome,
                   desc: desc,
+                  origemDestino: `${el.cidadeOrigem || t.origem || 'A definir'} ➔ ${el.cidadeDestino || t.destino || 'A definir'}`,
                   diaLabel: diaLabel,
                   key: `transporte:${transpNome}`,
                   voucher: v,
-                  dataSugerida: el.data || dataDoDiaStr || ''
+                  dataSugerida: el.data || dataDoDiaStr || '',
+                  linha: el.linha || t.linha || '',
+                  horario: el.horario || t.horario || '',
+                  duracao: el.tempo || t.tempo || '',
+                  pessoasText: pText,
+                  instrucoesPreCompra: el.instrucoesPreCompra || ''
                 });
               }
             }
@@ -4996,69 +5010,134 @@ window.renderAbaVouchersCliente = async function(cliente) {
       emissoesHTML = `<p style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Não há nenhum item marcado para emissão pela Heian neste roteiro.</p>`;
     } else {
       emissoesHTML = `
-        <div style="overflow-x:auto;">
-          <table class="data-table" style="width:100%; margin-bottom: 0;">
-            <thead>
-              <tr>
-                <th>Item do Roteiro Heian</th>
-                <th>Setor</th>
-                <th style="width:130px; text-align:center;">Status</th>
-                <th style="width:140px; text-align:center;">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${emissoesHeian.map(eh => {
-                let statusBadge = '';
-                let acaoHTML = '';
-                
-                if (eh.voucher) {
-                  statusBadge = `<span class="meta-badge" style="background:#d1fae5; color:#065f46; border:none; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase;">✔️ Emitido</span>`;
-                  
-                  let linkHTML = '';
-                  if (eh.voucher.arquivos && eh.voucher.arquivos.length > 0) {
-                    linkHTML = eh.voucher.arquivos.map((arq, idx) => {
-                      return `<a href="${arq.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">Visualizar Doc ${idx+1}</a>`;
-                    }).join('');
-                  } else if (eh.voucher.url) {
-                    linkHTML = `<a href="${eh.voucher.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">Abrir Link Externo</a>`;
-                  } else {
-                    linkHTML = `<span style="color:var(--ink-lt); font-size:11px; font-style:italic;">Instrução escrita</span>`;
-                  }
-                  
-                  const editAction = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.voucher.atracaoNome.replace(/'/g, "\\'")}', '${eh.voucher.nome.replace(/'/g, "\\'")}', '${eh.voucher.dataUso || ''}', '${eh.voucher.id}')`;
-                  acaoHTML = `
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                      ${linkHTML}
-                      <button class="btn-secondary" onclick="${editAction}" style="padding:2px 8px; font-size:10px; margin-top:4px; cursor:pointer;">✏️ Alterar</button>
-                    </div>
-                  `;
-                } else {
-                  statusBadge = `<span class="meta-badge" style="background:#fee2e2; color:#991b1b; border:none; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase;">⚠️ Pendente</span>`;
-                  
-                  const suggestionsName = eh.tipo === 'transporte' ? `Bilhete - ${eh.desc}` : `Ingresso - ${eh.desc}`;
-                  const actionClick = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.key.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${eh.dataSugerida}')`;
-                  
-                  acaoHTML = `
-                    <button class="btn-primary" onclick="${actionClick}" style="padding:4px 10px; font-size:11px; border-radius:4px; font-weight:600; cursor:pointer; background:var(--crimson); border-color:var(--crimson); color:white;">
-                      ➕ Anexar Voucher
-                    </button>
-                  `;
-                }
-                
-                return `
-                  <tr>
-                    <td>
-                      <div style="font-size:11px; color:var(--ink-lt);">${eh.diaLabel}</div>
-                      <strong style="font-size:13px; color:var(--ink-dk);">${eh.desc}</strong>
-                    </td>
-                    <td style="font-size:12px; font-weight:500; color:var(--ink-mid);">${eh.tipoLabel}</td>
-                    <td style="text-align:center;">${statusBadge}</td>
-                    <td style="text-align:center;">${acaoHTML}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; margin-top: 8px;">
+          ${emissoesHeian.map(eh => {
+            let statusBadge = '';
+            let acaoHTML = '';
+            let cardBorderColor = '#e5e7eb';
+            let cardBg = '#fff';
+            let cardBorderLeft = '#C4A35A';
+
+            if (eh.voucher) {
+              cardBorderColor = '#10b981';
+              cardBg = '#f6fdf9';
+              cardBorderLeft = '#10b981';
+              statusBadge = `<span style="background:#d1fae5; color:#065f46; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; border-radius:4px; letter-spacing:0.04em;">✔ Emitido</span>`;
+
+              let linkHTML = '';
+              if (eh.voucher.arquivos && eh.voucher.arquivos.length > 0) {
+                linkHTML = eh.voucher.arquivos.map((arq, idx) => {
+                  return `<a href="${arq.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff; margin-right:6px;">📄 Doc ${idx+1}</a>`;
+                }).join('');
+              } else if (eh.voucher.url) {
+                linkHTML = `<a href="${eh.voucher.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff;">🔗 Abrir Link</a>`;
+              } else {
+                linkHTML = `<span style="color:var(--ink-lt); font-size:11.5px; font-style:italic;">📝 Instrução escrita</span>`;
+              }
+
+              const editAction = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.voucher.atracaoNome.replace(/'/g, "\\'")}', '${eh.voucher.nome.replace(/'/g, "\\'")}', '${eh.voucher.dataUso || ''}', '${eh.voucher.id}')`;
+              acaoHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #d1fae5; padding-top:10px; margin-top:10px; gap:8px;">
+                  <div style="flex:1; display:flex; flex-wrap:wrap; gap:4px;">${linkHTML}</div>
+                  <button onclick="${editAction}" style="padding:4px 10px; font-size:11px; cursor:pointer; background:#fff; border:1px solid #a7f3d0; border-radius:4px; color:#065f46; font-weight:600; white-space:nowrap; flex-shrink:0;">✏️ Alterar</button>
+                </div>
+              `;
+            } else {
+              cardBorderColor = '#fca5a5';
+              cardBorderLeft = '#ef4444';
+              statusBadge = `<span style="background:#fee2e2; color:#991b1b; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; border-radius:4px; letter-spacing:0.04em;">⚠ Pendente</span>`;
+
+              const suggestionsName = eh.tipo === 'transporte' ? `Bilhete - ${eh.tituloItem || eh.desc}` : `Ingresso - ${eh.tituloItem || eh.desc}`;
+              const actionClick = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.key.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${eh.dataSugerida}')`;
+
+              acaoHTML = `
+                <div style="border-top:1px solid #fee2e2; padding-top:10px; margin-top:10px;">
+                  <button onclick="${actionClick}" style="padding:7px 0; font-size:12px; border-radius:6px; font-weight:600; cursor:pointer; background:var(--crimson); border:none; color:white; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    ➕ Anexar Bilhete / Ingresso
+                  </button>
+                </div>
+              `;
+            }
+
+            // Detalhes extras por tipo
+            let detalhesPrincipais = '';
+            if (eh.tipo === 'transporte') {
+              detalhesPrincipais = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                  ${eh.origemDestino ? `<div style="grid-column:span 2; background:#f9f9f9; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Trecho</div>
+                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.origemDestino}</div>
+                  </div>` : ''}
+                  ${eh.linha ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Linha / Trem / Voo</div>
+                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.linha}</div>
+                  </div>` : ''}
+                  ${eh.horario ? `<div style="background:#fff8e6; border:1px solid #fef3c7; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:2px;">Horário de Partida</div>
+                    <div style="font-size:16px; color:#000; font-weight:800;">${eh.horario}</div>
+                  </div>` : ''}
+                  ${eh.duracao ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Duração</div>
+                    <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">⏱ ${eh.duracao}</div>
+                  </div>` : ''}
+                </div>
+              `;
+            } else {
+              detalhesPrincipais = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                  ${eh.horario ? `<div style="background:#fff8e6; border:1px solid #fef3c7; border-radius:6px; padding:8px 10px;">
+                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:2px;">Horário</div>
+                    <div style="font-size:16px; color:#000; font-weight:800;">${eh.horario}</div>
+                  </div>` : ''}
+                  ${eh.local ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px; grid-column:${eh.horario ? '1' : 'span 2'};">
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Local de Encontro</div>
+                    <div style="font-size:12px; color:var(--ink-dk); font-weight:600;">📍 ${eh.local}</div>
+                  </div>` : ''}
+                </div>
+              `;
+            }
+
+            // Passageiros
+            const nomesViajantes = viajantes.length > 0 ? viajantes.map(v => v.nomeCompleto || v.nome || '').filter(Boolean).join(', ') : '';
+            const passageirosLabel = eh.pessoasText || (nomesViajantes ? `${viajantes.length} passageiro(s)` : '');
+            const passageirosDetalhe = nomesViajantes ? `<div style="font-size:11px; color:var(--ink-lt); margin-top:2px;">${nomesViajantes}</div>` : '';
+
+            // Nota de compra
+            let notaCompra = '';
+            if (eh.instrucoesPreCompra) {
+              notaCompra = `
+                <div style="background:#fffbeb; border-left:3px solid #f59e0b; padding:8px 10px; border-radius:0 6px 6px 0; margin-top:10px;">
+                  <div style="font-size:10px; font-weight:700; color:#92400e; text-transform:uppercase; margin-bottom:3px;">📌 Nota de Compra</div>
+                  <div style="font-size:12px; color:#78350f;">${eh.instrucoesPreCompra}</div>
+                </div>
+              `;
+            }
+
+            return `
+              <div style="border: 1px solid ${cardBorderColor}; border-left: 4px solid ${cardBorderLeft}; border-radius: 10px; padding: 14px; background: ${cardBg}; display: flex; flex-direction: column; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                  <div>
+                    <div style="font-size:10.5px; color:var(--ink-lt); font-weight:500; margin-bottom:2px;">${eh.diaLabel} · ${eh.dataSugerida ? fmtDataBR(eh.dataSugerida) : 'Sem data definida'}</div>
+                    <div style="font-size:11px; color:${eh.tipo === 'transporte' ? '#9c8248' : 'var(--crimson)'}; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">${eh.tipoLabel}</div>
+                  </div>
+                  ${statusBadge}
+                </div>
+
+                <div style="font-size:15px; font-weight:700; color:var(--ink-dk); line-height:1.3;">${eh.tituloItem || eh.desc}</div>
+
+                ${detalhesPrincipais}
+
+                ${passageirosLabel ? `<div style="margin-top:10px; background:#f0f4ff; border-radius:6px; padding:8px 10px;">
+                  <div style="font-size:10px; font-weight:600; color:#3730a3; text-transform:uppercase; margin-bottom:2px;">👤 Passageiros</div>
+                  <div style="font-size:12.5px; color:#1e1b4b; font-weight:600;">${passageirosLabel}</div>
+                  ${passageirosDetalhe}
+                </div>` : ''}
+
+                ${notaCompra}
+                ${acaoHTML}
+              </div>
+            `;
+          }).join('')}
         </div>
       `;
     }
