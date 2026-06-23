@@ -1582,7 +1582,6 @@ function renderTabelaHoteis(filtro) {
     </tr>`;
   }).join('');
 }
-}
 
 // ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
 function setupConfig() {
