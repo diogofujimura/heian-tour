@@ -1450,7 +1450,7 @@ function renderTabelaTransportes(filtro) {
   const tbody = document.querySelector('#tabelaTransportes tbody');
   if(!tbody) return;
   const lista = filtro ? state.transportesDB.filter(t=>[t.trecho,t.tipo,t.linha,t.categoria].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.transportesDB;
-  tbody.innerHTML = lista.map(t=>`<tr><td>${t.trecho}</td><td>${t.idade||''}</td><td>${t.tipo}</td><td>${t.linha}</td><td>${t.categoria}</td><td class="preco-cell">¥${fmt(t.preco_jpy)}</td><td>${t.tempo||'—'}</td><td><button class="btn-icon" onclick="abrirModalTransporte(${t.id})">✎</button> <button class="btn-icon" onclick="deletarTransporte(${t.id})">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(t=>`<tr><td>${t.trecho}</td><td>${t.idade||''}</td><td>${t.tipo}</td><td>${t.linha}</td><td>${t.categoria}</td><td class="preco-cell">¥${fmt(t.preco_jpy)}</td><td>${t.tempo||'—'}</td><td><button class="btn-icon" onclick="abrirModalTransporte('${t.id}')">✎</button> <button class="btn-icon" onclick="deletarTransporte('${t.id}')">✕</button></td></tr>`).join('');
 }
 function renderTabelaExperiencias(filtro) {
   if (filtro === undefined) {
@@ -1460,7 +1460,7 @@ function renderTabelaExperiencias(filtro) {
   const tbody = document.querySelector('#tabelaExperiencias tbody');
   if(!tbody) return;
   const lista = filtro ? state.experienciasDB.filter(e=>e.nome.toLowerCase().includes(filtro.toLowerCase())) : state.experienciasDB;
-  tbody.innerHTML = lista.map(e=>`<tr><td>${e.nome}</td><td>${e.tipo}</td><td class="preco-cell">¥${fmt(e.preco_jpy)}</td><td>${e.observacao||'—'}</td><td><button class="btn-icon" onclick="abrirModalExperiencia(${e.id})">✎</button> <button class="btn-icon" onclick="deletarExperiencia(${e.id})">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(e=>`<tr><td>${e.nome}</td><td>${e.tipo}</td><td class="preco-cell">¥${fmt(e.preco_jpy)}</td><td>${e.observacao||'—'}</td><td><button class="btn-icon" onclick="abrirModalExperiencia('${e.id}')">✎</button> <button class="btn-icon" onclick="deletarExperiencia('${e.id}')">✕</button></td></tr>`).join('');
 }
 function abrirModalTransporte(id) {
   const item = id ? state.transportesDB.find(t=>t.id==id) : {};
@@ -1479,7 +1479,7 @@ function abrirModalTransporte(id) {
       <div class="field full-width"><label>Instrução de Compra (Pré-compra)</label><textarea id="m_compra" rows="3" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:8px; font-family:inherit;">${item.compra||''}</textarea></div>
       <div class="field full-width"><label>Instrução de Uso (Embarque)</label><textarea id="m_uso" rows="3" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:8px; font-family:inherit;">${item.uso||''}</textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarTransporte(${id||'null'})">Salvar</button></div>`;
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarTransporte('${id||'null'}')">Salvar</button></div>`;
   openModal();
 }
 async function salvarTransporte(id) {
@@ -1512,7 +1512,7 @@ function abrirModalExperiencia(id) {
       <div class="field full-width"><label>Observações</label><input id="m_obs" value="${item.observacao||''}"></div>
       <div class="field full-width"><label>Link</label><input id="m_link" value="${item.link||''}"></div>
     </div>
-    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarExperiencia(${id||'null'})">Salvar</button></div>`;
+    <div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="salvarExperiencia('${id||'null'}')">Salvar</button></div>`;
   openModal();
 }
 async function salvarExperiencia(id){
