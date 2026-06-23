@@ -1980,10 +1980,20 @@ app.post('/api/sync', async (req, res) => {
       const idxPreco = headers.findIndex(h => h.includes('preço') || h.includes('preco') || h.includes('unitário'));
       const idxTempo = headers.findIndex(h => h.includes('tempo'));
       const idxObs = headers.findIndex(h => h.includes('observação') || h.includes('observacao'));
-      const idxLink = headers.findIndex(h => h.includes('link'));
+      const idxLink = headers.findIndex(h => {
+        const val = h.toLowerCase().trim();
+        return val.includes('link') || val === 'comprar';
+      });
       const idxId = headers.findIndex(h => h === 'id');
-      const idxCompra = headers.findIndex(h => h === 'compra' || h.includes('compra') || h.includes('instrução de compra') || h.includes('instrucao de compra'));
-      const idxUso = headers.findIndex(h => h === 'uso' || h.includes('uso') || h.includes('instrução de uso') || h.includes('instrucao de uso'));
+      const idxCompra = headers.findIndex(h => {
+        const val = h.toLowerCase().trim();
+        return val === 'compra' || val === 'instrução de compra' || val === 'instrucao de compra' || (val.includes('compra') && val !== 'comprar' && val !== 'comprado');
+      });
+      const idxUso = headers.findIndex(h => {
+        const val = h.toLowerCase().trim();
+        return val === 'uso' || val.includes('uso') || val.includes('instrução de uso') || val.includes('instrucao de uso');
+      });
+
 
       const dataRows = headerIdx >= 0 ? rows.slice(headerIdx + 1) : rows;
 
