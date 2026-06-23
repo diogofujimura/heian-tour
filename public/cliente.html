@@ -623,30 +623,143 @@
       padding-top: 16px;
       border-top-color: var(--border);
     }
-    .hotel-toggle-icon {
-      font-size: 14px;
-      color: var(--ink-light);
-      transition: transform 0.3s ease;
-      display: inline-flex;
+    /* Modal de Detalhes do Hotel */
+    .hotel-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(30, 27, 24, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 10000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+    .hotel-modal-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .hotel-modal-box {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      border-radius: 24px;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .hotel-modal-overlay.visible .hotel-modal-box {
+      transform: scale(1);
+    }
+    .hotel-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      background: rgba(30, 27, 24, 0.6);
+      backdrop-filter: blur(4px);
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      transition: var(--transition);
     }
-    .hotel-premium-card.expanded .hotel-toggle-icon {
-      transform: rotate(180deg);
-      color: var(--primary);
-      background: var(--primary-light);
-      border-color: rgba(142, 28, 28, 0.2);
+    .hotel-modal-close:hover {
+      background: var(--primary);
     }
-    .hotel-header-row {
+    
+    /* Carrossel de Fotos do Hotel */
+    .hotel-carousel {
+      width: 100%;
+      height: 280px;
+      position: relative;
+      background: #eae5de;
+      overflow: hidden;
+    }
+    .hotel-carousel-slides {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .hotel-carousel-slide {
+      min-width: 100%;
+      height: 100%;
+    }
+    .hotel-carousel-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .hotel-carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.85);
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      z-index: 5;
+      transition: var(--transition);
+    }
+    .hotel-carousel-btn:hover {
+      background: white;
+      color: var(--primary);
+      transform: translateY(-50%) scale(1.05);
+    }
+    .hotel-carousel-btn.prev {
+      left: 16px;
+    }
+    .hotel-carousel-btn.next {
+      right: 16px;
+    }
+    .hotel-carousel-dots {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+    .hotel-carousel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    .hotel-carousel-dot.active {
+      background: white;
+      width: 20px;
+      border-radius: 10px;
     }
     .hotel-photo-wrapper {
       width: 100%;
@@ -974,6 +1087,16 @@
     </main>
   </div>
 
+  <!-- MODAL DE DETALHES DO HOTEL -->
+  <div id="hotel-modal-overlay" class="hotel-modal-overlay">
+    <div class="hotel-modal-box">
+      <button class="hotel-modal-close" onclick="closeHotelModal()">✕</button>
+      <div id="hotel-modal-content">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- Render and tab control script -->
   <script>
     // Tab controller
@@ -1032,6 +1155,7 @@
 
     function renderClientData(data) {
       const { clientInfo, payments, quote, itinerary, clientLocalInfo, hoteis } = data;
+      window.hoteisCache = hoteis || [];
       
       // Hide loader and show content
       document.getElementById('loader').style.display = 'none';
@@ -1377,29 +1501,23 @@
                 ${fotoHtml}
                 <div class="hotel-city-badge">${hotelRico['Cidade'] || s.cidade || 'Japão'}</div>
               </div>
-              <div class="hotel-content">
-                <div class="hotel-header-row">
-                  <div style="flex: 1;">
-                    <h3 class="hotel-title" style="margin-bottom: 4px;">${hotelRico['Nome do Hotel']}</h3>
-                    ${periodStr ? `<div class="hotel-period" style="margin-bottom: 0;">📅 &nbsp;${periodStr}</div>` : ''}
-                  </div>
-                  <div class="hotel-toggle-icon">▼</div>
+              <div class="hotel-content" style="display: flex; flex-direction: column; justify-content: space-between; flex: 1;">
+                <div>
+                  <h3 class="hotel-title" style="margin-bottom: 4px;">${hotelRico['Nome do Hotel']}</h3>
+                  ${periodStr ? `<div class="hotel-period" style="margin-bottom: 12px;">📅 &nbsp;${periodStr}</div>` : ''}
                 </div>
                 
-                <div class="hotel-collapsible-details">
-                  ${hotelRico['Descrição'] ? `<p class="hotel-description" style="margin-bottom: 16px;">${hotelRico['Descrição']}</p>` : ''}
-                  ${comodidadesList ? `<div class="hotel-badges-container" style="margin-bottom: 16px;">${comodidadesList}</div>` : ''}
-                  <div class="hotel-actions" style="margin-top: 8px;">
-                    <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank" onclick="event.stopPropagation();">
-                      📍 Como Chegar / Ver Rota
-                    </a>
-                  </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px;">
+                  <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank" onclick="event.stopPropagation();" style="margin-top: 0; padding: 8px 16px; font-size: 11.5px; border-radius: 30px; display: inline-flex; align-items: center; justify-content: center;">
+                    📍 Como Chegar / Ver Rota
+                  </a>
+                  <span style="font-size: 12.5px; color: var(--primary); font-weight: 600; font-family: var(--ff-display); display: inline-flex; align-items: center; gap: 4px;">Detalhes →</span>
                 </div>
               </div>
             `;
             
             card.addEventListener('click', () => {
-              card.classList.toggle('expanded');
+              window.openHotelDetail(hotelRico.id);
             });
             staysList.appendChild(card);
           } else {
@@ -1760,6 +1878,121 @@
         document.body.appendChild(popover);
       }
     }
+
+    window.openHotelDetail = function(hotelId) {
+      const hotel = window.hoteisCache ? window.hoteisCache.find(h => h.id == hotelId) : null;
+      if (!hotel) return;
+      
+      const overlay = document.getElementById('hotel-modal-overlay');
+      const box = document.getElementById('hotel-modal-content');
+      
+      const fotoStr = hotel['Foto (URL)'] || '';
+      const fotosArr = fotoStr ? fotoStr.split(',').map(f => f.trim()).filter(Boolean) : [];
+      
+      if (fotosArr.length === 0) {
+        fotosArr.push('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600');
+      }
+      
+      let slidesHTML = '';
+      let dotsHTML = '';
+      fotosArr.forEach((foto, idx) => {
+        slidesHTML += `
+          <div class="hotel-carousel-slide">
+            <img src="${foto}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600'" alt="${hotel['Nome do Hotel']}">
+          </div>
+        `;
+        dotsHTML += `
+          <span class="hotel-carousel-dot ${idx === 0 ? 'active' : ''}" onclick="event.stopPropagation(); setCarouselIndex(${idx})"></span>
+        `;
+      });
+      
+      const showControls = fotosArr.length > 1;
+      const prevBtnHTML = showControls ? `<button class="hotel-carousel-btn prev" onclick="event.stopPropagation(); changeCarouselIndex(-1)">‹</button>` : '';
+      const nextBtnHTML = showControls ? `<button class="hotel-carousel-btn next" onclick="event.stopPropagation(); changeCarouselIndex(1)">›</button>` : '';
+      const dotsWrapperHTML = showControls ? `<div class="hotel-carousel-dots">${dotsHTML}</div>` : '';
+      
+      const comodidadesList = hotel['Comodidades'] 
+        ? hotel['Comodidades'].split(',').map(item => `<span class="hotel-meta-badge" style="background:#fef2f2; color:#8e1c1c; border: 1px solid rgba(142,28,28,0.12); font-weight:600; font-size:11px; padding: 6px 12px; border-radius: 20px;">${item.trim()}</span>`).join('')
+        : '';
+        
+      const mapsUrl = hotel['Link do Google Maps'] || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel['Nome do Hotel'] + ', Japan')}`;
+
+      box.innerHTML = `
+        <div class="hotel-carousel">
+          <div class="hotel-carousel-slides" id="hotel-carousel-slides-container">
+            ${slidesHTML}
+          </div>
+          ${prevBtnHTML}
+          ${nextBtnHTML}
+          ${dotsWrapperHTML}
+        </div>
+        <div style="padding: 24px;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--primary); letter-spacing: 1.5px; font-weight: 700; margin-bottom: 6px;">📍 ${hotel.Cidade || 'Japão'}</div>
+          <h2 style="font-family: var(--ff-display); font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: 12px; line-height: 1.2;">${hotel['Nome do Hotel']}</h2>
+          
+          <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px;">
+            <h4 style="font-family: var(--ff-display); font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Sobre a Hospedagem</h4>
+            <p style="font-size: 13px; color: var(--ink-mid); line-height: 1.6; white-space: pre-line;">${hotel['Descrição'] || 'Sem descrição cadastrada.'}</p>
+          </div>
+          
+          ${comodidadesList ? `
+          <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px;">
+            <h4 style="font-family: var(--ff-display); font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 10px;">Comodidades e Diferenciais</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              ${comodidadesList}
+            </div>
+          </div>` : ''}
+          
+          <div style="border-top: 1px solid var(--border); margin-top: 20px; padding-top: 16px; display: flex; justify-content: flex-end;">
+            <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank" style="margin-top: 0; padding: 10px 24px; font-size: 12.5px; font-weight: 600; border-radius: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              📍 Como Chegar / Ver Rota no Google Maps
+            </a>
+          </div>
+        </div>
+      `;
+      
+      let currentIndex = 0;
+      const slidesContainer = document.getElementById('hotel-carousel-slides-container');
+      const dotsList = box.querySelectorAll('.hotel-carousel-dot');
+      
+      window.setCarouselIndex = function(idx) {
+        currentIndex = idx;
+        if (currentIndex < 0) currentIndex = fotosArr.length - 1;
+        if (currentIndex >= fotosArr.length) currentIndex = 0;
+        
+        if (slidesContainer) {
+          slidesContainer.style.transform = `translateX(-${currentIndex * 100}%)`;
+        }
+        
+        dotsList.forEach((dot, dIdx) => {
+          if (dIdx === currentIndex) dot.classList.add('active');
+          else dot.classList.remove('active');
+        });
+      };
+      
+      window.changeCarouselIndex = function(direction) {
+        window.setCarouselIndex(currentIndex + direction);
+      };
+      
+      overlay.classList.add('visible');
+    };
+    
+    window.closeHotelModal = function() {
+      const overlay = document.getElementById('hotel-modal-overlay');
+      if (overlay) overlay.classList.remove('visible');
+    };
+
+    // Fechar ao clicar fora do modal
+    document.addEventListener('DOMContentLoaded', () => {
+      const overlay = document.getElementById('hotel-modal-overlay');
+      if (overlay) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            window.closeHotelModal();
+          }
+        });
+      }
+    });
 
     window.addEventListener('load', loadClientArea);
   </script>
