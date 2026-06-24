@@ -1471,9 +1471,130 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(142, 28, 28, 0.35);
     }
+    
+    /* Ícones de Traço Premium (SVG) */
+    .v-icon {
+      display: inline-flex;
+      align-self: center;
+      width: 1.15em;
+      height: 1.15em;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+      margin-right: 5px;
+      flex-shrink: 0;
+    }
+    .v-icon.no-margin {
+      margin-right: 0;
+    }
+    .v-icon-lg {
+      width: 1.5em;
+      height: 1.5em;
+    }
   </style>
 </head>
 <body>
+
+  <!-- SVG Sprite de Ícones Sofisticados -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <!-- Calendário -->
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+    </symbol>
+    <!-- Viajantes / Passageiros -->
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </symbol>
+    <!-- Pin de Localização -->
+    <symbol id="icon-map-pin" viewBox="0 0 24 24">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
+    </symbol>
+    <!-- Roteiro de Viagem -->
+    <symbol id="icon-compass" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+    </symbol>
+    <!-- Serviços Inclusos (Briefcase) -->
+    <symbol id="icon-briefcase" viewBox="0 0 24 24">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+    </symbol>
+    <!-- Voos (Avião) -->
+    <symbol id="icon-plane" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-2-2h-5l-4-4H8l2 8h-4L4 8H2l2 4-2 4h2l2-2h4l-2 8h2l4-4h5a2 2 0 0 0 2-2z"></path>
+    </symbol>
+    <!-- Financeiro (Cartão) -->
+    <symbol id="icon-credit-card" viewBox="0 0 24 24">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>
+    </symbol>
+    <!-- Ingressos (Ticket) -->
+    <symbol id="icon-ticket" viewBox="0 0 24 24">
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path>
+    </symbol>
+    <!-- Passeios / Tours Guiados (Flor de Cerejeira ou Estrela) -->
+    <symbol id="icon-flower" viewBox="0 0 24 24">
+      <path d="M12 7.5a2.5 2.5 0 0 0-2.5 2.5c0 1.5 1.5 2.5 2.5 3.5 1-1 2.5-2 2.5-3.5a2.5 2.5 0 0 0-2.5-2.5z"></path>
+      <path d="M12 16.5a2.5 2.5 0 0 0 2.5-2.5c0-1.5-1.5-2.5-2.5-3.5-1 1-2.5 2-2.5 3.5a2.5 2.5 0 0 0 2.5 2.5z"></path>
+      <path d="M7.5 12a2.5 2.5 0 0 0 2.5 2.5c1.5 0 2.5-1.5 3.5-2.5-1-1-2-2.5-3.5-2.5A2.5 2.5 0 0 0 7.5 12z"></path>
+      <path d="M16.5 12a2.5 2.5 0 0 0-2.5-2.5c-1.5 0-2.5 1.5-3.5 2.5 1 1 2 2.5 3.5 2.5a2.5 2.5 0 0 0 2.5-2.5z"></path>
+    </symbol>
+    <!-- Transportes (Trem) -->
+    <symbol id="icon-train" viewBox="0 0 24 24">
+      <rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path><circle cx="8" cy="7" r="1"></circle><circle cx="16" cy="7" r="1"></circle>
+    </symbol>
+    <!-- Outros Serviços (Plus) -->
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+      <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+    </symbol>
+    <!-- Hospedagens (Hotel / Home) -->
+    <symbol id="icon-hotel" viewBox="0 0 24 24">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </symbol>
+    <!-- Download -->
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+    </symbol>
+    <!-- Globo / Link Externo -->
+    <symbol id="icon-globe" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </symbol>
+    <!-- Alerta / Atenção (Atracao Fechada) -->
+    <symbol id="icon-alert" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </symbol>
+    <!-- Check / Proteção (Pela Heian) -->
+    <symbol id="icon-shield-check" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path>
+    </symbol>
+    <!-- Usuário Individual (Pelo Cliente) -->
+    <symbol id="icon-user" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+    </symbol>
+    <!-- Relógio -->
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+    </symbol>
+    <!-- Brilho / Erro (Sparkles) -->
+    <symbol id="icon-sparkles" viewBox="0 0 24 24">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path>
+    </symbol>
+    <!-- Mapa (Tour Guiado) -->
+    <symbol id="icon-map" viewBox="0 0 24 24">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
+    </symbol>
+    <!-- Dica / Lâmpada -->
+    <symbol id="icon-lightbulb" viewBox="0 0 24 24">
+      <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.1.7.7 1.3 1.5 1.5 2.4"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>
+    </symbol>
+    <!-- Documento genérico -->
+    <symbol id="icon-file" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>
+    </symbol>
+  </svg>
+
 
   <!-- LOADING CONTAINER -->
   <div id="loader" class="loader-container">
@@ -1483,7 +1604,7 @@
 
   <!-- ERROR CONTAINER -->
   <div id="error-screen" class="error-container" style="display: none;">
-    <div style="font-size: 40px; margin-bottom: 10px;">🌸</div>
+    <div style="font-size: 40px; margin-bottom: 10px;"><svg class="v-icon v-icon-lg no-margin" style="color: var(--primary);"><use href="#icon-flower"></use></svg></div>
     <h3 class="error-title">Resumo de Viagem indisponível</h3>
     <p style="color: var(--ink-mid); font-size: 13.5px; margin-bottom: 20px;">Não encontramos os dados ou o link de acesso está incompleto. Entre em contato com a equipe da Heian Tour.</p>
   </div>
@@ -1503,9 +1624,9 @@
           <h4 class="hero-subtitle" id="hero-subtitle">Bem-vindo(a)</h4>
           <h1 class="hero-title" id="client-name">Família</h1>
           <div class="hero-meta">
-            <span class="meta-badge" id="meta-dates">📅 -- / -- a -- / --</span>
-            <span class="meta-badge" id="meta-passengers">👥 - Viajantes</span>
-            <span class="meta-badge" id="meta-cities" style="display: none;">📍 <span></span></span>
+            <span class="meta-badge" id="meta-dates"><svg class="v-icon"><use href="#icon-calendar"></use></svg>-- / -- a -- / --</span>
+            <span class="meta-badge" id="meta-passengers"><svg class="v-icon"><use href="#icon-users"></use></svg>- Viajantes</span>
+            <span class="meta-badge" id="meta-cities" style="display: none;"><svg class="v-icon"><use href="#icon-map-pin"></use></svg><span></span></span>
           </div>
         </div>
       </div>
@@ -1515,11 +1636,11 @@
 
       <!-- Tabs Header -->
       <nav class="tabs">
-        <button class="tab-btn active" onclick="switchTab(event, 'tab-itinerary')">📅 Roteiro de Viagem</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-services')">💼 Serviços Inclusos</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-info')">✈️ Voos & Hotéis</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-payments')">💳 Extrato Financeiro</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-vouchers')">🎟️ Ingressos & Vouchers</button>
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-itinerary')"><svg class="v-icon"><use href="#icon-compass"></use></svg>Roteiro de Viagem</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-services')"><svg class="v-icon"><use href="#icon-briefcase"></use></svg>Serviços Inclusos</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-info')"><svg class="v-icon"><use href="#icon-plane"></use></svg>Voos & Hotéis</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-payments')"><svg class="v-icon"><use href="#icon-credit-card"></use></svg>Extrato Financeiro</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-vouchers')"><svg class="v-icon"><use href="#icon-ticket"></use></svg>Ingressos & Vouchers</button>
       </nav>
 
       <!-- TAB 1: ITINERARY -->
@@ -1533,7 +1654,7 @@
       <section id="tab-services" class="tab-content">
         <!-- Tours -->
         <div class="info-card" id="card-tours-wrapper" style="display:none;">
-          <h3 class="info-card-title">🌸 Passeios e Tours Guiados</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-flower"></use></svg>Passeios e Tours Guiados</h3>
           <div class="data-table-wrapper">
             <table class="data-table" id="table-tours">
               <thead>
@@ -1551,7 +1672,7 @@
 
         <!-- Ingressos / Experiências -->
         <div class="info-card" id="card-experiences-wrapper" style="display:none;">
-          <h3 class="info-card-title">🎟️ Ingressos & Experiências</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-ticket"></use></svg>Ingressos & Experiências</h3>
           <div class="data-table-wrapper">
             <table class="data-table" id="table-experiences">
               <thead>
@@ -1570,7 +1691,7 @@
 
         <!-- Transportes -->
         <div class="info-card" id="card-transports-wrapper" style="display:none;">
-          <h3 class="info-card-title">🚄 Bilhetes & Transportes</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-train"></use></svg>Bilhetes & Transportes</h3>
           <div class="data-table-wrapper">
             <table class="data-table" id="table-transports">
               <thead>
@@ -1589,7 +1710,7 @@
 
         <!-- Itens Adicionais -->
         <div class="info-card" id="card-addons-wrapper" style="display:none;">
-          <h3 class="info-card-title">➕ Outros Serviços / Consultoria</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-plus"></use></svg>Outros Serviços / Consultoria</h3>
           <div class="data-table-wrapper">
             <table class="data-table" id="table-addons">
               <thead>
@@ -1610,7 +1731,7 @@
         <div class="details-grid">
           <!-- Voos -->
           <div class="info-card">
-            <h3 class="info-card-title">✈️ Voos de Chegada & Partida</h3>
+            <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-plane"></use></svg>Voos de Chegada & Partida</h3>
             <div class="detail-item">
               <span class="detail-label">Voo de Chegada</span>
               <span class="detail-value" id="info-flight-arrival">-</span>
@@ -1623,7 +1744,7 @@
 
           <!-- Stays -->
           <div class="info-card">
-            <h3 class="info-card-title">🏨 Hospedagens (Hotéis)</h3>
+            <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-hotel"></use></svg>Hospedagens (Hotéis)</h3>
             <div class="detail-item" id="info-stays-list">
               <!-- Rendered stays -->
             </div>
@@ -1632,7 +1753,7 @@
 
         <!-- Travelers list -->
         <div class="info-card">
-          <h3 class="info-card-title">👤 Passageiros / Viajantes</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-users"></use></svg>Passageiros / Viajantes</h3>
           <div class="detail-item">
             <span class="detail-label">Nome dos Passageiros</span>
             <span class="detail-value" id="info-travelers" style="white-space: pre-line;">-</span>
@@ -1658,7 +1779,7 @@
           </div>
         </section>
         <div class="info-card">
-          <h3 class="info-card-title">💳 Histórico de Pagamentos Confirmados</h3>
+          <h3 class="info-card-title"><svg class="v-icon"><use href="#icon-credit-card"></use></svg>Histórico de Pagamentos Confirmados</h3>
           <div class="data-table-wrapper">
             <table class="data-table" id="table-payments">
               <thead>
@@ -1679,7 +1800,7 @@
       <!-- TAB 5: VOUCHERS -->
       <section id="tab-vouchers" class="tab-content">
         <div class="vouchers-header-section" style="margin-bottom: 24px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
-          <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--primary); margin-bottom: 6px;">🎟️ Seus Ingressos & Vouchers</h2>
+          <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--primary); margin-bottom: 6px;"><svg class="v-icon v-icon-lg"><use href="#icon-ticket"></use></svg>Seus Ingressos & Vouchers</h2>
           <p style="color: var(--ink-mid); font-size: 14px;">Acesse e baixe aqui os QR codes, PDFs de reservas e instruções específicas para suas atividades.</p>
         </div>
         <div class="vouchers-grid" id="vouchers-list-container">
@@ -1713,7 +1834,7 @@
         <button id="qrZoomNextBtn" class="qr-zoom-arrow" onclick="window.navigateQrZoom(1)">▶</button>
       </div>
       <div id="qrZoomDesc" class="qr-zoom-desc"></div>
-      <a id="qrZoomDownloadBtn" class="btn-primary" style="display:inline-block; margin-top:16px; text-decoration:none; text-align:center; padding:10px 20px; font-weight:600; border-radius:8px;" href="" download="qrcode.png">📥 Baixar Arquivo / Imagem</a>
+      <a id="qrZoomDownloadBtn" class="btn-primary" style="display:inline-block; margin-top:16px; text-decoration:none; text-align:center; padding:10px 20px; font-weight:600; border-radius:8px;" href="" download="qrcode.png"><svg class="v-icon" style="stroke-width: 2.5;"><use href="#icon-download"></use></svg>Baixar Arquivo / Imagem</a>
     </div>
   </div>
 
@@ -1729,7 +1850,7 @@
       </div>
     </div>
     <button class="days-fab-trigger" onclick="toggleDaysPanel()">
-      📅
+      <svg class="v-icon no-margin" style="stroke-width: 2.5; width: 1.3em; height: 1.3em;"><use href="#icon-calendar"></use></svg>
     </button>
   </div>
 
@@ -1863,19 +1984,19 @@
       
       const dataInicioFormatted = clientInfo.dataInicio ? fmtDateBR(clientInfo.dataInicio) : '';
       const dataFimFormatted = clientInfo.dataFim ? fmtDateBR(clientInfo.dataFim) : '';
-      document.getElementById('meta-dates').textContent = dataInicioFormatted && dataFimFormatted 
-        ? `📅 ${dataInicioFormatted} a ${dataFimFormatted}` 
-        : '📅 Período da Viagem';
+      document.getElementById('meta-dates').innerHTML = dataInicioFormatted && dataFimFormatted 
+        ? `<svg class="v-icon"><use href="#icon-calendar"></use></svg>${dataInicioFormatted} a ${dataFimFormatted}` 
+        : `<svg class="v-icon"><use href="#icon-calendar"></use></svg>Período da Viagem`;
         
       const passageiros = (clientInfo.adultos || 0) + (clientInfo.criancas || 0);
       let paxText = `${passageiros} Passageiro${passageiros > 1 ? 's' : ''}`;
       if (clientInfo.adultos > 0 || clientInfo.criancas > 0) {
-        paxText = `👥 ${clientInfo.adultos} Adulto${clientInfo.adultos > 1 ? 's' : ''}`;
+        paxText = `${clientInfo.adultos} Adulto${clientInfo.adultos > 1 ? 's' : ''}`;
         if (clientInfo.criancas > 0) {
           paxText += ` e ${clientInfo.criancas} Criança${clientInfo.criancas > 1 ? 's' : ''}`;
         }
       }
-      document.getElementById('meta-passengers').textContent = paxText;
+      document.getElementById('meta-passengers').innerHTML = `<svg class="v-icon"><use href="#icon-users"></use></svg>${paxText}`;
 
       // 1.1 Rota de Cidades no Hero
       const estadiasArr = clientLocalInfo?.estadias || [];
@@ -1933,8 +2054,8 @@
           
           const diaData = somarDias(dataInicioStr, index);
           const headerTag = dia.tourGuiado 
-            ? '<span class="timeline-day-tag">Tour Guiado</span>' 
-            : '<span class="timeline-day-tag guide-no">自由 Roteiro Livre</span>';
+            ? '<span class="timeline-day-tag"><svg class="v-icon" style="color:var(--accent); stroke-width:2.5;"><use href="#icon-map"></use></svg>Tour Guiado</span>' 
+            : '<span class="timeline-day-tag guide-no"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-compass"></use></svg>Roteiro Livre</span>';
             
           let elementsHTML = '';
           let temConteudo = false;
@@ -1952,7 +2073,7 @@
                 temConteudo = true;
                 elementsHTML += `
                   <div class="event-pill info" style="border-left-color: var(--accent); background: var(--accent-light); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span><strong>Encontro com Guia:</strong> ${el.horarioEncontro || '--:--'} — ${el.localEncontro || 'Local combinado'} ${el.duracaoTour ? `(${el.duracaoTour})` : ''}</span>
+                    <span><svg class="v-icon" style="color:var(--primary);"><use href="#icon-clock"></use></svg><strong>Encontro com Guia:</strong> ${el.horarioEncontro || '--:--'} — ${el.localEncontro || 'Local combinado'} ${el.duracaoTour ? `(${el.duracaoTour})` : ''}</span>
                   </div>
                 `;
               } else if (el.tipo === 'sequencia') {
@@ -1964,7 +2085,7 @@
                   : '';
                 elementsHTML += `
                   <div style="margin-bottom: 14px; width: 100%;">
-                    <div style="margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary);">${el.nomeDaRota || 'Atividades recomendadas'}</div>
+                    <div style="margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); display: flex; align-items: center;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-map-pin"></use></svg>${el.nomeDaRota || 'Atividades recomendadas'}</div>
                     ${atrHtml}
                   </div>
                 `;
@@ -1989,15 +2110,15 @@
                     : `window.rolarParaVoucher('${expVoucher.id}')`;
                   
                   clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
-                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: var(--accent); background: rgba(223, 183, 108, 0.1); color: var(--primary); font-weight: 700; flex-shrink:0; padding: 4px 10px;">Ver Bilhete</span>`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: var(--accent); background: rgba(223, 183, 108, 0.1); color: var(--primary); font-weight: 700; flex-shrink:0; padding: 4px 10px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-ticket"></use></svg>Ver Bilhete</span>`;
                   
                   if (el.instrucoesPosCompra) {
                     instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
                   }
                 } else {
                   vchIndicator = `
-                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
-                      ${el.compradoHeian !== false ? 'Pela Heian' : 'Pelo Cliente'}
+                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px; display:inline-flex; align-items:center;">
+                      ${el.compradoHeian !== false ? '<svg class="v-icon" style="margin-right:4px; stroke-width:2.5;"><use href="#icon-shield-check"></use></svg>Pela Heian' : '<svg class="v-icon" style="margin-right:4px; stroke-width:2.5;"><use href="#icon-user"></use></svg>Pelo Cliente'}
                     </span>
                   `;
                   
@@ -2010,7 +2131,7 @@
                   <div class="event-pill experience" ${clickAttr}>
                     <div style="width: 100%;">
                       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
-                        <span><strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--primary);">(${el.horaPartida})</span>` : ''}</span>
+                        <span style="display:inline-flex; align-items:center;"><strong><svg class="v-icon" style="color:var(--primary);"><use href="#icon-ticket"></use></svg>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--primary); margin-left:4px;">(${el.horaPartida})</span>` : ''}</span>
                         ${vchIndicator}
                       </div>
                     </div>
@@ -2038,15 +2159,15 @@
                     : `window.rolarParaVoucher('${transVoucher.id}')`;
                   
                   clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
-                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); color: #2563eb; font-weight: 700; flex-shrink:0; padding: 4px 10px;">Ver Bilhete</span>`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); color: #2563eb; font-weight: 700; flex-shrink:0; padding: 4px 10px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-ticket"></use></svg>Ver Bilhete</span>`;
                   
                   if (el.instrucoesPosCompra) {
                     instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
                   }
                 } else {
                   vchIndicator = `
-                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
-                      ${el.compradoHeian !== false ? 'Pela Heian' : 'Pelo Cliente'}
+                    <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px; display:inline-flex; align-items:center;">
+                      ${el.compradoHeian !== false ? '<svg class="v-icon" style="margin-right:4px; stroke-width:2.5;"><use href="#icon-shield-check"></use></svg>Pela Heian' : '<svg class="v-icon" style="margin-right:4px; stroke-width:2.5;"><use href="#icon-user"></use></svg>Pelo Cliente'}
                     </span>
                   `;
                   
@@ -2062,7 +2183,7 @@
                   <div class="event-pill transport" ${clickAttr}>
                     <div style="width: 100%;">
                       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
-                        <span><strong>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb;">(${el.horario})</span>` : ''}</span>
+                        <span style="display:inline-flex; align-items:center;"><strong><svg class="v-icon" style="color:#2563eb;"><use href="#icon-train"></use></svg>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb; margin-left:4px;">(${el.horario})</span>` : ''}</span>
                         ${vchIndicator}
                       </div>
                       ${rotaStr}
@@ -2086,7 +2207,7 @@
             const clickAction = diaVoucher.tipo === 'qr_code'
               ? `window.openQrZoom('${diaVoucher.nome.replace(/'/g, "\\'")}', '${diaVoucher.url}', '${(diaVoucher.instrucao || '').replace(/\n/g, '\\n').replace(/'/g, "\\'")}')`
               : `window.rolarParaVoucher('${diaVoucher.id}')`;
-            diaVchHtml = `<span onclick="event.stopPropagation(); ${clickAction}" style="margin-left: 10px; display:inline-flex; align-items:center; background:#10b98122; color:#10b981; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; cursor:pointer;" title="${diaVoucher.nome}">🎟️ Voucher</span>`;
+            diaVchHtml = `<span onclick="event.stopPropagation(); ${clickAction}" style="margin-left: 10px; display:inline-flex; align-items:center; background:#10b98122; color:#10b981; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; cursor:pointer;" title="${diaVoucher.nome}"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-ticket"></use></svg>Voucher</span>`;
           }
 
           item.innerHTML = `
@@ -2298,12 +2419,12 @@
               <div class="hotel-content" style="display: flex; flex-direction: column; justify-content: space-between; flex: 1;">
                 <div>
                   <h3 class="hotel-title" style="margin-bottom: 4px;">${hotelRico['Nome do Hotel']}</h3>
-                  ${periodStr ? `<div class="hotel-period" style="margin-bottom: 12px;">📅 &nbsp;${periodStr}</div>` : ''}
+                  ${periodStr ? `<div class="hotel-period" style="margin-bottom: 12px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:6px;"><use href="#icon-calendar"></use></svg>${periodStr}</div>` : ''}
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px;">
                   <a class="hotel-maps-btn" href="${mapsUrl}" target="_blank" onclick="event.stopPropagation();" style="margin-top: 0; padding: 8px 16px; font-size: 11.5px; border-radius: 30px; display: inline-flex; align-items: center; justify-content: center;">
-                    📍 Como Chegar / Ver Rota
+                    <svg class="v-icon" style="margin-right:4px;"><use href="#icon-map-pin"></use></svg>Como Chegar / Ver Rota
                   </a>
                   <span style="font-size: 12.5px; color: var(--primary); font-weight: 600; font-family: var(--ff-display); display: inline-flex; align-items: center; gap: 4px;">Detalhes →</span>
                 </div>
@@ -2330,9 +2451,9 @@
             item.innerHTML = `
               <div style="font-size: 11px; text-transform: uppercase; color: var(--primary); letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">${s.cidade || 'Hospedagem'}</div>
               <h3 style="font-family: var(--ff-display); font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 8px;">${s.hotel || 'Não especificado'}</h3>
-              ${periodStr ? `<div style="font-size: 13px; color: var(--ink-mid); margin-bottom: 12px;">📅 Período: ${periodStr}</div>` : ''}
+              ${periodStr ? `<div style="font-size: 13px; color: var(--ink-mid); margin-bottom: 12px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:6px;"><use href="#icon-calendar"></use></svg>Período: ${periodStr}</div>` : ''}
               <div style="display:flex; justify-content:flex-end;">
-                <a href="${googleMapsUrl}" target="_blank" style="font-size:12px; color: var(--primary); font-weight:600; text-decoration:none;">📍 Ver no Google Maps →</a>
+                <a href="${googleMapsUrl}" target="_blank" style="font-size:12px; color: var(--primary); font-weight:600; text-decoration:none; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px; width:1.0em; height:1.0em;"><use href="#icon-map-pin"></use></svg>Ver no Google Maps →</a>
               </div>
             `;
             staysList.appendChild(item);
@@ -2415,11 +2536,11 @@
 
         let assocLabel = '';
         if (v.atracaoNome) {
-          if (v.atracaoNome.startsWith('dia:')) assocLabel = `📅 Associado ao Dia ${v.atracaoNome.split(':')[1]}`;
-          else if (v.atracaoNome.startsWith('atracao:')) assocLabel = `📍 Atração: ${v.atracaoNome.split(':')[1]}`;
-          else if (v.atracaoNome.startsWith('experiencia:')) assocLabel = `🎟️ Exp: ${v.atracaoNome.split(':')[1]}`;
-          else if (v.atracaoNome.startsWith('transporte:')) assocLabel = `🚄 Transp: ${v.atracaoNome.split(':')[1]}`;
-          else assocLabel = `🔗 ${v.atracaoNome}`;
+          if (v.atracaoNome.startsWith('dia:')) assocLabel = `<svg class="v-icon" style="margin-right:4px;"><use href="#icon-calendar"></use></svg>Associado ao Dia ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('atracao:')) assocLabel = `<svg class="v-icon" style="margin-right:4px;"><use href="#icon-map-pin"></use></svg>Atração: ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('experiencia:')) assocLabel = `<svg class="v-icon" style="margin-right:4px;"><use href="#icon-ticket"></use></svg>Exp: ${v.atracaoNome.split(':')[1]}`;
+          else if (v.atracaoNome.startsWith('transporte:')) assocLabel = `<svg class="v-icon" style="margin-right:4px;"><use href="#icon-train"></use></svg>Transp: ${v.atracaoNome.split(':')[1]}`;
+          else assocLabel = `<svg class="v-icon" style="margin-right:4px;"><use href="#icon-globe"></use></svg>${v.atracaoNome}`;
         }
 
         let mediaHTML = '';
@@ -2443,7 +2564,7 @@
 
             mediaHTML = `
               <div style="display:flex; flex-direction:column; gap:6px;">
-                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📱 Ingressos (${vArquivos.length} pessoas)</span>
+                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-ticket"></use></svg>Ingressos (${vArquivos.length} pessoas)</span>
                 <div class="voucher-gallery">
                   ${itemsHtml}
                 </div>
@@ -2465,19 +2586,19 @@
           if (vArquivos.length > 0) {
             mediaHTML = `
               <div style="display:flex; flex-direction:column; gap:8px;">
-                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📄 Documentos PDF (${vArquivos.length})</span>
+                <span style="font-size:11px; color:var(--ink-light); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-file"></use></svg>Documentos PDF (${vArquivos.length})</span>
                 ${vArquivos.map((arq, idx) => {
                   const downloadName = arq.fileName || `${v.nome}_${idx + 1}.pdf`;
                   return `
                     <div class="voucher-pdf-card" style="margin-bottom:0; padding:12px;">
                       <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-                        <span style="font-size:20px; flex-shrink:0;">📄</span>
+                        <svg class="v-icon v-icon-lg" style="margin-right:0; stroke-width:1.5; color:var(--primary);"><use href="#icon-file"></use></svg>
                         <div style="min-width:0; flex:1;">
                           <div style="font-weight:600; font-size:12.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${downloadName}">${downloadName}</div>
                           <div style="font-size:11px; color:var(--ink-light);">PDF #${idx + 1}</div>
                         </div>
                       </div>
-                      <a class="btn-primary" href="${arq.url}" download="${downloadName}" style="padding:6px 10px; font-size:11px; text-decoration:none; border-radius:6px; font-weight:600; flex-shrink:0;">📥 Baixar</a>
+                      <a class="btn-primary" href="${arq.url}" download="${downloadName}" style="padding:6px 10px; font-size:11px; text-decoration:none; border-radius:6px; font-weight:600; flex-shrink:0;"><svg class="v-icon" style="margin-right:4px; stroke-width:2.5;"><use href="#icon-download"></use></svg>Baixar</a>
                     </div>
                   `;
                 }).join('')}
@@ -2488,7 +2609,7 @@
           mediaHTML = `
             <div style="text-align: center; margin-top: 4px;">
               <a class="btn-primary" href="${v.url}" target="_blank" style="padding:8px 16px; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; border-radius:8px; font-weight:600; width: 100%; justify-content: center;">
-                🌐 Acessar Link Externo ↗
+                <svg class="v-icon" style="margin-right:4px;"><use href="#icon-globe"></use></svg>Acessar Link Externo ↗
               </a>
             </div>
           `;
@@ -2498,14 +2619,14 @@
           <span class="voucher-badge ${v.tipo}">${typeLabel}</span>
           <h3 class="voucher-title">${v.nome}</h3>
           
-          ${v.dataUso ? `<div class="voucher-meta-item">📅 &nbsp;Uso em: ${fmtDateBR(v.dataUso)}</div>` : ''}
+          ${v.dataUso ? `<div class="voucher-meta-item" style="display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px;"><use href="#icon-calendar"></use></svg>Uso em: ${fmtDateBR(v.dataUso)}</div>` : ''}
           ${assocLabel ? `<div class="voucher-meta-item">${assocLabel}</div>` : ''}
           
           ${mediaHTML}
           
           ${v.instrucao ? `
             <div class="voucher-instruction-box">
-              <strong style="color:var(--primary); font-size:11.5px; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">💡 Instruções Específicas</strong>
+              <strong style="color:var(--primary); font-size:11.5px; display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center;"><svg class="v-icon" style="margin-right:4px; color:var(--accent);"><use href="#icon-lightbulb"></use></svg>Instruções Específicas</strong>
               ${v.instrucao}
             </div>
           ` : ''}
@@ -2798,7 +2919,7 @@
         const chk = verificarFuncionamentoAtracao(match, dataStr);
         if (chk.fechado) {
           extraClass = ' fechada';
-          warnIcon = '⚠️ ';
+          warnIcon = `<svg class="v-icon" style="color:var(--primary); margin-right:4px; width:0.95em; height:0.95em;"><use href="#icon-alert"></use></svg>`;
           if (chk.tipoBloqueio === 'semanal') {
             warnTitle = ` (fecha às ${chk.diaSemanaNome.toLowerCase()}s)`;
           } else if (chk.tipoBloqueio === 'manutencao') {
