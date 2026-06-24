@@ -295,7 +295,7 @@ function abrirOrcamento(id, directEdit = false) {
   const temCliente = !!orc.notionClienteId;
   const lockedStyle = temCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
   const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
-  if(btnEditarCot) btnEditarCot.innerHTML = temCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
+  if(btnEditarCot) btnEditarCot.innerHTML = temCliente ? '<svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg> Editar Cliente' : '<svg class="v-icon" style="margin-right:2px;"><use href="#icon-save"></use></svg> Salvar Cliente no Notion';
   const btnImport = document.getElementById('btnImportNotion');
   if (btnImport) btnImport.style.display = temCliente ? 'none' : 'inline-block';
   ['clienteNome', 'clienteAdultos', 'clienteCriancas'].forEach(id => {
@@ -422,7 +422,7 @@ function novoOrcamento() {
   });
   document.getElementById('clienteDataOrcamento').value = today();
   const btnEditarCot = document.getElementById('btnEditarClienteCotacao');
-  if(btnEditarCot) btnEditarCot.innerHTML = '💾 Salvar Cliente no Notion';
+  if(btnEditarCot) btnEditarCot.innerHTML = '<svg class="v-icon"><use href="#icon-save"></use></svg> Salvar Cliente no Notion';
   const btnImport = document.getElementById('btnImportNotion');
   if (btnImport) btnImport.style.display = 'inline-block';
   
@@ -478,7 +478,7 @@ function renderListaOrcamentos(filterQuery = '') {
       <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
         <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${orc.nome||'Sem nome'}</div>
         <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); abrirOrcamento(${orc.id}, true)" title="Editar">
-          ✏️
+          <svg class="v-icon no-margin" style="width:1.15em; height:1.15em;"><use href="#icon-edit"></use></svg>
         </button>
       </div>
       <div class="list-card-subtitle" style="margin-top: 4px;">${orc.cliente?.nome||''} ${txtPessoas?'· '+txtPessoas:''}</div>
@@ -614,7 +614,7 @@ function setupMenuCambio() {
           status.textContent = 'Erro ao buscar.';
         }
       } catch(e) { status.textContent = 'Erro de rede.'; }
-      btnFetch.textContent = '🌍 Do Dia'; btnFetch.disabled = false;
+      btnFetch.textContent = 'Do Dia'; btnFetch.disabled = false;
     });
   }
 
@@ -635,7 +635,7 @@ function setupMenuCambio() {
         updateResumo();
         clear();
       } catch(e) { status.textContent = 'Erro ao salvar.'; }
-      btnSave.textContent = '💾 Salvar'; btnSave.disabled = false;
+      btnSave.textContent = 'Salvar'; btnSave.disabled = false;
       setTimeout(() => { panel.style.display = 'none'; status.textContent = ''; }, 1500);
     });
   }
@@ -833,8 +833,8 @@ function renderEstadiasForm() {
       <div class="item-row-header" style="display: flex; align-items: center; justify-content: space-between;">
         <span class="item-row-num">Estadia ${i+1}</span>
         <div style="display: flex; gap: 4px; align-items: center;">
-          <button type="button" class="btn-move-up" onclick="moverEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔼</button>
-          <button type="button" class="btn-move-down" onclick="moverEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔽</button>
+          <button type="button" class="btn-move-up" onclick="moverEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">▲</button>
+          <button type="button" class="btn-move-down" onclick="moverEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">▼</button>
           <button type="button" class="btn-remove" onclick="rmEstadia(${est.id})">✕</button>
         </div>
       </div>
@@ -1080,7 +1080,7 @@ function renderTransportesForm() {
       const pInf = g.precos.infantil || 0;
       const isSelected = t._dbId && (t._dbId === g._dbIdAdulto || t._dbId === g._dbIdInfantil || t._dbId === g.id);
       return `<option value="${g.id}" ${isSelected ? 'selected' : ''}>` +
-      `${g.trecho} | ${g.tipo} | ${g.linha} | ${g.categoria} ${g.tempo ? '(⏱ ' + g.tempo + ') ' : ''}— Ad: ¥${fmt(pAd)} / Inf: ¥${fmt(pInf)}</option>`;
+      `${g.trecho} | ${g.tipo} | ${g.linha} | ${g.categoria} ${g.tempo ? '(' + g.tempo + ') ' : ''}— Ad: ¥${fmt(pAd)} / Inf: ¥${fmt(pInf)}</option>`;
     }).join('');
     
     const div = document.createElement('div');
@@ -1450,7 +1450,7 @@ function renderTabelaTransportes(filtro) {
   const tbody = document.querySelector('#tabelaTransportes tbody');
   if(!tbody) return;
   const lista = filtro ? state.transportesDB.filter(t=>[t.trecho,t.tipo,t.linha,t.categoria].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.transportesDB;
-  tbody.innerHTML = lista.map(t=>`<tr><td>${t.trecho}</td><td>${t.idade||''}</td><td>${t.tipo}</td><td>${t.linha}</td><td>${t.categoria}</td><td class="preco-cell">¥${fmt(t.preco_jpy)}</td><td>${t.tempo||'—'}</td><td><button class="btn-icon" onclick="abrirModalTransporte('${t.id}')">✎</button> <button class="btn-icon" onclick="deletarTransporte('${t.id}')">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(t=>`<tr><td>${t.trecho}</td><td>${t.idade||''}</td><td>${t.tipo}</td><td>${t.linha}</td><td>${t.categoria}</td><td class="preco-cell">¥${fmt(t.preco_jpy)}</td><td>${t.tempo||'—'}</td><td><button class="btn-icon" onclick="abrirModalTransporte('${t.id}')" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button> <button class="btn-icon" onclick="deletarTransporte('${t.id}')" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button></td></tr>`).join('');
 }
 function renderTabelaExperiencias(filtro) {
   if (filtro === undefined) {
@@ -1460,7 +1460,7 @@ function renderTabelaExperiencias(filtro) {
   const tbody = document.querySelector('#tabelaExperiencias tbody');
   if(!tbody) return;
   const lista = filtro ? state.experienciasDB.filter(e=>e.nome.toLowerCase().includes(filtro.toLowerCase())) : state.experienciasDB;
-  tbody.innerHTML = lista.map(e=>`<tr><td>${e.nome}</td><td>${e.tipo}</td><td class="preco-cell">¥${fmt(e.preco_jpy)}</td><td>${e.observacao||'—'}</td><td><button class="btn-icon" onclick="abrirModalExperiencia('${e.id}')">✎</button> <button class="btn-icon" onclick="deletarExperiencia('${e.id}')">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(e=>`<tr><td>${e.nome}</td><td>${e.tipo}</td><td class="preco-cell">¥${fmt(e.preco_jpy)}</td><td>${e.observacao||'—'}</td><td><button class="btn-icon" onclick="abrirModalExperiencia('${e.id}')" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button> <button class="btn-icon" onclick="deletarExperiencia('${e.id}')" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button></td></tr>`).join('');
 }
 function abrirModalTransporte(id) {
   const item = id ? state.transportesDB.find(t=>t.id==id) : {};
@@ -1531,7 +1531,7 @@ function renderTabelaAtracoes(filtro) {
   const tbody = document.querySelector('#tabelaAtracoes tbody');
   if(!tbody) return;
   const lista = filtro ? state.atracoesDB.filter(a=>[a['Nome da Atração'],a['Bairro'],a['Cidade']].join(' ').toLowerCase().includes(filtro.toLowerCase())) : state.atracoesDB;
-  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td><div class="chip-atracao" style="display: inline-block;" data-id="${a['Nome da Atração'].replace(/"/g, '&quot;')}">${a['Nome da Atração']}</div></td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')">✎</button> <button class="btn-icon" onclick="deletarAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')">✕</button></td></tr>`).join('');
+  tbody.innerHTML = lista.map(a=>`<tr><td>${a['Cidade']||''}</td><td>${a['Bairro']||''}</td><td><div class="chip-atracao" style="display: inline-block;" data-id="${a['Nome da Atração'].replace(/"/g, '&quot;')}">${a['Nome da Atração']}</div></td><td>${a['Preço (Ingresso)']||'—'}</td><td><button class="btn-icon" onclick="abrirModalAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button> <button class="btn-icon" onclick="deletarAtracao('${a['Nome da Atração'].replace(/'/g, "\\'")}')" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button></td></tr>`).join('');
 
   // Adicionar listeners para o popover flutuante nos chips
   tbody.querySelectorAll('.chip-atracao').forEach(chip => {
@@ -1652,8 +1652,8 @@ function renderTabelaHoteis(filtro) {
       <td style="text-align:center;">${fotoHtml}</td>
       <td>${mapsLink}</td>
       <td>
-        <button class="btn-icon" onclick="abrirModalHotel('${h.id}')">✎</button> 
-        <button class="btn-icon" onclick="deletarHotel('${h.id}')">✕</button>
+        <button class="btn-icon" onclick="abrirModalHotel('${h.id}')" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button> 
+        <button class="btn-icon" onclick="deletarHotel('${h.id}')" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button>
       </td>
     </tr>`;
   }).join('');
@@ -2373,7 +2373,7 @@ function renderSugestoesHtml(id, tipo, sugestoesTexto) {
 
   return `
     <div class="sugestoes-wrap">
-      <button type="button" class="btn-sugestao-menu" onclick="toggleSugestoesDropdown(${id}, '${tipo}', event)">📋 Biblioteca</button>
+      <button type="button" class="btn-sugestao-menu" onclick="toggleSugestoesDropdown(${id}, '${tipo}', event)" style="display:inline-flex; align-items:center; gap:3.5px;"><svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-file"></use></svg>Biblioteca</button>
       ${dropdownHtml}
     </div>
   `;
@@ -2556,9 +2556,9 @@ function renderTabelaRotas(filtro) {
     <td>${r.cidade || ''}</td>
     <td>${r.nomeDaRota || ''}</td>
     <td>${(r.atracoesDoDia || []).join(', ')}</td>
-          <td>
-        <button class="btn-icon" onclick="editarRota(${r.id})">✏️</button>
-        <button class="btn-icon" onclick="deletarRota(${r.id})">❌</button>
+      <td>
+        <button class="btn-icon" onclick="editarRota(${r.id})" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button>
+        <button class="btn-icon" onclick="deletarRota(${r.id})" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button>
       </td>
   </tr>`).join('');
 }
@@ -2606,7 +2606,7 @@ function abrirModalRota(r = null) {
             <div class="field" style="margin-top: 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
           <label style="margin:0">Atrações Disponíveis (Clique para adicionar)</label>
-          <input type="text" id="modalRotSearch" placeholder="🔍 Buscar..." oninput="window.renderModalRotasUI()" style="width:250px; padding:4px 8px; font-size:13px; border:1px solid #ccc; border-radius:4px;">
+          <input type="text" id="modalRotSearch" placeholder="Buscar..." oninput="window.renderModalRotasUI()" style="width:250px; padding:4px 8px; font-size:13px; border:1px solid #ccc; border-radius:4px;">
         </div>
         <div id="modalRotAvailable" style="max-height: 200px; overflow-y: auto; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-alt); display: flex; flex-wrap: wrap; gap: 8px;">
       </div>
@@ -2912,7 +2912,7 @@ window.restaurarItemLixeira = async function(tipo, key) {
     const url = tipo === 'cotacao' ? `/api/orcamentos/${key}/restaurar` : `/api/roteiros/${key}/restaurar`;
     const res = await fetch(url, { method: 'POST' });
     if (!res.ok) throw new Error('Erro ao restaurar');
-    showToast('Item restaurado com sucesso! 🔄');
+    showToast('Item restaurado com sucesso!');
     
     // Atualiza a lixeira
     window.carregarLixeira();
@@ -2957,7 +2957,7 @@ window.excluirItemDefinitivoLixeira = async function(tipo, key) {
     const url = tipo === 'cotacao' ? `/api/orcamentos/${key}/definitivo` : `/api/roteiros/${key}/definitivo`;
     const res = await fetch(url, { method: 'DELETE' });
     if (!res.ok) throw new Error('Erro ao excluir permanentemente');
-    showToast('Item apagado definitivamente! 🗑️');
+    showToast('Item apagado definitivamente!');
     window.carregarLixeira();
   } catch(err) {
     console.error(err);
@@ -3373,9 +3373,9 @@ function renderClientesTabela() {
     
     let datasViagem = 'Sem data';
     if (c.dataInicio && c.dataFim) {
-      datasViagem = `📅 ${fmtDataBR(c.dataInicio)} a ${fmtDataBR(c.dataFim)}`;
+      datasViagem = `${fmtDataBR(c.dataInicio)} a ${fmtDataBR(c.dataFim)}`;
     } else if (c.dataInicio) {
-      datasViagem = `📅 ${fmtDataBR(c.dataInicio)}`;
+      datasViagem = `${fmtDataBR(c.dataInicio)}`;
     }
 
     let passageiros = '';
@@ -3400,7 +3400,7 @@ function renderClientesTabela() {
           if (cr > 0) parts.push(`${cr} Cr`);
           passageiros += ` (${parts.join(', ')})`;
         }
-        passageiros = `👥 ${passageiros}`;
+        passageiros = `${passageiros}`;
       }
     }
     
@@ -3411,9 +3411,9 @@ function renderClientesTabela() {
         const parts = [];
         if (ad > 0) parts.push(`${ad} Ad`);
         if (cr > 0) parts.push(`${cr} Cr`);
-        passageiros = `👥 ${parts.join(', ')}`;
+        passageiros = `${parts.join(', ')}`;
       } else {
-        passageiros = '👥 Sem passageiros';
+        passageiros = 'Sem passageiros';
       }
     }
 
@@ -3421,7 +3421,7 @@ function renderClientesTabela() {
       <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
         <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${c.nome}</div>
         <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); editarClienteCard('${c.id}')" title="Editar">
-          ✏️
+          <svg class="v-icon no-margin"><use href="#icon-edit"></use></svg>
         </button>
       </div>
       <div class="list-card-subtitle" style="margin-top: 4px; font-size: 11px; color: var(--ink-lt); display: flex; gap: 8px; flex-wrap: wrap;">
@@ -4028,12 +4028,12 @@ try {
   if (orc && roteiroInfo) {
     btnToggle.style.display = 'inline-block';
     btnToggle.dataset.view = roteiroInfo ? 'roteiro' : 'cotacao';
-    btnToggle.innerHTML = roteiroInfo ? '🔄 Mudar para Cotação' : '🔄 Mudar para Roteiro';
+    btnToggle.innerHTML = roteiroInfo ? 'Mudar para Cotação' : 'Mudar para Roteiro';
     
     btnToggle.onclick = function() {
       if (this.dataset.view === 'roteiro') {
         this.dataset.view = 'cotacao';
-        this.innerHTML = '🔄 Mudar para Roteiro';
+        this.innerHTML = 'Mudar para Roteiro';
         // Populate DOM before preview to prevent syncDOMToState from wiping it out
         state.orcamento = JSON.parse(JSON.stringify(orc));
         document.getElementById('orcNome').value = orc.nome || '';
@@ -4045,7 +4045,7 @@ try {
         renderPreview(); 
       } else {
         this.dataset.view = 'roteiro';
-        this.innerHTML = '🔄 Mudar para Cotação';
+        this.innerHTML = 'Mudar para Cotação';
         roteiroOriginalNome = roteiroInfo.nome;
         roteiroEmEdicao = JSON.parse(JSON.stringify(roteiroInfo.data));
         document.getElementById('editRoteiroNome').value = roteiroInfo.nome;
@@ -4116,7 +4116,7 @@ window.handleAcaoClienteCotacao = async function() {
     
     const btn = document.getElementById('btnEditarClienteCotacao');
     const oldHtml = btn.innerHTML;
-    btn.innerHTML = '⏳ Salvando...';
+    btn.innerHTML = 'Salvando...';
     btn.disabled = true;
 
     try {
@@ -4151,7 +4151,7 @@ window.handleAcaoClienteCotacao = async function() {
       // Recarrega NotionClients
       notionClients = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' }).then(r=>r.json()); window.notionClients = notionClients;
 
-      btn.innerHTML = '👤 Editar Cliente';
+      btn.innerHTML = '<svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg> Editar Cliente';
       btn.disabled = false;
       
       // Trava os campos e salva
@@ -4477,31 +4477,31 @@ window.renderPreviewCliente = function(cliente, estadias = [], viajantes = [], e
         </div>
       </div>
       <div class="client-actions-bar">
-        <button class="btn-secondary" onclick="window.location.href='mailto:${emails && emails[0] ? emails[0].email : (cliente.email || '')}'" title="Enviar E-mail" ${!(emails && emails[0] || cliente.email) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-          ✉️ E-mail
+        <button class="btn-secondary" onclick="window.location.href='mailto:${emails && emails[0] ? emails[0].email : (cliente.email || '')}'" title="Enviar E-mail" style="display:inline-flex; align-items:center; gap:4px; ${!(emails && emails[0] || cliente.email) ? 'opacity:0.5; cursor:not-allowed;' : ''}" ${!(emails && emails[0] || cliente.email) ? 'disabled' : ''}>
+          <svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-mail"></use></svg> E-mail
         </button>
-        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\D/g,'')}', '_blank');" title="WhatsApp" ${!cliente.telefone ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-          💬 WhatsApp
+        <button class="btn-secondary" onclick="if('${cliente.telefone || ''}') window.open('https://wa.me/${(cliente.telefone || '').replace(/\D/g,'')}', '_blank');" title="WhatsApp" style="display:inline-flex; align-items:center; gap:4px; ${!cliente.telefone ? 'opacity:0.5; cursor:not-allowed;' : ''}" ${!cliente.telefone ? 'disabled' : ''}>
+          <svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-message-square"></use></svg> WhatsApp
         </button>
-        <button class="btn-secondary" onclick="if(typeof copiarLinkClienteFromId === 'function') copiarLinkClienteFromId('${cliente.id}');" title="Copiar Link da Área do Cliente">
-          🔗 Link do Cliente
+        <button class="btn-secondary" onclick="if(typeof copiarLinkClienteFromId === 'function') copiarLinkClienteFromId('${cliente.id}');" title="Copiar Link da Área do Cliente" style="display:inline-flex; align-items:center; gap:4px;">
+          <svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-link"></use></svg> Link do Cliente
         </button>
-        <button class="btn-secondary" onclick="navToPage('dashboard'); if(typeof selecionarClienteDashboard === 'function') selecionarClienteDashboard('${cliente.id}'); closeClienteModal();" title="Painel Financeiro do Cliente">
-          💼 Financeiro
+        <button class="btn-secondary" onclick="navToPage('dashboard'); if(typeof selecionarClienteDashboard === 'function') selecionarClienteDashboard('${cliente.id}'); closeClienteModal();" title="Painel Financeiro do Cliente" style="display:inline-flex; align-items:center; gap:4px;">
+          <svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-dollar-sign"></use></svg> Financeiro
         </button>
-        <button class="btn-primary" onclick="editarClienteCard('${cliente.id}')">
-          ✏️ Editar Cliente
+        <button class="btn-primary" onclick="editarClienteCard('${cliente.id}')" style="display:inline-flex; align-items:center; gap:4px;">
+          <svg class="v-icon" style="margin-right:0;"><use href="#icon-user"></use></svg> Editar Cliente
         </button>
       </div>
     </div>
 
     <!-- Barra de Navegação de Abas -->
     <div class="tabs-client-nav">
-      <button class="tab-client-btn active" data-tab="resumo" onclick="window.switchClientTab('resumo', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">📋 Resumo de Pendências</button>
+      <button class="tab-client-btn active" data-tab="resumo" onclick="window.switchClientTab('resumo', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-file"></use></svg> Resumo de Pendências</button>
       <button class="tab-client-btn" data-tab="dados" onclick="window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Dados do Cliente</button>
       <button class="tab-client-btn" data-tab="roteiros" onclick="window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Roteiros</button>
       <button class="tab-client-btn" data-tab="cotacoes" onclick="window.switchClientTab('cotacoes', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">Cotações</button>
-      <button class="tab-client-btn" data-tab="vouchers" onclick="window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')">🎟️ Vouchers & Ingressos</button>
+      <button class="tab-client-btn" data-tab="vouchers" onclick="window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:var(--ink-mid); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Vouchers & Ingressos</button>
     </div>
 
     <!-- Conteúdo da Aba Ativa -->
@@ -4761,13 +4761,13 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
   // 1. Coluna Viajantes & Dados
   html += `
     <div class="pendencias-block">
-      <div class="pendencias-block-title">👥 Viajantes & Dados Gerais</div>
+      <div class="pendencias-block-title" style="display:inline-flex; align-items:center; gap:6px;"><svg class="v-icon" style="stroke:var(--gold-dk); width:1.15em; height:1.15em; margin-right:0;"><use href="#icon-users"></use></svg> Viajantes & Dados Gerais</div>
       <div class="pendencias-list">
   `;
   if (pendenciasDados.length === 0) {
     html += `
       <div class="pendencia-empty-state">
-        <span>✔️</span> Viajantes e dados 100% preenchidos!
+        <span style="color:#2ecc71; font-weight:bold; margin-right:4px;">✓</span> Viajantes e dados 100% preenchidos!
       </div>
     `;
   } else {
@@ -4786,13 +4786,13 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
   // 2. Coluna Hospedagem
   html += `
     <div class="pendencias-block">
-      <div class="pendencias-block-title">🏨 Hospedagem (Estadias)</div>
+      <div class="pendencias-block-title" style="display:inline-flex; align-items:center; gap:6px;"><svg class="v-icon" style="stroke:var(--gold-dk); width:1.15em; height:1.15em; margin-right:0;"><use href="#icon-home"></use></svg> Hospedagem (Estadias)</div>
       <div class="pendencias-list">
   `;
   if (pendenciasHospedagem.length === 0) {
     html += `
       <div class="pendencia-empty-state">
-        <span>✔️</span> Hotéis e estadias 100% cobertos!
+        <span style="color:#2ecc71; font-weight:bold; margin-right:4px;">✓</span> Hotéis e estadias 100% cobertos!
       </div>
     `;
   } else {
@@ -4811,13 +4811,13 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
   // 3. Coluna Roteiro & Emissões
   html += `
     <div class="pendencias-block">
-      <div class="pendencias-block-title">🚄 Roteiro & Emissões (Heian)</div>
+      <div class="pendencias-block-title" style="display:inline-flex; align-items:center; gap:6px;"><svg class="v-icon" style="stroke:var(--gold-dk); width:1.15em; height:1.15em; margin-right:0;"><use href="#icon-map"></use></svg> Roteiro & Emissões (Heian)</div>
       <div class="pendencias-list">
   `;
   if (pendenciasEmissoes.length === 0) {
     html += `
       <div class="pendencia-empty-state">
-        <span>✔️</span> Roteiro e emissões concluídos com sucesso!
+        <span style="color:#2ecc71; font-weight:bold; margin-right:4px;">✓</span> Roteiro e emissões concluídos com sucesso!
       </div>
     `;
   } else {
@@ -4905,7 +4905,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
     if (roteiroVinculado && roteiroVinculado.dias) {
       roteiroVinculado.dias.forEach((dia, dIdx) => {
         const diaLabel = `Dia ${dIdx + 1} (${dia.cidade || ''})`;
-        itensRoteiro.push({ val: `dia:${dIdx + 1}`, label: `📅 ${diaLabel}` });
+        itensRoteiro.push({ val: `dia:${dIdx + 1}`, label: diaLabel });
 
         let dataDoDiaStr = '';
         if (cliente.dataInicio) {
@@ -4927,13 +4927,13 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
           dia.elementos.forEach(el => {
             if (el.tipo === 'sequencia' && el.atracoesDoDia) {
               el.atracoesDoDia.forEach(atr => {
-                itensRoteiro.push({ val: `atracao:${atr}`, label: `📍 Atração: ${atr} (${diaLabel})` });
+                itensRoteiro.push({ val: `atracao:${atr}`, label: `Atração: ${atr} (${diaLabel})` });
               });
             } else if (el.tipo === 'experiencia') {
               const e = el.expInfo || {};
               // nomeExp vive direto em el.nomeExp — expInfo é apenas fallback
               const nomeExp = el.nomeExp || e.nomeExp || el.titulo || 'Experiência';
-              itensRoteiro.push({ val: `experiencia:${nomeExp}`, label: `🎟️ Exp: ${nomeExp} (${diaLabel})` });
+              itensRoteiro.push({ val: `experiencia:${nomeExp}`, label: `Exp: ${nomeExp} (${diaLabel})` });
 
               const compradoPelaHeian = el.compradoHeian !== false && e.compradoHeian !== false;
               if (compradoPelaHeian) {
@@ -4945,7 +4945,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'experiencia',
-                  tipoLabel: '🎟️ Experiência',
+                  tipoLabel: 'Experiência',
                   tituloItem: nomeExp,
                   desc: nomeExp,
                   diaLabel: diaLabel,
@@ -4965,7 +4965,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               const origem = el.cidadeOrigem || t.origem || '';
               const destino = el.cidadeDestino || t.destino || '';
               const desc = `${transpNome}${origem && destino ? ` (${origem} ➔ ${destino})` : ''}`;
-              itensRoteiro.push({ val: `transporte:${transpNome}`, label: `🚄 Transp: ${desc} (${diaLabel})` });
+              itensRoteiro.push({ val: `transporte:${transpNome}`, label: `Transp: ${desc} (${diaLabel})` });
 
               const compradoPelaHeian = el.compradoHeian !== false && t.compradoHeian !== false;
               if (compradoPelaHeian) {
@@ -4978,7 +4978,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                 const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : '');
                 emissoesHeian.push({
                   tipo: 'transporte',
-                  tipoLabel: `🚄 ${transpNome}`,
+                  tipoLabel: transpNome,
                   tituloItem: transpNome,
                   desc: desc,
                   origemDestino: `${origem || 'A definir'} ➔ ${destino || 'A definir'}`,
@@ -5023,25 +5023,25 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               let linkHTML = '';
               if (eh.voucher.arquivos && eh.voucher.arquivos.length > 0) {
                 linkHTML = eh.voucher.arquivos.map((arq, idx) => {
-                  return `<a href="${arq.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff; margin-right:6px;">📄 Doc ${idx+1}</a>`;
+                  return `<a href="${arq.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff; margin-right:6px;"><svg class="v-icon" style="stroke:var(--gold-dk); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-file"></use></svg> Doc ${idx+1}</a>`;
                 }).join('');
               } else if (eh.voucher.url) {
-                linkHTML = `<a href="${eh.voucher.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff;">🔗 Abrir Link</a>`;
+                linkHTML = `<a href="${eh.voucher.url}" target="_blank" style="color:var(--gold-dk); font-weight:600; font-size:11.5px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border:1px solid var(--gold-lt); border-radius:4px; background:#fff;"><svg class="v-icon" style="stroke:var(--gold-dk); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-link"></use></svg> Abrir Link</a>`;
               } else {
-                linkHTML = `<span style="color:var(--ink-lt); font-size:11.5px; font-style:italic;">📝 Instrução escrita</span>`;
+                linkHTML = `<span style="color:var(--ink-lt); font-size:11.5px; font-style:italic; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:var(--ink-lt); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-file-text"></use></svg> Instrução escrita</span>`;
               }
 
               const editAction = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.voucher.atracaoNome.replace(/'/g, "\\'")}', '${eh.voucher.nome.replace(/'/g, "\\'")}', '${eh.voucher.dataUso || ''}', '${eh.voucher.id}')`;
               acaoHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #d1fae5; padding-top:10px; margin-top:10px; gap:8px;">
                   <div style="flex:1; display:flex; flex-wrap:wrap; gap:4px;">${linkHTML}</div>
-                  <button onclick="${editAction}" style="padding:4px 10px; font-size:11px; cursor:pointer; background:#fff; border:1px solid #a7f3d0; border-radius:4px; color:#065f46; font-weight:600; white-space:nowrap; flex-shrink:0;">✏️ Alterar</button>
+                  <button onclick="${editAction}" style="padding:4px 10px; font-size:11px; cursor:pointer; background:#fff; border:1px solid #a7f3d0; border-radius:4px; color:#065f46; font-weight:600; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon no-margin" style="stroke:#065f46; width:1.1em; height:1.1em;"><use href="#icon-edit"></use></svg> Alterar</button>
                 </div>
               `;
             } else {
               cardBorderColor = '#fca5a5';
               cardBorderLeft = '#ef4444';
-              statusBadge = `<span style="background:#fee2e2; color:#991b1b; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; border-radius:4px; letter-spacing:0.04em;">⚠ Pendente</span>`;
+              statusBadge = `<span style="background:#fee2e2; color:#991b1b; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; border-radius:4px; letter-spacing:0.04em;">Pendente</span>`;
 
               const suggestionsName = eh.tipo === 'transporte' ? `Bilhete - ${eh.tituloItem || eh.desc}` : `Ingresso - ${eh.tituloItem || eh.desc}`;
               const actionClick = `window.uploadRapidoVoucherAdmin('${cliente.id}', '${eh.key.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${eh.dataSugerida}')`;
@@ -5049,7 +5049,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               acaoHTML = `
                 <div style="border-top:1px solid #fee2e2; padding-top:10px; margin-top:10px;">
                   <button onclick="${actionClick}" style="padding:7px 0; font-size:12px; border-radius:6px; font-weight:600; cursor:pointer; background:var(--crimson); border:none; color:white; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
-                    ➕ Anexar Bilhete / Ingresso
+                    <svg class="v-icon no-margin" style="stroke:white; width:1.1em; height:1.1em;"><use href="#icon-plus"></use></svg> Anexar Bilhete / Ingresso
                   </button>
                 </div>
               `;
@@ -5066,23 +5066,23 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
               detalhesPrincipais = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
                   ${trechoValido ? `<div style="grid-column:span 2; background:#f0f4f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🛤️ Trecho</div>
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">Trecho</div>
                     <div style="font-size:14px; color:var(--ink-dk); font-weight:700;">${eh.origemDestino}</div>
                   </div>` : ''}
                   ${eh.linha ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">🔖 Trem / Voo / Linha</div>
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">Trem / Voo / Linha</div>
                     <div style="font-size:13px; color:var(--ink-dk); font-weight:700;">${eh.linha}</div>
                   </div>` : ''}
                   ${categoriaValida ? `<div style="background:#f5f0ff; border:1px solid #ede9fe; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:#6d28d9; text-transform:uppercase; margin-bottom:3px;">🎫 Classe / Tipo</div>
+                    <div style="font-size:10px; font-weight:600; color:#6d28d9; text-transform:uppercase; margin-bottom:3px;">Classe / Tipo</div>
                     <div style="font-size:13px; color:#4c1d95; font-weight:700;">${eh.categoria}</div>
                   </div>` : ''}
                   ${eh.horario ? `<div style="background:#fff8e6; border:1px solid #fef3c7; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:3px;">⏰ Horário de Partida</div>
+                    <div style="font-size:10px; font-weight:600; color:#b45309; text-transform:uppercase; margin-bottom:3px;">Horário de Partida</div>
                     <div style="font-size:22px; color:#92400e; font-weight:800; line-height:1;">${eh.horario}</div>
                   </div>` : ''}
                   ${eh.duracao ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px;">
-                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">⏱ Duração</div>
+                    <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:3px;">Duração</div>
                     <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${eh.duracao}</div>
                   </div>` : ''}
                 </div>
@@ -5096,7 +5096,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                   </div>` : ''}
                   ${eh.local ? `<div style="background:#f9f9f9; border-radius:6px; padding:8px 10px; grid-column:${eh.horario ? '1' : 'span 2'};">
                     <div style="font-size:10px; font-weight:600; color:var(--ink-lt); text-transform:uppercase; margin-bottom:2px;">Local de Encontro</div>
-                    <div style="font-size:12px; color:var(--ink-dk); font-weight:600;">📍 ${eh.local}</div>
+                    <div style="font-size:12px; color:var(--ink-dk); font-weight:600;">${eh.local}</div>
                   </div>` : ''}
                 </div>
               `;
@@ -5112,7 +5112,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
             if (eh.instrucoesPreCompra) {
               notaCompra = `
                 <div style="background:#fffbeb; border-left:3px solid #f59e0b; padding:8px 10px; border-radius:0 6px 6px 0; margin-top:10px;">
-                  <div style="font-size:10px; font-weight:700; color:#92400e; text-transform:uppercase; margin-bottom:3px;">📌 Nota de Compra</div>
+                  <div style="font-size:10px; font-weight:700; color:#92400e; text-transform:uppercase; margin-bottom:3px;">Nota de Compra</div>
                   <div style="font-size:12px; color:#78350f;">${eh.instrucoesPreCompra}</div>
                 </div>
               `;
@@ -5134,7 +5134,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                 ${detalhesPrincipais}
 
                 ${passageirosLabel ? `<div style="margin-top:10px; background:#f0f4ff; border-radius:6px; padding:8px 10px;">
-                  <div style="font-size:10px; font-weight:600; color:#3730a3; text-transform:uppercase; margin-bottom:2px;">👤 Passageiros</div>
+                  <div style="font-size:10px; font-weight:600; color:#3730a3; text-transform:uppercase; margin-bottom:2px;">Passageiros</div>
                   <div style="font-size:12.5px; color:#1e1b4b; font-weight:600;">${passageirosLabel}</div>
                   ${passageirosDetalhe}
                 </div>` : ''}
@@ -5190,21 +5190,21 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
                 } else {
                   filesCount = 0;
                 }
-                const filesLabel = filesCount > 1 ? `<span style="font-size:10.5px; padding: 2px 5px; background: #eee; border-radius: 4px; color: #555; margin-left: 6px; font-weight: normal;">📦 ${filesCount} arquivos</span>` : '';
+                const filesLabel = filesCount > 1 ? `<span style="font-size:10.5px; padding: 2px 5px; background: #eee; border-radius: 4px; color: #555; margin-left: 6px; font-weight: normal;">${filesCount} arquivos</span>` : '';
 
                 return `
                   <tr>
                     <td>
                       <strong>${v.nome}</strong> ${filesLabel}
-                      ${v.instrucao ? `<div style="font-size:11px; color:var(--ink-lt); margin-top:2px; white-space:pre-line;">💬 ${v.instrucao.substring(0, 100)}${v.instrucao.length > 100 ? '...' : ''}</div>` : ''}
+                      ${v.instrucao ? `<div style="font-size:11px; color:var(--ink-lt); margin-top:2px; white-space:pre-line;">${v.instrucao.substring(0, 100)}${v.instrucao.length > 100 ? '...' : ''}</div>` : ''}
                     </td>
                     <td><span class="meta-badge" style="background:${badgeColor}22; color:${badgeColor}; border:none; padding:2px 8px; font-size:11px; font-weight:600;">${v.tipo.toUpperCase()}</span></td>
                     <td style="font-size:12.5px;">${assocLabel}</td>
                     <td style="font-size:12.5px;">${v.dataUso ? fmtDataBR(v.dataUso) : '—'}</td>
                     <td style="text-align:center;">
                       <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center;">
-                        <button class="btn-secondary" onclick="window.uploadRapidoVoucherAdmin('${cliente.id}', '${v.atracaoNome || ''}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#3b82f6; border-color:#eff6ff; cursor:pointer;" title="Editar">✏️</button>
-                        <button class="btn-secondary" onclick="window.excluirVoucherCliente('${cliente.id}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#c00; border-color:#fee; cursor:pointer;" title="Excluir">❌</button>
+                        <button class="btn-secondary" onclick="window.uploadRapidoVoucherAdmin('${cliente.id}', '${v.atracaoNome || ''}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#3b82f6; border-color:#eff6ff; cursor:pointer;" title="Editar"><svg class="v-icon no-margin"><use href="#icon-edit"></use></svg></button>
+                        <button class="btn-secondary" onclick="window.excluirVoucherCliente('${cliente.id}', '${v.id}')" style="padding:4px 8px; font-size:11px; color:#c00; border-color:#fee; cursor:pointer;" title="Excluir"><svg class="v-icon no-margin" style="stroke:#c00;"><use href="#icon-trash"></use></svg></button>
                       </div>
                     </td>
                   </tr>
@@ -5222,7 +5222,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
         <!-- Controle de Emissões Heian (Roteiro) -->
         <div class="info-card" style="padding:16px; border: 1px solid rgba(196,163,90,0.22); background: linear-gradient(to bottom, #fdfaf5, #ffffff);">
           <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson); display:flex; justify-content:space-between; align-items:center;">
-            <span>📋 Controle de Emissões Heian (Roteiro)</span>
+            <span>Controle de Emissões Heian (Roteiro)</span>
             <span style="font-size:11px; color:var(--ink-lt); font-weight:normal;">Mapeado dinamicamente do roteiro</span>
           </h3>
           ${emissoesHTML}
@@ -5231,7 +5231,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
         <!-- Lista de Vouchers -->
         <div class="info-card" style="padding:16px;">
           <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
-            <span>🎟️ Todos os Ingressos e Vouchers Enviados</span>
+            <span>Todos os Ingressos e Vouchers Enviados</span>
             <span style="font-size:11px; color:var(--ink-lt); font-weight:normal;">${vouchers.length} item(ns)</span>
           </h3>
           ${vouchersHTML}
@@ -5239,7 +5239,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
 
         <!-- Formulário de Cadastro -->
         <div class="info-card" style="padding:16px; border:1px dashed var(--border); background:#fdfdfd;">
-          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson);">➕ Cadastrar Novo Voucher Avulso</h3>
+          <h3 class="info-card-title" style="margin-bottom:12px; font-size:14px; font-weight:600; color:var(--crimson);">Cadastrar Novo Voucher Avulso</h3>
           
           <form id="formNovoVoucher" onsubmit="window.salvarNovoVoucherCliente(event, '${cliente.id}')" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
             
@@ -5300,7 +5300,7 @@ window.renderAbaVouchersCliente = async function(cliente, viajantes = []) {
 
             <div style="grid-column:span 2; display:flex; justify-content:flex-end; margin-top:8px;">
               <button type="submit" class="btn-primary" style="padding:10px 20px; font-size:13px; font-weight:600; border-radius:6px;">
-                🚀 Adicionar e Salvar Ficha
+                Adicionar e Salvar Ficha
               </button>
             </div>
             
@@ -5519,10 +5519,10 @@ window.uploadRapidoVoucherAdmin = async function(clienteId, atracaoNome, nomeSug
 
   let labelVinculo = 'Nenhum';
   if (targetAtracao) {
-    if (targetAtracao.startsWith('dia:')) labelVinculo = `📅 Dia ${targetAtracao.split(':')[1]}`;
-    else if (targetAtracao.startsWith('atracao:')) labelVinculo = `📍 Atração: ${targetAtracao.split(':')[1]}`;
-    else if (targetAtracao.startsWith('experiencia:')) labelVinculo = `🎟️ Experiência: ${targetAtracao.split(':')[1]}`;
-    else if (targetAtracao.startsWith('transporte:')) labelVinculo = `🚄 Transporte: ${targetAtracao.split(':')[1]}`;
+    if (targetAtracao.startsWith('dia:')) labelVinculo = `Dia ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('atracao:')) labelVinculo = `Atração: ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('experiencia:')) labelVinculo = `Experiência: ${targetAtracao.split(':')[1]}`;
+    else if (targetAtracao.startsWith('transporte:')) labelVinculo = `Transporte: ${targetAtracao.split(':')[1]}`;
     else labelVinculo = targetAtracao;
   }
 
@@ -5541,7 +5541,7 @@ window.uploadRapidoVoucherAdmin = async function(clienteId, atracaoNome, nomeSug
     <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:16px; position:relative;" onclick="event.stopPropagation()">
       <span onclick="window.fecharModalUploadRapido()" style="position:absolute; top:12px; right:16px; font-size:20px; font-weight:bold; cursor:pointer; color:#7f7f7f;">✕</span>
       <h3 style="margin:0; font-family:var(--ff-display); color:var(--crimson); font-size:16px; font-weight:600;">
-        ${isEdit ? '✏️ Editar Ingresso / Passagem' : '🎟️ Enviar Ingresso / Passagem'}
+        ${isEdit ? 'Editar Ingresso / Passagem' : 'Enviar Ingresso / Passagem'}
       </h3>
       
       <div style="font-size:12px; color:var(--text-sec); border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:4px;">
@@ -5597,7 +5597,7 @@ window.uploadRapidoVoucherAdmin = async function(clienteId, atracaoNome, nomeSug
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
           <button type="button" onclick="window.fecharModalUploadRapido()" class="btn-secondary" style="padding:8px 16px; font-size:12.5px;">Cancelar</button>
           <button type="submit" class="btn-primary" style="padding:8px 20px; font-size:12.5px; font-weight:600;">
-            ${isEdit ? '💾 Salvar Alterações' : '🚀 Enviar'}
+            ${isEdit ? 'Salvar Alterações' : 'Enviar'}
           </button>
         </div>
       </form>
@@ -5753,7 +5753,7 @@ window.salvarUploadRapidoVoucher = async function(e, clienteId, atracaoNome, vou
     alert('Erro ao salvar ingresso: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerText = voucherId ? '💾 Salvar Alterações' : '🚀 Enviar';
+    btn.innerText = voucherId ? 'Salvar Alterações' : 'Enviar';
   }
 };
 
@@ -5825,11 +5825,11 @@ function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
     viajantesHTML = `<div style="display:flex; flex-direction:column; gap:6px;">` +
       viajantes.map(v => {
         const nomeCompleto = [v.nome, v.sobrenome].filter(Boolean).join(' ') || 'Sem nome';
-        const tipo = (parseInt(v.idade) < 12 && !isNaN(parseInt(v.idade))) ? '🧒' : '🧑';
-        const idadeStr = v.idade ? `${v.idade} anos` : '';
+        const tipo = (parseInt(v.idade) < 12 && !isNaN(parseInt(v.idade))) ? 'Criança:' : 'Adulto:';
+        const ageStr = v.idade ? `${v.idade} anos` : '';
         return `<div style="padding:8px 12px; background:rgba(196,163,90,0.04); border:1px solid var(--border); border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:13px; color:var(--ink-dk);">${tipo} ${nomeCompleto}</span>
-          <span style="font-size:12px; color:var(--ink-lt);">${idadeStr}</span>
+          <span style="font-size:12px; color:var(--ink-lt);">${ageStr}</span>
         </div>`;
       }).join('') + `</div>`;
   } else {
@@ -5844,10 +5844,10 @@ function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
   if (emails && emails.length > 0) {
     emailsHTML = emails.map((e, i) => {
       const badge = i === 0 ? ' <span style="font-size:9px; background:var(--crimson); color:#fff; padding:1px 4px; border-radius:3px; vertical-align:middle;">Principal</span>' : '';
-      return `<div style="font-size:13px; color:var(--ink-dk); padding:4px 0;">📧 ${e.email}${badge}</div>`;
+      return `<div style="font-size:13px; color:var(--ink-dk); padding:4px 0;">${e.email}${badge}</div>`;
     }).join('');
   } else if (cliente.email) {
-    emailsHTML = `<div style="font-size:13px; color:var(--ink-dk); white-space:pre-wrap;">📧 ${cliente.email}</div>`;
+    emailsHTML = `<div style="font-size:13px; color:var(--ink-dk); white-space:pre-wrap;">${cliente.email}</div>`;
   } else {
     emailsHTML = `<p style="font-size: 13px; color: var(--ink-lt); font-style: italic;">Nenhum e-mail cadastrado.</p>`;
   }
@@ -5859,7 +5859,7 @@ function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <strong style="color: var(--crimson); font-size: 14px;">${est.cidade || 'Cidade não informada'}</strong>
           <span style="font-size: 12px; color: var(--ink-lt);">
-            ${est.dataInicio && est.dataFim ? `📅 ${fmtDataBR(est.dataInicio)} a ${fmtDataBR(est.dataFim)}` : 'Sem período informado'}
+            ${est.dataInicio && est.dataFim ? `${fmtDataBR(est.dataInicio)} a ${fmtDataBR(est.dataFim)}` : 'Sem período informado'}
           </span>
         </div>
         <div style="font-size: 13px; color: var(--ink-dk);">${est.hotel || 'Hotel não informado'}</div>
@@ -5881,22 +5881,22 @@ function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
           <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500;">${passageiros}</div>
         </div>
         <div>
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">✈ Voo de Chegada</div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-plane"></use></svg> Voo de Chegada</div>
           <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500;">${vooChegadaStr}</div>
         </div>
         <div>
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px;">✈ Voo de Partida</div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); margin-bottom: 4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-plane"></use></svg> Voo de Partida</div>
           <div style="font-size: 14px; color: var(--ink-dk); font-weight: 500;">${vooPartidaStr}</div>
         </div>
       </div>
 
       <div>
-        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600;">👥 Viajantes</h3>
+        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon"><use href="#icon-users"></use></svg> Viajantes</h3>
         ${viajantesHTML}
       </div>
 
       <div>
-        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600;">📧 E-mails</h3>
+        <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 12px; font-weight: 600; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon"><use href="#icon-file"></use></svg> E-mails</h3>
         ${emailsHTML}
       </div>
 
@@ -5926,7 +5926,7 @@ function renderAbaRoteiros(cliente) {
       <div style="text-align:center; padding: 40px 20px;">
         <p style="color:var(--ink-lt); font-size:14px; margin-bottom:16px;">Nenhum roteiro vinculado a este cliente.</p>
         <button class="btn-primary" onclick="window.criarRoteiroParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:8px; padding: 10px 18px; border-radius: 8px;">
-          ➕ Criar Roteiro
+          Criar Roteiro
         </button>
       </div>
     `;
@@ -5952,7 +5952,7 @@ function renderAbaRoteiros(cliente) {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <span style="font-size:13px; color:var(--ink-lt); font-weight:500;">Histórico de Roteiros</span>
       <button class="btn-primary" onclick="window.criarRoteiroParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:6px; padding: 6px 12px; font-size:12px; border-radius: 6px;">
-        ➕ Novo Roteiro
+        Novo Roteiro
       </button>
     </div>
     <div class="compact-cards-grid" style="margin-bottom:16px;">
@@ -5961,9 +5961,9 @@ function renderAbaRoteiros(cliente) {
     <div id="roteiroActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
       <strong id="roteiroActiveTitle" style="color:var(--crimson); font-size:15px;"></strong>
       <div style="display:flex; gap:8px;">
-        <button class="btn-secondary" id="btnSincronizarCalendarioPreview" style="padding: 6px 12px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson); cursor:pointer;">📅 Sincronizar Calendário</button>
-        <button class="btn-secondary" id="btnAbrirRoteiroPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer;">🗺️ Abrir Editor</button>
-        <button class="btn-secondary" id="btnExcluirRoteiroPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer;">❌ Excluir</button>
+        <button class="btn-secondary" id="btnSincronizarCalendarioPreview" style="padding: 6px 12px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson); cursor:pointer; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-calendar"></use></svg>Sincronizar Calendário</button>
+        <button class="btn-secondary" id="btnAbrirRoteiroPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-edit"></use></svg>Abrir Editor</button>
+        <button class="btn-secondary" id="btnExcluirRoteiroPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#c00; margin-right:2px;"><use href="#icon-trash"></use></svg>Excluir</button>
       </div>
     </div>
     <div id="roteiroActivePreview" class="tab-preview-section"></div>
@@ -6092,7 +6092,7 @@ function renderAbaCotacoes(cliente) {
       <div style="text-align:center; padding: 40px 20px;">
         <p style="color:var(--ink-lt); font-size:14px; margin-bottom:16px;">Nenhuma cotação vinculada a este cliente.</p>
         <button class="btn-primary" onclick="window.criarCotacaoParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:8px; padding: 10px 18px; border-radius: 8px;">
-          ➕ Criar Cotação
+          Criar Cotação
         </button>
       </div>
     `;
@@ -6125,7 +6125,7 @@ function renderAbaCotacoes(cliente) {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <span style="font-size:13px; color:var(--ink-lt); font-weight:500;">Histórico de Cotações</span>
       <button class="btn-primary" onclick="window.criarCotacaoParaCliente('${cliente.id}')" style="display:inline-flex; align-items:center; gap:6px; padding: 6px 12px; font-size:12px; border-radius: 6px;">
-        ➕ Nova Cotação
+        Nova Cotação
       </button>
     </div>
     <div class="compact-cards-grid" style="margin-bottom:16px;">
@@ -6134,8 +6134,8 @@ function renderAbaCotacoes(cliente) {
     <div id="cotacaoActivePreviewHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
       <strong id="cotacaoActiveTitle" style="color:var(--crimson); font-size:15px;"></strong>
       <div style="display:flex; gap:8px;">
-        <button class="btn-secondary" id="btnAbrirCotacaoPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer;">💰 Abrir Editor</button>
-        <button class="btn-secondary" id="btnExcluirCotacaoPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer;">❌ Excluir</button>
+        <button class="btn-secondary" id="btnAbrirCotacaoPreview" style="padding: 6px 12px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-edit"></use></svg>Abrir Editor</button>
+        <button class="btn-secondary" id="btnExcluirCotacaoPreview" style="padding: 6px 12px; font-size:12px; color:#c00; border-color:#fee; cursor:pointer; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#c00; margin-right:2px;"><use href="#icon-trash"></use></svg>Excluir</button>
       </div>
     </div>
     <div id="cotacaoActivePreview" class="tab-preview-section" style="max-height: 600px; overflow-y: auto;"></div>
@@ -6458,14 +6458,14 @@ function gerarEventCardHTML(ev, simplificado = false) {
     const guiasNomes = ev.assignee && ev.assignee.length > 0 ? ev.assignee.map(a => a.name).join(', ') : 'Nenhum guia designado';
     footerGuiaHTML = `
       <div style="border-top:1px solid var(--border); padding-top:4.2px; font-size:8.2px; color:var(--ink-mid); display:flex; align-items:center; gap:4px;">
-        <span style="color:var(--ink-lt);">👤 Guia:</span> <strong>${guiasNomes}</strong>
+        <span style="color:var(--ink-lt); display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon no-margin" style="width:1em; height:1em;"><use href="#icon-user"></use></svg> Guia:</span> <strong>${guiasNomes}</strong>
       </div>
     `;
   } else {
     if (ev.assignee && ev.assignee.length > 1) {
       const chips = ev.assignee.map(a => 
         `<span class="colab-card-chip" style="background:rgba(107,31,42,0.06); color:var(--crimson); font-size:8px; font-weight:700; padding:1px 5px; border-radius:4px; display:inline-flex; align-items:center; gap:2px; border:1px solid rgba(107,31,42,0.12);">
-          👤 ${a.name}
+          <svg class="v-icon no-margin" style="width:1em; height:1em;"><use href="#icon-user"></use></svg> ${a.name}
         </span>`
       ).join('');
       
@@ -6480,20 +6480,20 @@ function gerarEventCardHTML(ev, simplificado = false) {
     } else {
       const guiaIdAtual = ev.assignee && ev.assignee.length > 0 ? ev.assignee[0].id : '';
       const optionsColaboradores = calColaboradores.map(col => {
-        return `<option value="${col.id}" ${col.id === guiaIdAtual ? 'selected' : ''}>👤 ${col.name}</option>`;
+        return `<option value="${col.id}" ${col.id === guiaIdAtual ? 'selected' : ''}>${col.name}</option>`;
       }).join('');
       
       footerGuiaHTML = `
         <div style="border-top:1px solid var(--border); padding-top:4px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:4px;" onclick="event.stopPropagation();">
           <div style="display:flex; align-items:center; gap:4px; flex-grow:1;">
-            <span style="font-size:8px; font-weight:600; color:var(--ink-mid); white-space:nowrap;">👤 Guia:</span>
+            <span style="font-size:8px; font-weight:600; color:var(--ink-mid); white-space:nowrap; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon no-margin" style="width:1em; height:1em;"><use href="#icon-user"></use></svg> Guia:</span>
             <select onchange="atualizarGuiaRapidoLista('${ev.id}', this)" class="calendar-card-select" style="flex-grow:1; max-width:110px;">
               <option value="">Nenhum guia designado</option>
               ${optionsColaboradores}
             </select>
           </div>
           <button class="btn-secondary" style="margin:0; padding:1px 4px; font-size:8px; height:18px; line-height:1; border-radius:3px; border-color:var(--border);" onclick="abrirCalendarioEventModal('${ev.id}')" title="Designar múltiplos colaboradores">
-            ➕
+            +
           </button>
         </div>
       `;
@@ -6537,7 +6537,7 @@ function gerarEventCardHTML(ev, simplificado = false) {
             ${ev.tipoServico || 'Serviço'}
           </span>
           <span style="font-size:9px; font-weight:700; color:var(--ink-mid);">
-            🕒 ${meetingTime}
+            ${meetingTime}
           </span>
         </div>
         <h4 style="margin:1px 0 0 0; font-family:var(--ff-display); font-size:11px; font-weight:700; color:var(--ink-dk); line-height:1.3;">
@@ -6671,7 +6671,7 @@ window.renderCalendario = async function() {
         if (select) {
           select.innerHTML = '<option value="">Nenhum guia designado</option>';
           calColaboradores.forEach(col => {
-            select.innerHTML += `<option value="${col.id}">👤 ${col.name}</option>`;
+            select.innerHTML += `<option value="${col.id}">${col.name}</option>`;
           });
         }
       }
@@ -6779,7 +6779,7 @@ window.renderCalendario = async function() {
           tipoClass = 'event-type-transfer';
         }
         
-        const guiaText = ev.assignee.length > 0 ? ` [👤 ${ev.assignee.map(a => a.name).join(', ')}]` : '';
+        const guiaText = ev.assignee.length > 0 ? ` [${ev.assignee.map(a => a.name).join(', ')}]` : '';
         return `
           <div class="calendar-event-badge calendar-event-item ${tipoClass} draggable-event" draggable="true" data-event-id="${ev.id}" onclick="event.stopPropagation(); abrirCalendarioEventModal('${ev.id}')">
             ${ev.titulo}${guiaText}
@@ -6896,7 +6896,7 @@ window.renderCalendario = async function() {
           <!-- Coluna da Esquerda: Informações do Dia -->
           <div class="calendar-list-day-header">
             <div class="calendar-list-day-date">
-              🗓️ ${dataFormatada}
+              ${dataFormatada}
             </div>
             <div class="calendar-list-day-weekday">
               ${diaSemana}
@@ -7056,12 +7056,12 @@ window.abrirCalendarioEventModal = function(eventoId) {
     // 1. Tentar renderizar a partir das informações ricas salvas no próprio evento
     if (ev.cidade || ev.horaEncontro || ev.localEncontro || ev.atracoes || ev.transportInfo || ev.expInfo) {
       if (typeLower.includes('roteiro')) {
-        specHTML += `<div style="font-weight:700; color:var(--crimson); font-size:12px; margin-bottom:12px; text-transform:uppercase;">🗺️ Roteiro do Dia:</div>`;
+        specHTML += `<div style="font-weight:700; color:var(--crimson); font-size:12px; margin-bottom:12px; text-transform:uppercase;">Roteiro do Dia:</div>`;
 
         const parts = [];
-        if (ev.horaEncontro) parts.push(`🕒 Encontro: <strong>${ev.horaEncontro}</strong><br>`);
-        if (ev.localEncontro) parts.push(`📍 Local: <strong>${ev.localEncontro}</strong><br>`);
-        if (ev.duracaoTour) parts.push(`⏳ Duração: <strong>${ev.duracaoTour}</strong>`);
+        if (ev.horaEncontro) parts.push(`Encontro: <strong>${ev.horaEncontro}</strong><br>`);
+        if (ev.localEncontro) parts.push(`Local: <strong>${ev.localEncontro}</strong><br>`);
+        if (ev.duracaoTour) parts.push(`Duração: <strong>${ev.duracaoTour}</strong>`);
         
         if (parts.length > 0) {
           specHTML += `<div style="font-size:12px; background:#f9f6f6; border-left:3px solid var(--crimson); padding:8px 12px; border-radius:6px; margin-bottom:12px; color:var(--ink-mid); display:block; line-height:1.4;">${parts.join('')}</div>`;
@@ -7073,7 +7073,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
         
         if (ev.atracoes && ev.atracoes.length > 0) {
           const chipsHTML = ev.atracoes.map(atr => 
-            `<span style="background:rgba(196,163,90,0.12); color:#8a703b; border:1px solid rgba(196,163,90,0.2); padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; display:inline-block; margin:2px 4px 2px 0;">⭐ ${atr}</span>`
+            `<span style="background:rgba(196,163,90,0.12); color:#8a703b; border:1px solid rgba(196,163,90,0.2); padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; display:inline-block; margin:2px 4px 2px 0;">${atr}</span>`
           ).join('');
           specHTML += `<div style="margin-top:8px;"><strong>Atrações:</strong><div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${chipsHTML}</div></div>`;
         }
@@ -7086,7 +7086,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
           specHTML += `</div>`;
         }
       } else if (ev.transportInfo || typeLower.includes('shinkansen') || typeLower.includes('romancecar') || typeLower.includes('trem') || typeLower.includes('ônibus') || typeLower.includes('onibus') || typeLower.includes('transfer') || typeLower.includes('transporte')) {
-        specHTML += `<div style="font-weight:700; color:#9c8248; font-size:12px; margin-bottom:12px; text-transform:uppercase;">🚆 Detalhes do Transporte:</div>`;
+        specHTML += `<div style="font-weight:700; color:#9c8248; font-size:12px; margin-bottom:12px; text-transform:uppercase;">Detalhes do Transporte:</div>`;
         
         const t = ev.transportInfo || {};
         const orig = t.origem || ev.cidade?.split(' ➔ ')[0] || 'Origem';
@@ -7114,7 +7114,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
             ${t.observacoes ? `<div style="margin-top:10px; font-style:italic; border-top:1px dashed rgba(196,163,90,0.2); padding-top:8px; color:var(--ink-lt);">Obs: ${t.observacoes}</div>` : ''}
           </div>`;
       } else if (ev.expInfo || typeLower.includes('experiência') || typeLower.includes('experiencia')) {
-        specHTML += `<div style="font-weight:700; color:#a3522b; font-size:12px; margin-bottom:12px; text-transform:uppercase;">🎫 Tickets & Experiências:</div>`;
+        specHTML += `<div style="font-weight:700; color:#a3522b; font-size:12px; margin-bottom:12px; text-transform:uppercase;">Tickets & Experiências:</div>`;
         
         const e = ev.expInfo || {};
         const hora = e.horaPartida || ev.horaEncontro || 'Definir';
@@ -7165,13 +7165,13 @@ window.abrirCalendarioEventModal = function(eventoId) {
             const textos = (diaRoteiro.elementos || []).filter(el => el.tipo === 'texto');
 
             if (sequencias.length > 0 || infos.length > 0 || textos.length > 0) {
-              specHTML += `<div style="font-weight:700; color:var(--crimson); font-size:12px; margin-bottom:8px; text-transform:uppercase;">🗺️ Roteiro do Dia:</div>`;
+              specHTML += `<div style="font-weight:700; color:var(--crimson); font-size:12px; margin-bottom:8px; text-transform:uppercase;">Roteiro do Dia:</div>`;
 
               infos.forEach(inf => {
                 const parts = [];
-                if (inf.horarioEncontro) parts.push(`🕒 ${inf.horarioEncontro}`);
-                if (inf.localEncontro) parts.push(`📍 Encontro: ${inf.localEncontro}`);
-                if (inf.duracaoTour) parts.push(`⏳ ${inf.duracaoTour}`);
+                if (inf.horarioEncontro) parts.push(`${inf.horarioEncontro}`);
+                if (inf.localEncontro) parts.push(`Encontro: ${inf.localEncontro}`);
+                if (inf.duracaoTour) parts.push(`${inf.duracaoTour}`);
                 if (parts.length > 0) {
                   specHTML += `<div style="font-size:11px; background:#f5f7fa; padding:6px 10px; border-radius:6px; margin-bottom:8px; color:var(--ink-mid);">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
                 }
@@ -7180,7 +7180,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
               sequencias.forEach(seq => {
                 const cidadeName = seq.cidade ? `<strong style="color:var(--gold-dk);">${seq.cidade}:</strong> ` : '';
                 const atrs = seq.atracoesDoDia && seq.atracoesDoDia.length > 0
-                  ? seq.atracoesDoDia.map(a => `<span style="background:rgba(196,163,90,0.1); color:#9c8248; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; display:inline-block; margin:2px 2px 2px 0;">⭐ ${a.nome}</span>`).join(' ')
+                  ? seq.atracoesDoDia.map(a => `<span style="background:rgba(196,163,90,0.1); color:#9c8248; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; display:inline-block; margin:2px 2px 2px 0;">${a.nome}</span>`).join(' ')
                   : '<span style="color:var(--ink-lt);">Nenhuma atração</span>';
 
                 specHTML += `
@@ -7199,7 +7199,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
           } else if (typeLower.includes('shinkansen') || typeLower.includes('romancecar') || typeLower.includes('trem') || typeLower.includes('ônibus') || typeLower.includes('onibus') || typeLower.includes('transfer')) {
             const transportes = (diaRoteiro.elementos || []).filter(el => el.tipo === 'transporte');
             if (transportes.length > 0) {
-              specHTML += `<div style="font-weight:700; color:#9c8248; font-size:12px; margin-bottom:8px; text-transform:uppercase;">🚆 Detalhes do Transporte:</div>`;
+              specHTML += `<div style="font-weight:700; color:#9c8248; font-size:12px; margin-bottom:8px; text-transform:uppercase;">Detalhes do Transporte:</div>`;
               transportes.forEach(t => {
                 const heianEmitido = t.compradoHeian !== false
                   ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
@@ -7225,7 +7225,7 @@ window.abrirCalendarioEventModal = function(eventoId) {
           } else if (typeLower.includes('experiência') || typeLower.includes('experiencia')) {
             const experiencias = (diaRoteiro.elementos || []).filter(el => el.tipo === 'experiencia');
             if (experiencias.length > 0) {
-              specHTML += `<div style="font-weight:700; color:#a3522b; font-size:12px; margin-bottom:8px; text-transform:uppercase;">🎫 Tickets & Experiências:</div>`;
+              specHTML += `<div style="font-weight:700; color:#a3522b; font-size:12px; margin-bottom:8px; text-transform:uppercase;">Tickets & Experiências:</div>`;
               experiencias.forEach(e => {
                 const heianEmitido = e.compradoHeian !== false
                   ? `<span style="font-size:9px; background:var(--gold); color:white; padding:1px 4px; border-radius:4px; font-weight:bold; margin-left:6px; text-transform:uppercase;">Emitido Heian</span>`
@@ -7497,7 +7497,7 @@ window.sincronizarRoteiroCalendario = async function(roteiroNome) {
   overlay.style.zIndex = '9999';
   overlay.innerHTML = `
     <div style="background:#fff; padding:24px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); border:1px solid var(--border); text-align:center;">
-      <div style="font-size:32px; margin-bottom:12px; animation:spin 2s linear infinite">⏳</div>
+      <div style="font-size:32px; margin-bottom:12px; animation:spin 2s linear infinite; display:inline-flex; align-items:center; justify-content:center;"><svg class="v-icon v-icon-lg" style="stroke:var(--gold-dk); width:40px; height:40px; margin-right:0;"><use href="#icon-clock"></use></svg></div>
       <strong style="color:var(--crimson); font-size:14px; display:block; margin-bottom:4px;">Sincronizando com o Notion...</strong>
       <span style="font-size:12px; color:var(--ink-lt);">Isso pode demorar alguns segundos</span>
     </div>
@@ -7687,7 +7687,7 @@ window.selecionarColaboradorDashboard = async function(id) {
     const prevVal = filtroPeriodo.value || 'all';
     const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     
-    let optionsHTML = '<option value="all">📅 Todo o período</option>';
+    let optionsHTML = '<option value="all">Todo o período</option>';
     Array.from(periodos).sort().reverse().forEach(p => {
       const [y, m] = p.split('-');
       const nomeMes = mesesNomes[parseInt(m) - 1];
@@ -7781,15 +7781,15 @@ window.filtrarDashColaborador = function() {
               </span>
               <strong style="margin-left:4px; font-size:12px; color:var(--ink-dk);">${ev.titulo}</strong>
             </td>
-            <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">🕒 ${ev.horaEncontro || '-'}</td>
+            <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">${ev.horaEncontro || '-'}</td>
             <td style="padding:12px 16px; font-size:12px; color:var(--ink-mid);">${localStr}</td>
             <td style="padding:12px 16px; font-size:12px; text-align:right;">
               <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
                 <button class="btn-secondary" style="margin:0; padding:4px 8px; font-size:11px; border-radius:4px; border-color:var(--border);" onclick="enviarLembreteTrabalho('${ev.id}', 'email')">
-                  ✉️ E-mail
+                  E-mail
                 </button>
                 <button class="btn-secondary" style="margin:0; padding:4px 8px; font-size:11px; border-radius:4px; border-color:#25D366; color:#25D366; background:#f0fff4;" onclick="enviarLembreteTrabalho('${ev.id}', 'whatsapp')">
-                  💬 WhatsApp
+                  WhatsApp
                 </button>
               </div>
             </td>
@@ -7893,8 +7893,8 @@ window.filtrarDashColaborador = function() {
           </td>
           <td style="padding:12px 16px; font-size:12px;">
             <select id="pago_select_${ev.id}" class="calendar-card-select" style="width:110px; height:26px; padding:2px 4px; font-size:11px; margin:0; border:1px solid var(--border);">
-              <option value="false" ${!isPago ? 'selected' : ''}>⏳ Pendente</option>
-               <option value="true" ${isPago ? 'selected' : ''}>✅ Pago</option>
+              <option value="false" ${!isPago ? 'selected' : ''}>Pendente</option>
+               <option value="true" ${isPago ? 'selected' : ''}>Pago</option>
             </select>
           </td>
           <td style="padding:12px 16px; font-size:12px; text-align:right;">

@@ -2821,4 +2821,30 @@ html, body {
   margin: auto 0;
 }
 
+/* Ícones de Traço Premium (SVG) Globais */
+.v-icon {
+  display: inline-flex;
+  align-self: center;
+  width: 1.15em;
+  height: 1.15em;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+.v-icon.no-margin {
+  margin-right: 0;
+}
+.v-icon-lg {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+
 

@@ -372,7 +372,7 @@ function renderKanban() {
         if (c.dataInicio) {
           const dtStart = fmtDataBRAgenda(c.dataInicio);
           const dtEnd = c.dataFim ? fmtDataBRAgenda(c.dataFim) : '';
-          const periodStr = dtEnd ? `📅 ${dtStart} - ${dtEnd}` : `📅 A partir de ${dtStart}`;
+          const periodStr = dtEnd ? `${dtStart} - ${dtEnd}` : `A partir de ${dtStart}`;
           
           const pEl = document.createElement('span');
           pEl.textContent = periodStr;
@@ -386,7 +386,7 @@ function renderKanban() {
           if (c.criancas > 0) paxArr.push(`${c.criancas} cr`);
           
           const paxEl = document.createElement('span');
-          paxEl.textContent = `👥 ${paxArr.join(' · ')}`;
+          paxEl.textContent = paxArr.join(' · ');
           metaEl.appendChild(paxEl);
         }
 
@@ -400,7 +400,7 @@ function renderKanban() {
         // Hotel
         if (c.hotel) {
           const hotEl = document.createElement('span');
-          hotEl.textContent = `🏨 ${c.hotel}`;
+          hotEl.textContent = c.hotel;
           hotEl.style.whiteSpace = 'nowrap';
           hotEl.style.overflow = 'hidden';
           hotEl.style.textOverflow = 'ellipsis';
@@ -811,17 +811,17 @@ function renderListaAgenda(eventos, container, ehHoje) {
     }
 
     const dataFormatada = !ehHoje ? fmtDataBRAgenda(ev.dataServico) : '';
-    const dateBadge = dataFormatada ? `<span style="font-size:10px; background:rgba(0,0,0,0.06); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">📅 ${dataFormatada}</span>` : '';
+    const dateBadge = dataFormatada ? `<span style="font-size:10px; background:rgba(0,0,0,0.06); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">${dataFormatada}</span>` : '';
     
     // Chips de colaboradores
     const colabs = ev.assignee && ev.assignee.length > 0
       ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
-           ${ev.assignee.map(a => `<span style="font-size:10px; background:rgba(107,31,42,0.08); color:var(--crimson); padding:2px 6px; border-radius:12px; font-weight:600;">👤 ${a.name}</span>`).join('')}
+           ${ev.assignee.map(a => `<span style="font-size:10px; background:rgba(107,31,42,0.08); color:var(--crimson); padding:2px 6px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:2.5px;"><svg class="v-icon" style="stroke:var(--crimson); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-user"></use></svg>${a.name}</span>`).join('')}
          </div>`
-      : `<span style="font-size:10px; color:var(--ink-lt); font-style:italic; display:block; margin-top:6px;">👤 Sem colaborador designado</span>`;
+      : `<span style="font-size:10px; color:var(--ink-lt); font-style:italic; display:block; margin-top:6px;">Sem colaborador designado</span>`;
 
-    const hora = ev.horaEncontro ? `🕒 ${ev.horaEncontro}` : '';
-    const local = ev.localEncontro ? `📍 ${ev.localEncontro}` : '';
+    const hora = ev.horaEncontro ? `${ev.horaEncontro}` : '';
+    const local = ev.localEncontro ? `${ev.localEncontro}` : '';
     const details = [hora, local].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
     const card = document.createElement('div');
@@ -1015,7 +1015,7 @@ async function carregarSaldosContas() {
         justifyContent: 'space-between',
         alignItems: 'center'
       });
-      title.innerHTML = `<span>💳 ${c.nome}</span> <span style="font-size:10px; color:var(--ink-lt); font-weight:500; text-transform:none;">Ver Extrato ➔</span>`;
+      title.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-dollar-sign"></use></svg>${c.nome}</span> <span style="font-size:10px; color:var(--ink-lt); font-weight:500; text-transform:none;">Ver Extrato ➔</span>`;
       card.appendChild(title);
 
       const saldosWrapper = document.createElement('div');
@@ -1136,10 +1136,10 @@ async function carregarSaldosContas() {
             flex: '1'
           });
           
-          const icon = m.tipo === 'entrada' ? '🟢' : '🔴';
+          const color = m.tipo === 'entrada' ? '#2ecc71' : '#e74c3c';
           const dtFormated = m.data ? m.data.substring(5, 10).split('-').reverse().join('/') : '--/--';
           
-          left.innerHTML = `<span style="margin-right:4px;">${icon}</span><span style="font-weight:600; margin-right:4px;">[${dtFormated}]</span><span>${m.descricao}</span>`;
+          left.innerHTML = `<span style="margin-right:6px; color:${color}; font-size:10px;">●</span><span style="font-weight:600; margin-right:4px;">[${dtFormated}]</span><span>${m.descricao}</span>`;
           
           const right = document.createElement('div');
           Object.assign(right.style, {
@@ -1190,14 +1190,14 @@ function renderTableCliGuias(guias) {
     tr.innerHTML = `
       <td>${g.dataServico ? fmtDataBR(g.dataServico) : '-'}</td>
       <td><strong>${g.titulo}</strong></td>
-      <td>👤 ${g.colabName}</td>
+      <td>${g.colabName}</td>
       <td style="text-align:right; font-family:var(--ff-num); font-weight:600;">¥ ${g.valor.toLocaleString('en-US')}</td>
       <td style="text-align:center; display:flex; align-items:center; justify-content:center; gap:8px; height:100%; border:none;">
         <input type="checkbox" id="${idCheckbox}" ${isChecked} onchange="iniciarPagamentoGuia('${g.id}', '${g.colabId}', '${g.colabName}', '${g.titulo}', ${g.valor})" style="width:16px; height:16px; cursor:pointer;">
         ${labelStatus}
       </td>
       <td style="text-align:center;">
-        <button onclick="deletarItemCalendarioTabela('${g.id}', '${g.titulo.replace(/'/g, "\\'")}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:14px; padding: 4px;" title="Excluir Item do Calendário">🗑️</button>
+        <button onclick="deletarItemCalendarioTabela('${g.id}', '${g.titulo.replace(/'/g, "\\'")}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:14px; padding: 4px; display:inline-flex; align-items:center; justify-content:center;" title="Excluir Item do Calendário"><svg class="v-icon no-margin" style="stroke:#e74c3c;"><use href="#icon-trash"></use></svg></button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -1521,8 +1521,8 @@ function onFiltroMesVisaoGeralConta() {
     }
 
     const tipoLabel = m.tipo === 'entrada'
-      ? '<span style="background:rgba(46, 204, 113, 0.1); color:#2ecc71; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px;">🟢 Entrada</span>'
-      : '<span style="background:rgba(231, 76, 60, 0.1); color:#e74c3c; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px;">🔴 Saída</span>';
+      ? '<span style="background:rgba(46, 204, 113, 0.1); color:#2ecc71; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px; display:inline-flex; align-items:center; gap:4px;"><span style="color:#2ecc71;">●</span> Entrada</span>'
+      : '<span style="background:rgba(231, 76, 60, 0.1); color:#e74c3c; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px; display:inline-flex; align-items:center; gap:4px;"><span style="color:#e74c3c;">●</span> Saída</span>';
 
     let valorOrigStr = '';
     if (m.moedaOriginal === 'BRL') valorOrigStr = `R$ ${m.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1530,7 +1530,7 @@ function onFiltroMesVisaoGeralConta() {
     else valorOrigStr = `¥ ${Math.round(m.valorOriginal).toLocaleString('en-US')}`;
 
     const notionPageUrl = `https://notion.so/${m.id.replace(/-/g, '')}`;
-    const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);">✏️ Editar no Notion</a>`;
+    const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);"><svg class="v-icon no-margin" style="stroke:var(--ink-mid); width:1.1em; height:1.1em;"><use href="#icon-edit"></use></svg> Editar no Notion</a>`;
 
     tr.innerHTML = `
       <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${dateStr}</td>
@@ -2053,7 +2053,7 @@ window.carregarDiariasPendentesContabilidade = async function() {
     if (diarias.length === 0) {
       container.innerHTML = `
         <div style="text-align:center; padding: 24px; color: var(--ink-lt); font-style: italic; font-size: 13px;">
-          🎉 Todas as diárias de guias foram pagas!
+          Todas as diárias de guias foram pagas!
         </div>`;
       return;
     }
@@ -2080,8 +2080,8 @@ window.carregarDiariasPendentesContabilidade = async function() {
 
       item.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-          <strong style="color:var(--crimson); font-size:13px;">👤 ${d.colaboradorNome}</strong>
-          <span style="font-size:10px; background:rgba(0,0,0,0.05); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">📅 ${dateStr}</span>
+          <strong style="color:var(--crimson); font-size:13px; display:inline-flex; align-items:center; gap:2.5px;"><svg class="v-icon" style="stroke:var(--crimson); width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-user"></use></svg>${d.colaboradorNome}</strong>
+          <span style="font-size:10px; background:rgba(0,0,0,0.05); color:var(--ink-mid); padding:2px 6px; border-radius:4px; font-weight:600;">${dateStr}</span>
         </div>
         <div style="font-weight:600; color:var(--ink-dk); margin-top:2px;">${d.eventoTitulo}</div>
         <div style="font-size:11px; color:var(--ink-lt);">
@@ -2090,7 +2090,7 @@ window.carregarDiariasPendentesContabilidade = async function() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
           <span style="font-family:var(--ff-num); font-size:13px; font-weight:700; color:var(--gold-dk);">¥ ${d.valorDiaria.toLocaleString('en-US')}</span>
           <button class="btn-primary" onclick="iniciarPagamentoGuiaDeContabilidade('${d.eventoId}', '${d.colaboradorId}', '${d.colaboradorNome}', '${d.eventoTitulo}', ${d.valorDiaria}, '${d.clienteId}')" style="margin:0; padding:6px 12px; font-size:11px; border-radius:6px; font-weight:600; background-color:#e74c3c; border-color:#c0392b;">
-            💸 Pagar Guia
+            Pagar Guia
           </button>
         </div>
       `;

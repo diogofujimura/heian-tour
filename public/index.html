@@ -70,28 +70,164 @@ window.addEventListener('unhandledrejection', function(e) {
 </head>
 <body>
 
-<aside class="sidebar">
+  <!-- SVG Sprite de Ícones Sofisticados -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <!-- Calendário -->
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+    </symbol>
+    <!-- Viajantes / Passageiros -->
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </symbol>
+    <!-- Pin de Localização -->
+    <symbol id="icon-map-pin" viewBox="0 0 24 24">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
+    </symbol>
+    <!-- Bússola -->
+    <symbol id="icon-compass" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+    </symbol>
+    <!-- Serviços Inclusos (Briefcase) -->
+    <symbol id="icon-briefcase" viewBox="0 0 24 24">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+    </symbol>
+    <!-- Voos (Avião) -->
+    <symbol id="icon-plane" viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-2-2h-5l-4-4H8l2 8h-4L4 8H2l2 4-2 4h2l2-2h4l-2 8h2l4-4h5a2 2 0 0 0 2-2z"></path>
+    </symbol>
+    <!-- Financeiro (Cartão) -->
+    <symbol id="icon-credit-card" viewBox="0 0 24 24">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>
+    </symbol>
+    <!-- Ingressos (Ticket) -->
+    <symbol id="icon-ticket" viewBox="0 0 24 24">
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path>
+    </symbol>
+    <!-- Passeios (Flor) -->
+    <symbol id="icon-flower" viewBox="0 0 24 24">
+      <path d="M12 7.5a2.5 2.5 0 0 0-2.5 2.5c0 1.5 1.5 2.5 2.5 3.5 1-1 2.5-2 2.5-3.5a2.5 2.5 0 0 0-2.5-2.5z"></path>
+      <path d="M12 16.5a2.5 2.5 0 0 0 2.5-2.5c0-1.5-1.5-2.5-2.5-3.5-1 1-2.5 2-2.5 3.5a2.5 2.5 0 0 0 2.5 2.5z"></path>
+      <path d="M7.5 12a2.5 2.5 0 0 0 2.5 2.5c1.5 0 2.5-1.5 3.5-2.5-1-1-2-2.5-3.5-2.5A2.5 2.5 0 0 0 7.5 12z"></path>
+      <path d="M16.5 12a2.5 2.5 0 0 0-2.5-2.5c-1.5 0-2.5 1.5-3.5 2.5 1 1 2 2.5 3.5 2.5a2.5 2.5 0 0 0 2.5-2.5z"></path>
+    </symbol>
+    <!-- Transportes (Trem) -->
+    <symbol id="icon-train" viewBox="0 0 24 24">
+      <rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path><circle cx="8" cy="7" r="1"></circle><circle cx="16" cy="7" r="1"></circle>
+    </symbol>
+    <!-- Hospedagens (Hotel / Home) -->
+    <symbol id="icon-hotel" viewBox="0 0 24 24">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </symbol>
+    <!-- Download -->
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+    </symbol>
+    <!-- Globo / Link Externo -->
+    <symbol id="icon-globe" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </symbol>
+    <!-- Alerta / Atenção -->
+    <symbol id="icon-alert" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </symbol>
+    <!-- Check / Proteção -->
+    <symbol id="icon-shield-check" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path>
+    </symbol>
+    <!-- Usuário Individual -->
+    <symbol id="icon-user" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+    </symbol>
+    <!-- Relógio -->
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+    </symbol>
+    <!-- Brilho / Erro (Sparkles) -->
+    <symbol id="icon-sparkles" viewBox="0 0 24 24">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path>
+    </symbol>
+    <!-- Dashboard / Painel -->
+    <symbol id="icon-dashboard" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="9" y1="9" x2="21" y2="9"></line><line x1="9" y1="15" x2="21" y2="15"></line>
+    </symbol>
+    <!-- Dólar / Moeda -->
+    <symbol id="icon-dollar" viewBox="0 0 24 24">
+      <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+    </symbol>
+    <!-- Database / Base -->
+    <symbol id="icon-database" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+    </symbol>
+    <!-- Lixeira -->
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+      <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>
+    </symbol>
+    <!-- Engrenagem / Configurações -->
+    <symbol id="icon-settings" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </symbol>
+    <!-- Salvar / Disquete -->
+    <symbol id="icon-save" viewBox="0 0 24 24">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></symbol>
+    </symbol>
+    <!-- Seta para Esquerda -->
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
+    </symbol>
+    <!-- Seta para Direita -->
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+    </symbol>
+    <!-- Desfazer -->
+    <symbol id="icon-undo" viewBox="0 0 24 24">
+      <path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+    </symbol>
+    <!-- Raio / Ação Rápida -->
+    <symbol id="icon-zap" viewBox="0 0 24 24">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+    </symbol>
+    <!-- Impressora -->
+    <symbol id="icon-printer" viewBox="0 0 24 24">
+      <polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>
+    </symbol>
+    <!-- Lápis / Editar -->
+    <symbol id="icon-edit" viewBox="0 0 24 24">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </symbol>
+    <!-- Mapa (Geral) -->
+    <symbol id="icon-map" viewBox="0 0 24 24">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
+    </symbol>
+    <!-- Lâmpada -->
+    <symbol id="icon-lightbulb" viewBox="0 0 24 24">
+      <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.1.7.7 1.3 1.5 1.5 2.4"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>
+    </symbol>
+    <!-- Arquivo -->
+    <symbol id="icon-file" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>
+ <aside class="sidebar">
   <div class="sidebar-logo"><img src="assets/logo.png" alt="Heian Tour"></div>
   <nav class="sidebar-nav">
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gestão & Vendas</div>
-    <a class="nav-item active" data-page="dashboard">📊 &nbsp;Painel Geral</a>
-    <a class="nav-item" data-page="clientes">👥 &nbsp;Clientes</a>
-    <a class="nav-item" data-page="calendario">📅 &nbsp;Calendário</a>
-    <a class="nav-item" data-page="colaboradores">👤 &nbsp;Colaboradores</a>
-    <a class="nav-item" data-page="contabilidade">💵 &nbsp;Contabilidade</a>
+    <a class="nav-item active" data-page="dashboard"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>&nbsp;Painel Geral</a>
+    <a class="nav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-users"></use></svg>&nbsp;Clientes</a>
+    <a class="nav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-calendar"></use></svg>&nbsp;Calendário</a>
+    <a class="nav-item" data-page="colaboradores"><svg class="v-icon"><use href="#icon-user"></use></svg>&nbsp;Colaboradores</a>
+    <a class="nav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-dollar"></use></svg>&nbsp;Contabilidade</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
-    <a class="nav-item" data-page="base">◇ &nbsp;Base de Dados</a>
-    <a class="nav-item" data-page="lixeira">🗑️ &nbsp;Lixeira</a>
-    <a class="nav-item" data-page="config">◉ &nbsp;Configurações</a>
+    <a class="nav-item" data-page="base"><svg class="v-icon"><use href="#icon-database"></use></svg>&nbsp;Base de Dados</a>
+    <a class="nav-item" data-page="lixeira"><svg class="v-icon"><use href="#icon-trash"></use></svg>&nbsp;Lixeira</a>
+    <a class="nav-item" data-page="config"><svg class="v-icon"><use href="#icon-settings"></use></svg>&nbsp;Configurações</a>
   </nav>
   
   <div class="sidebar-cambio">
     <div style="font-size: 11px; font-weight: 700; color: var(--crimson-dk); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
       <span>Câmbio no App</span>
       <div>
-        <button id="btnToggleMenuCambioConfig" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0 6px" title="Configurar Câmbio">⚙️</button>
-        <button id="btnRefreshCambioMenu" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0" title="Zerar valores">⟳</button>
+        <button id="btnToggleMenuCambioConfig" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0 6px; display:inline-flex; align-items:center;" title="Configurar Câmbio"><svg class="v-icon no-margin" style="width:1.1em; height:1.1em;"><use href="#icon-settings"></use></svg></button>
+        <button id="btnRefreshCambioMenu" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0; display:inline-flex; align-items:center;" title="Zerar valores"><svg class="v-icon no-margin" style="width:1.1em; height:1.1em;"><use href="#icon-undo"></use></svg></button>
       </div>
     </div>
     
@@ -100,21 +236,24 @@ window.addEventListener('unhandledrejection', function(e) {
       <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">¥→US$</span><input type="number" id="menuCambioRateUSD" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
       <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">¥→R$</span><input type="number" id="menuCambioRateBRL" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
       <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px">
-        <button id="btnMenuCambioFetch" style="flex:1; font-size:10px; padding:5px; background:var(--crimson); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500" title="Buscar do dia">🌍 Do Dia</button>
-        <button id="btnMenuCambioSave" style="flex:1; font-size:10px; padding:5px; background:var(--ink); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500" title="Salvar taxa no servidor">💾 Salvar</button>
+        <button id="btnMenuCambioFetch" style="flex:1; font-size:10px; padding:5px; background:var(--crimson); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:2px;" title="Buscar do dia"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:2px;"><use href="#icon-globe"></use></svg>Do Dia</button>
+        <button id="btnMenuCambioSave" style="flex:1; font-size:10px; padding:5px; background:var(--ink); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:2px;" title="Salvar taxa no servidor"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:2px;"><use href="#icon-save"></use></svg>Salvar</button>
       </div>
       <div id="menuCambioStatus" style="font-size:10px; color:var(--crimson); font-weight:600; margin-top:2px; text-align:center"></div>
     </div>
-
+ 
     <div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:6px">
       <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">JPY ¥</span><input type="number" id="menuCambioJPY" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
       <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">USD $</span><input type="number" id="menuCambioUSD" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
       <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">BRL R$</span><input type="number" id="menuCambioBRL" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
     </div>
   </div>
-
+ 
   <div class="sidebar-sync">
-    <button id="btnSync" class="btn-sync">↻ Sincronizar Sheets</button>
+    <button id="btnSync" class="btn-sync" style="display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-undo"></use></svg>Sincronizar Sheets</button>
+    <p id="syncStatus" class="sync-status"></p>
+  </div>
+</aside>s</button>
     <p id="syncStatus" class="sync-status"></p>
   </div>
 </aside>
@@ -134,18 +273,18 @@ window.addEventListener('unhandledrejection', function(e) {
     <div class="page-header">
       <h1 id="orcTitulo">Nova Cotação</h1>
       <div class="header-actions">
-        <button class="btn-secondary" onclick="window.voltarParaClientesDeCotacao()" style="margin-right:8px;">⬅ Voltar para Clientes</button>
-        <button class="btn-secondary" onclick="window.desfazerAcaoCotacao()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:8px;">↩ Desfazer</button>
+        <button class="btn-secondary" onclick="window.voltarParaClientesDeCotacao()" style="margin-right:8px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-arrow-left"></use></svg>Voltar para Clientes</button>
+        <button class="btn-secondary" onclick="window.desfazerAcaoCotacao()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:8px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
         <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
         <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro ➔</button>
-        <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)">⚡ Exportar para Roteiro</button>
+        <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Exportar para Roteiro</button>
         <button id="btnPreview" class="btn-secondary">Visualizar PDF</button>
         <button id="btnPrint" class="btn-primary">Exportar PDF</button>
       </div>
     </div>
 
     <div class="card">
-      <h2 class="card-title">Dados do Cliente<button id="btnImportNotion" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);">⚡ Importar do Notion</button></h2>
+      <h2 class="card-title">Dados do Cliente<button id="btnImportNotion" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Importar do Notion</button></h2>
       <div class="form-grid">
   <div class="field" id="notionSelectWrapper" style="display:none; grid-column: span 2; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
     <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
@@ -157,15 +296,15 @@ window.addEventListener('unhandledrejection', function(e) {
         <div class="field" style="grid-column: span 1">
           <label>Status da Venda</label>
           <select id="orcStatus" style="width: 100%; padding: 8px; border: 1px solid var(--border-dk); border-radius: 4px; outline: none; background: #fff;">
-            <option value="Pendente">🟡 Pendente</option>
-            <option value="Fechado">🟢 Fechado</option>
-            <option value="Perdido">🔴 Perdido</option>
+            <option value="Pendente">● Pendente</option>
+            <option value="Fechado">● Fechado</option>
+            <option value="Perdido">● Perdido</option>
           </select>
         </div>
       </div>
       <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-top:12px; margin-bottom:8px;">
         <h3 style="margin:0; font-size:16px; color:#5c1d24; font-family: 'Playfair Display', serif;">Dados do Cliente (Cabeça)</h3>
-        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteCotacao()">👤 Editar Cliente</button>
+        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px;" type="button" onclick="handleAcaoClienteCotacao()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg>Editar Cliente</button>
       </div>
       <div class="form-grid" style="margin-top:0">
         <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" ></div>
@@ -253,7 +392,7 @@ window.addEventListener('unhandledrejection', function(e) {
 
     <div class="card" id="cardTextosCustom">
       <div class="card-title-row">
-        <h2 class="card-title">✏ Personalizar Textos do PDF</h2>
+        <h2 class="card-title" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon"><use href="#icon-edit"></use></svg>Personalizar Textos do PDF</h2>
         <button class="btn-secondary" onclick="toggleCardTextos()" id="btnToggleTextos" style="font-size:11px;padding:6px 14px">Expandir</button>
       </div>
       <div id="textosCustomForm" class="hidden">
@@ -323,7 +462,7 @@ window.addEventListener('unhandledrejection', function(e) {
                  <input type="checkbox" id="chkIncluirDescricoesPdf" style="margin-right:6px; accent-color:var(--crimson)">
                  Incluir descrições no PDF
                </label>
-               <button id="btnGerarRoteiro" class="btn-secondary" style="font-size:13px;" disabled="">🖨 PDF</button>
+               <button id="btnGerarRoteiro" class="btn-secondary" style="font-size:13px; display:inline-flex; align-items:center; gap:4px;" disabled=""><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
              </div>
           </div>
           
@@ -331,8 +470,8 @@ window.addEventListener('unhandledrejection', function(e) {
             <div id="roteiroPreviewHeader" style="display:none; margin-bottom: 20px; align-items: center; justify-content: space-between;">
               <div style="display:flex; align-items:center; gap: 15px;">
                  <h2 id="roteiroPreviewTitle" style="margin:0; color: var(--gold-dk); font-size: 24px;"></h2>
-                 <button id="btnEditarRoteiro" class="btn-primary" style="padding: 6px 16px;">✏️ Editar Roteiro</button>
-                 <button id="btnExcluirRoteiro" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); padding: 5px 12px; font-size:12px;">✖ Excluir Roteiro</button>
+                 <button id="btnEditarRoteiro" class="btn-primary" style="padding: 6px 16px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-edit"></use></svg>Editar Roteiro</button>
+                 <button id="btnExcluirRoteiro" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); padding: 5px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Roteiro</button>
               </div>
             </div>
             <div class="roteiro-timeline" id="roteiroTimeline"></div>
@@ -352,8 +491,8 @@ window.addEventListener('unhandledrejection', function(e) {
                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
                      <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
                      <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-                     <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()">🪄 Gerar com IA</button>
-                     <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px;">↩ Desfazer</button>
+                     <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()"><svg class="v-icon" style="margin-right:2px; stroke:#6d28d9;"><use href="#icon-sparkles"></use></svg>Gerar com IA</button>
+                     <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
                      <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
                      <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
                      <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent">Cancelar</button>
@@ -363,9 +502,9 @@ window.addEventListener('unhandledrejection', function(e) {
                
                <div class="card" style="margin-bottom: 24px">
                  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
-                   <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249);" type="button" onclick="toggleImportNotionRoteiro()">⚡ Importar do Notion</button></h2>
+                   <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249); display:inline-flex; align-items:center; gap:4px;" type="button" onclick="toggleImportNotionRoteiro()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Importar do Notion</button></h2>
                    <div>
-                     <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px;" type="button" onclick="handleAcaoClienteRoteiro()">👤 Editar Cliente</button>
+                     <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px;" type="button" onclick="handleAcaoClienteRoteiro()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg>Editar Cliente</button>
                    </div>
                  </div>
                  <div class="form-grid" id="rotNotionSelectWrapper" style="display:none; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
@@ -389,13 +528,13 @@ window.addEventListener('unhandledrejection', function(e) {
                  </div>
                  
                  <div style="margin-top:12px; text-align: right;">
-                   <button class="btn-primary" id="btnGerarDiasAutomaticamente" style="font-size:11px; padding: 6px 12px; border-radius:4px;" title="Cria automaticamente todos os dias baseado na Data de Início e Data Final.">✨ Gerar Dias Automaticamente</button>
+                   <button class="btn-primary" id="btnGerarDiasAutomaticamente" style="font-size:11px; padding: 6px 12px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Cria automaticamente todos os dias baseado na Data de Início e Data Final."><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-sparkles"></use></svg>Gerar Dias Automaticamente</button>
                  </div>
                  <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
                   <div id="rotEstadiasList"></div>
                   <div style="display: flex; gap: 8px; margin-top: 8px;">
                     <button class="btn-add" id="btnRotAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
-                    <button class="btn-secondary" id="btnRotOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;">📅 Ordenar por Data</button>
+                    <button class="btn-secondary" id="btnRotOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;"><svg class="v-icon"><use href="#icon-calendar"></use></svg>Ordenar por Data</button>
                   </div>
                 </div>
 
@@ -437,9 +576,9 @@ window.addEventListener('unhandledrejection', function(e) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:1px solid var(--border); padding-bottom:20px;">
                 <h3 id="orcamentosPreviewTitle" style="font-family: var(--ff-display); font-size: 24px; color: var(--crimson);">Pré-visualização</h3>
                 <div style="display:flex; gap: 10px;">
-                    <button id="btnEditFromPreview2" class="btn-primary" onclick="editarCotacaoAtual()">✏️ Editar Cotação</button>
-                    <button id="btnExcluirCotacaoInline" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3);" onclick="excluirCotacaoAtual()">✖ Excluir Cotação</button>
-                    <button class="btn-secondary" onclick="document.getElementById('btnPrintFromPreview').click()">🖨 PDF</button>
+                    <button id="btnEditFromPreview2" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
+                    <button id="btnExcluirCotacaoInline" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
+                    <button class="btn-secondary" onclick="document.getElementById('btnPrintFromPreview').click()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
                 </div>
             </div>
             <div id="previewContainerInline" style="max-width:800px; margin:0 auto;"></div>
@@ -472,7 +611,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <!-- Ordens de Serviço (Dia e Semana) -->
       <div class="dashboard-agenda-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
         <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          📅 <span>Agenda Operacional (Ordens de Serviço)</span>
+          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-calendar"></use></svg> <span>Agenda Operacional (Ordens de Serviço)</span>
         </h3>
         
         <div class="agenda-layout-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
@@ -502,7 +641,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <!-- Kanban de Clientes -->
       <div class="dashboard-kanban-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
         <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          📋 <span>Quadro de Clientes (Status Notion)</span>
+          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-users"></use></svg> <span>Quadro de Clientes (Status Notion)</span>
         </h3>
         
         <div id="kanbanBoard" class="kanban-board-scroll">
@@ -572,13 +711,13 @@ window.addEventListener('unhandledrejection', function(e) {
             </div>
             <div style="display: flex; gap: 8px; margin-top: 10px; width: 100%; flex-wrap: wrap;">
               <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #2ecc71; border-color: #27ae60; font-size:12px;">
-                💵 Recebimento
+                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-credit-card"></use></svg>Recebimento
               </button>
               <button class="btn-primary" id="btnFichaRegistrarSaida" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #e74c3c; border-color: #c0392b; font-size:12px;">
-                🔴 Registrar Saída
+                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg>Registrar Saída
               </button>
               <button class="btn-secondary" id="btnFichaLinkCliente" onclick="copiarLinkCliente()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size:12px; background-color: #34495e; border-color: #2c3e50; color: white;" title="Copiar Link da Área do Cliente">
-                🔗 Link do Cliente
+                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-globe"></use></svg>Link do Cliente
               </button>
             </div>
           </div>
@@ -646,10 +785,10 @@ window.addEventListener('unhandledrejection', function(e) {
     <!-- Ações Financeiras Rápidas -->
     <div style="display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap;">
       <button class="btn-primary" onclick="abrirModalRegistrarEntradaGeral()" style="margin-top: 0; padding: 12px 20px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background-color: #2ecc71; border-color: #27ae60; box-shadow: 0 2px 6px rgba(46, 204, 113, 0.15);">
-        <span>🟢</span> Registrar Recebimento (Entrada)
+        <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-shield-check"></use></svg> Registrar Recebimento (Entrada)
       </button>
       <button class="btn-primary" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 12px 20px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background-color: #e74c3c; border-color: #c0392b; box-shadow: 0 2px 6px rgba(231, 76, 60, 0.15);">
-        <span>🔴</span> Registrar Pagamento / Despesa (Saída)
+        <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg> Registrar Pagamento / Despesa (Saída)
       </button>
     </div>
 
@@ -657,19 +796,19 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 28px;" id="kpisConsolidadosFinanceiros">
       <!-- Total Caixa Consolidado -->
       <div style="background: linear-gradient(135deg, var(--crimson) 0%, #4a0d15 100%); padding: 24px; border-radius: 12px; border: 1px solid rgba(107,31,42,0.2); box-shadow: var(--shadow); color: white; display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;">💰 Caixa Geral Consolidado (Est.)</span>
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg> Caixa Geral Consolidado (Est.)</span>
         <h2 id="kpiCaixaConsolidado" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600;">¥ 0</h2>
         <span style="font-size: 10px; opacity: 0.7;">Soma de todas as moedas convertida em JPY</span>
       </div>
       <!-- Total Entradas Mês -->
       <div style="background: var(--warm-white); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">🟢 Total Recebido (Mês Atual)</span>
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#2ecc71; margin-right:2px;"><use href="#icon-shield-check"></use></svg> Total Recebido (Mês Atual)</span>
         <h2 id="kpiEntradasMes" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600; color: #2ecc71;">¥ 0</h2>
         <span id="subkpiEntradasMes" style="font-size: 10px; color: var(--ink-lt);">Carregando entradas...</span>
       </div>
       <!-- Total Saídas Mês -->
       <div style="background: var(--warm-white); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">🔴 Total Pago/Despesas (Mês Atual)</span>
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#e74c3c; margin-right:2px;"><use href="#icon-dollar"></use></svg> Total Pago/Despesas (Mês Atual)</span>
         <h2 id="kpiSaidasMes" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600; color: #e74c3c;">¥ 0</h2>
         <span id="subkpiSaidasMes" style="font-size: 10px; color: var(--ink-lt);">Carregando saídas...</span>
       </div>
@@ -681,7 +820,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div style="display: flex; flex-direction: column; gap: 28px;">
         <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 28px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);">
           <h3 style="font-size: 18px; color: var(--crimson); font-weight: 700; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 10px; display:flex; align-items:center; gap:8px">
-            💳 <span>Saldos Disponíveis por Conta</span>
+            <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-credit-card"></use></svg> <span>Saldos Disponíveis por Conta</span>
           </h3>
           <div id="saldosContasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
             <div style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Carregando saldos de contas...</div>
@@ -692,7 +831,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <!-- Coluna da Direita: Diárias Pendentes -->
       <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 28px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);">
         <h3 style="font-size: 18px; color: var(--crimson); font-weight: 700; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 10px; display:flex; align-items:center; gap:8px">
-          👤 <span>Diárias Pendentes de Guias</span>
+          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-user"></use></svg> <span>Diárias Pendentes de Guias</span>
         </h3>
         <div id="diarasPendentesContabilidadeContainer" style="display: flex; flex-direction: column; gap: 14px;">
           <div style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Carregando diárias pendentes...</div>
@@ -754,9 +893,8 @@ window.addEventListener('unhandledrejection', function(e) {
                     </div>
                   </div>
 
-                  <!-- FOTO DE PERFIL -->
                   <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk);">
-                    <span>👤 Foto de Perfil (Opcional)</span>
+                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-user"></use></svg> Foto de Perfil (Opcional)</span>
                   </div>
                   <div style="background: rgba(196, 163, 90, 0.04); border: 1px dashed rgba(196, 163, 90, 0.3); border-radius: 12px; padding: 16px; margin-top: 8px;">
                     <div style="display:flex; align-items:center; gap:16px;">
@@ -773,7 +911,7 @@ window.addEventListener('unhandledrejection', function(e) {
                   </div>
 
                   <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span>✈ Voos e Datas</span>
+                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-plane"></use></svg> Voos e Datas</span>
                   </div>
                   <div class="form-grid" style="margin-top:8px;">
                     <div class="field"><label>Data de Chegada</label><input type="date" id="mcDataInicio"></div>
@@ -797,14 +935,14 @@ window.addEventListener('unhandledrejection', function(e) {
                   </div>
 
                   <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span>👥 Viajantes</span>
+                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-users"></use></svg> Viajantes</span>
                     <span id="mcViajantesResumo" style="font-size:10px; font-weight:400; color:var(--ink-lt); text-transform:none; letter-spacing:0;"></span>
                   </div>
                   <div id="viajantesList" style="margin-top:8px;"></div>
                   <button class="btn-add" id="btnAddViajante" style="margin-top:8px; border-style:dashed">+ Adicionar Viajante</button>
 
                   <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span>📧 E-mails</span>
+                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-file"></use></svg> E-mails</span>
                   </div>
                   <div id="emailsList" style="margin-top:8px;"></div>
                   <button class="btn-add" id="btnAddEmail" style="margin-top:8px; border-style:dashed">+ Adicionar E-mail</button>
@@ -813,7 +951,7 @@ window.addEventListener('unhandledrejection', function(e) {
                   <div id="estadiasList"></div>
                   <div style="display: flex; gap: 8px; margin-top: 8px;">
                     <button class="btn-add" id="btnAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
-                    <button class="btn-secondary" id="btnOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;">📅 Ordenar por Data</button>
+                    <button class="btn-secondary" id="btnOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;"><svg class="v-icon"><use href="#icon-calendar"></use></svg> Ordenar por Data</button>
                   </div>
                   <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button id="btnAcessoCotacao" class="btn-secondary" style="flex: 1; display: none;">Cotação</button>
@@ -955,7 +1093,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <!-- ── LIXEIRA ──────────────────────────────────────────────────────────── -->
   <div id="page-lixeira" class="page">
     <div class="page-header">
-      <h1>🗑️ Lixeira do Sistema</h1>
+      <h1 style="display:inline-flex; align-items:center; gap:8px;"><svg class="v-icon v-icon-lg" style="stroke:var(--crimson);"><use href="#icon-trash"></use></svg> Lixeira do Sistema</h1>
     </div>
     <div class="card">
       <p class="hint" style="margin-bottom:12px">Gerencie cotações e roteiros excluídos. Você pode restaurá-los ou apagá-los definitivamente.</p>
@@ -974,29 +1112,29 @@ window.addEventListener('unhandledrejection', function(e) {
     <div class="calendar-wrapper">
       <div class="calendar-top-bar">
         <div class="calendar-title-nav">
-          <button class="calendar-nav-btn" id="calendarPrevMonthBtn">◀</button>
+          <button class="calendar-nav-btn" id="calendarPrevMonthBtn" style="display:inline-flex; align-items:center; justify-content:center;"><svg class="v-icon no-margin" style="width:1.2em; height:1.2em;"><use href="#icon-arrow-left"></use></svg></button>
           <span class="calendar-month-title" id="calendarMonthYearTitle">Janeiro 2026</span>
-          <button class="calendar-nav-btn" id="calendarNextMonthBtn">▶</button>
+          <button class="calendar-nav-btn" id="calendarNextMonthBtn" style="display:inline-flex; align-items:center; justify-content:center;"><svg class="v-icon no-margin" style="width:1.2em; height:1.2em;"><use href="#icon-arrow-right"></use></svg></button>
         </div>
         
         <div class="calendar-filters" style="display:flex; align-items:center;">
           <!-- Alternância de Visualização -->
           <div style="display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#fff; margin-right:12px;">
-            <button class="btn-view-toggle active" id="btnCalViewGrid" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--crimson); outline:none; transition: all 0.2s;">📅 Grade</button>
-            <button class="btn-view-toggle" id="btnCalViewList" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-mid); border-left:1px solid var(--border); outline:none; transition: all 0.2s;">📋 Lista</button>
+            <button class="btn-view-toggle active" id="btnCalViewGrid" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--crimson); outline:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-calendar"></use></svg> Grade</button>
+            <button class="btn-view-toggle" id="btnCalViewList" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-mid); border-left:1px solid var(--border); outline:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Lista</button>
           </div>
 
           <select id="calendarFilterCliente" class="calendar-filter-select" style="margin-right:12px;">
-            <option value="">👥 Todos os Clientes</option>
+            <option value="">Todos os Clientes</option>
           </select>
           <button class="btn-primary" id="btnRefreshCalendario" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px">
             ↻ Atualizar
           </button>
           <button class="btn-secondary" id="btnSyncNotionCalendario" onclick="sincronizarCalendarioDoNotion()" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background: var(--warm-white); border: 1px solid var(--border); margin-left: 8px; font-weight: 600;">
-            ☁️ Sincronizar do Notion
+            <svg class="v-icon"><use href="#icon-globe"></use></svg> Sincronizar do Notion
           </button>
           <button class="btn-primary" id="btnAdicionarEventoCalendario" onclick="abrirModalCriarEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background: var(--crimson); color: white; margin-left: 8px; font-weight: 600;">
-            ➕ Novo Evento
+            <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-edit"></use></svg> Novo Evento
           </button>
         </div>
       </div>
@@ -1040,7 +1178,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="pane-content-inner" id="colaboradoresContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
         <!-- Empty State -->
         <div id="colaboradoresEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
-          <span style="font-size: 48px; display:block; margin-bottom: 16px;">👤</span>
+          <span style="display:block; margin-bottom: 16px; color: var(--gold-dk); opacity:0.3;"><svg class="v-icon v-icon-lg" style="width: 48px; height: 48px; stroke-width: 1.5; margin-right:0;"><use href="#icon-user"></use></svg></span>
           <h3>Selecione um Colaborador</h3>
           <p class="hint">Escolha um guia na barra lateral para ver o seu dashboard de tours e pagamentos.</p>
         </div>
@@ -1057,22 +1195,22 @@ window.addEventListener('unhandledrejection', function(e) {
                 <h1 id="colabDashNome" style="margin: 0; font-family: var(--ff-display); font-size: 26px; color: var(--crimson); line-height: 1.2;">Nome do Colaborador</h1>
                 <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 13px;">
                   <a id="colabDashEmailLink" href="#" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='var(--crimson)'" onmouseout="this.style.color='var(--ink-mid)'">
-                    <span>📧</span> <span id="colabDashEmail">Email: -</span>
+                    <span id="colabDashEmail">Email: -</span>
                   </a>
                   <a id="colabDashWhatsappLink" href="#" target="_blank" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='#25D366'" onmouseout="this.style.color='var(--ink-mid)'">
-                    <span>📱</span> <span id="colabDashWhatsapp">WhatsApp: -</span>
+                    <span id="colabDashWhatsapp">WhatsApp: -</span>
                   </a>
                   <span style="color: var(--ink-lt);">|</span>
-                  <span style="color: var(--ink-mid); display: flex; align-items: center; gap: 6px;">
-                    <span>💰</span> <span id="colabDashRate">Taxa Padrão: ¥ -</span>
+                  <span style="color: var(--ink-mid); display: inline-flex; align-items: center; gap: 4px;">
+                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-dollar"></use></svg> <span id="colabDashRate">Taxa Padrão: ¥ -</span>
                   </span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 6px; font-size: 12px; color: var(--ink-mid);">
-                  <span style="display: flex; align-items: center; gap: 6px;">
-                    <span>🏠</span> <span id="colabDashResidencia">Residência: -</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px;">
+                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-hotel"></use></svg> <span id="colabDashResidencia">Residência: -</span>
                   </span>
-                  <span style="display: flex; align-items: center; gap: 6px;">
-                    <span>📍</span> <span id="colabDashLocais">Atuação: -</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px;">
+                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-map-pin"></use></svg> <span id="colabDashLocais">Atuação: -</span>
                   </span>
                 </div>
               </div>
@@ -1081,15 +1219,15 @@ window.addEventListener('unhandledrejection', function(e) {
               <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-lt); font-weight: 600;">Período de Análise</span>
               <!-- Filtro de Mês/Ano -->
               <select id="colabDashFiltroPeriodo" class="search-input-modern" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; min-width: 180px;" onchange="filtrarDashColaborador()">
-                <option value="all">📅 Todo o período</option>
+                <option value="all">Todo o período</option>
               </select>
             </div>
           </div>
 
           <!-- Tabs de Sub-Abas do Dashboard -->
           <div style="display:flex; gap:8px; border-bottom:1px solid var(--border); margin-bottom:24px; padding-bottom:0;">
-            <button id="btnColabTabEscala" class="btn-view-toggle active" style="padding: 8px 16px; font-weight:600; cursor:pointer;" onclick="mudarSubAbaColab('escala')">📋 Escala de Trabalho</button>
-            <button id="btnColabTabFinanceiro" class="btn-view-toggle" style="padding: 8px 16px; font-weight:600; cursor:pointer;" onclick="mudarSubAbaColab('financeiro')">💰 Controle Financeiro (Diárias)</button>
+            <button id="btnColabTabEscala" class="btn-view-toggle active" style="padding: 8px 16px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="mudarSubAbaColab('escala')"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg>Escala de Trabalho</button>
+            <button id="btnColabTabFinanceiro" class="btn-view-toggle" style="padding: 8px 16px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="mudarSubAbaColab('financeiro')"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-dollar"></use></svg>Controle Financeiro (Diárias)</button>
           </div>
 
           <!-- SUB-ABA 1: ESCALA DE TRABALHO -->
@@ -1179,9 +1317,9 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="preview-toolbar">
     <span>HEIAN TOUR &nbsp;·&nbsp; Pré-visualização</span>
     <div style="display:flex; gap: 10px;">
-      <button id="btnEditFromPreview" class="btn-primary" onclick="editarCotacaoAtual()">✏️ Editar Cotação</button>
-      <button id="btnExcluirCotacaoModal" class="btn-secondary" style="color:#ff8888; border-color:rgba(255,136,136,0.3);" onclick="excluirCotacaoAtual()">✖ Excluir Cotação</button>
-      <button id="btnPrintFromPreview" class="btn-secondary" style="color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.4)">🖨 Imprimir / PDF</button>
+      <button id="btnEditFromPreview" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
+      <button id="btnExcluirCotacaoModal" class="btn-secondary" style="color:#ff8888; border-color:rgba(255,136,136,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#ff8888;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
+      <button id="btnPrintFromPreview" class="btn-secondary" style="color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.4); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>Imprimir / PDF</button>
       <button id="btnClosePreview" class="btn-secondary" onclick="document.getElementById('previewOverlay').classList.add('hidden'); document.body.style.overflow=''; const t = document.getElementById('btnTogglePreviewView'); if(t) t.style.display='none';" style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25)">✕ Fechar</button>
     </div>
   </div>
@@ -1201,11 +1339,11 @@ window.addEventListener('unhandledrejection', function(e) {
     
     <div style="margin-bottom:20px;">
       <div class="event-detail-row">
-        <strong>📅 Data:</strong>
+        <strong>Data:</strong>
         <span id="calEventModalData">17/06/2026</span>
       </div>
       <div class="event-detail-row">
-        <strong>👥 Cliente:</strong>
+        <strong>Cliente:</strong>
         <span id="calEventModalCliente">Carregando...</span>
       </div>
       
@@ -1215,7 +1353,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     
     <div style="border-top:1px solid var(--border); padding-top:20px;">
-      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:12px; color:var(--ink-mid);">👤 DESIGNAR GUIAS / COLABORADORES:</label>
+      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:12px; color:var(--ink-mid);">DESIGNAR GUIAS / COLABORADORES:</label>
       <div id="calEventModalAssigneesContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:10px; max-height:120px; overflow-y:auto; padding:8px; border:1px solid var(--border); border-radius:6px; background:#fafafa;">
         <!-- Injetado via JS -->
       </div>
@@ -1225,7 +1363,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="calEventModalFinancasContainer" style="border-top:1px dashed var(--border); padding-top:16px; margin-top:16px; display:none;">
       <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:12px; color:var(--ink-mid); cursor:pointer; margin-bottom: 8px;">
         <input type="checkbox" id="calEventModalGeraPagamento" onchange="toggleCalEventModalValorDiaria()" style="width:16px; height:16px; margin:0;">
-        <span>💰 Este serviço gera diária para o guia</span>
+        <span>Este serviço gera diária para o guia</span>
       </label>
       <div id="calEventModalValorDiariaWrapper" style="margin-top:12px; display:none; align-items:center; gap:8px;">
         <span style="font-size:12px; color:var(--ink-mid);">Valor da Diária (¥):</span>
@@ -1256,13 +1394,13 @@ window.addEventListener('unhandledrejection', function(e) {
     
     <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">👤 Colaborador / Guia</label>
+        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Colaborador / Guia</label>
         <input type="text" id="modalPagarGuiaColab" class="search-input-modern" style="width:100%; padding:8px 12px; background:#f5f5f5; border:1px solid var(--border); border-radius:6px; font-size:13px;" readonly>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">💰 Moeda</label>
+          <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Moeda</label>
           <select id="modalPagarGuiaMoeda" class="search-input-modern" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px;" onchange="onChangeMoedaPagarGuia()">
             <option value="JPY">JPY (Iene)</option>
             <option value="BRL">BRL (Real)</option>
@@ -1277,11 +1415,11 @@ window.addEventListener('unhandledrejection', function(e) {
 
       <!-- Preview de conversão se a moeda não for JPY -->
       <div id="modalPagarGuiaPreviewJPYWrapper" style="display:none; background:rgba(230,175,46,0.08); padding:10px 14px; border-radius:6px; border:1px solid rgba(230,175,46,0.25); font-size:12px; color:var(--gold-dk);">
-        <span>⚠️ Estimativa Convertida: </span><strong id="modalPagarGuiaPreviewJPY">¥ 0</strong>
+        <span>Estimativa Convertida: </span><strong id="modalPagarGuiaPreviewJPY">¥ 0</strong>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">💳 Conta Pagadora (Notion)</label>
+        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Conta Pagadora (Notion)</label>
         <select id="modalPagarGuiaConta" class="search-input-modern" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
           <option value="">Carregando contas...</option>
         </select>
@@ -1306,7 +1444,7 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <div style="display:flex; align-items:center; gap: 12px;">
         <a id="modalVisaoGeralContaEditarLink" href="#" target="_blank" class="btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--warm-white);">
-          ✏️ Editar Conta no Notion
+          <svg class="v-icon" style="stroke:var(--ink-mid); margin-right:2px;"><use href="#icon-edit"></use></svg> Editar Conta no Notion
         </a>
         <button class="event-modal-close" onclick="fecharModalVisaoGeralConta()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt); padding: 0; line-height: 1;">✕</button>
       </div>
@@ -1525,9 +1663,9 @@ window.addEventListener('unhandledrejection', function(e) {
         <div>
           <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Tipo de Serviço *</label>
           <select id="modalCriarEvTipoServico" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" onchange="onTipoServicoCriarChange()">
-            <option value="Roteiro">🗺️ Tour / Roteiro</option>
-            <option value="Transporte">🚆 Transporte</option>
-            <option value="Experiência">🎫 Experiência</option>
+            <option value="Roteiro">Tour / Roteiro</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Experiência">Experiência</option>
           </select>
         </div>
       </div>
@@ -1592,11 +1730,11 @@ window.addEventListener('unhandledrejection', function(e) {
           <div>
             <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Tipo de Transporte</label>
             <select id="modalCriarEvTranspTipo" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-              <option value="Shinkansen">🚄 Shinkansen</option>
-              <option value="Romancecar">🚈 Romancecar</option>
-              <option value="Trem">🚇 Trem</option>
-              <option value="Ônibus">🚌 Ônibus</option>
-              <option value="Transfer">🚗 Transfer</option>
+              <option value="Shinkansen">Shinkansen</option>
+              <option value="Romancecar">Romancecar</option>
+              <option value="Trem">Trem</option>
+              <option value="Ônibus">Ônibus</option>
+              <option value="Transfer">Transfer</option>
             </select>
           </div>
           <div>

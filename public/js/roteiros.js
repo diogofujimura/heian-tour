@@ -487,20 +487,20 @@ function renderizarRoteiro(roteiroNome) {
     const temDeslocamento = rota.elementos.some(el => el.tipo === 'transporte');
     const temExperiencia = rota.elementos.some(el => el.tipo === 'experiencia');
     
-    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center;">⭐ Tour Guiado</span>` : '';
-    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
-    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
+    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-compass"></use></svg> Tour Guiado</span>` : '';
+    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-shuffle"></use></svg> Deslocamento</span>` : '';
+    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px; border: 1px solid rgba(255,255,255,0.4);"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Experiência</span>` : '';
 
     let elementosHtml = rota.elementos.map(el => {
       if (el.tipo === 'info') {
         const parts = [];
         if (el.dataDoTour) {
           const d = new Date(el.dataDoTour);
-          parts.push(`📅 ${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
+          parts.push(isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' }));
         }
-        if (el.horarioEncontro) parts.push(`🕒 ${el.horarioEncontro}`);
-        if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
-        if (el.localEncontro) parts.push(`📍 ${el.localEncontro}`);
+        if (el.horarioEncontro) parts.push(`Encontro: ${el.horarioEncontro}`);
+        if (el.duracaoTour) parts.push(`Duração: ${el.duracaoTour}`);
+        if (el.localEncontro) parts.push(`Local: ${el.localEncontro}`);
         if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
         return '';
       } else if (el.tipo === 'texto') {
@@ -510,7 +510,7 @@ function renderizarRoteiro(roteiroNome) {
         const destino = el.cidadeDestino || 'Destino';
         const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha})` : 'Deslocamento a definir';
         const ctg = el.categoria ? ` - ${el.categoria}` : '';
-        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[⏱ ${el.tempo}]</span>` : '';
+        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[${el.tempo}]</span>` : '';
         const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
         const h = el.horario ? `${el.horario}` : '';
         const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
@@ -521,10 +521,10 @@ function renderizarRoteiro(roteiroNome) {
               <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
           </div>`;
       } else if (el.tipo === 'experiencia') {
-        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; Viajantes: ${pText}` : `Viajantes: ${pText}`) : '';
         const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
         return `
           <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
@@ -532,7 +532,7 @@ function renderizarRoteiro(roteiroNome) {
               <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
           </div>`;
       } else if (el.tipo === 'sequencia') {
         const tituloRota = el.nomeDaRota || 'Sequência';
@@ -617,20 +617,20 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
     const temDeslocamento = rota.elementos.some(el => el.tipo === 'transporte');
     const temExperiencia = rota.elementos.some(el => el.tipo === 'experiencia');
     
-    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center;">⭐ Tour Guiado</span>` : '';
-    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
-    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
+    const badgeGuiado = rota.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-compass"></use></svg> Tour Guiado</span>` : '';
+    const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-shuffle"></use></svg> Deslocamento</span>` : '';
+    const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px; border: 1px solid rgba(255,255,255,0.4);"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Experiência</span>` : '';
 
     let elementosHtml = rota.elementos.map((el, elIdx) => {
       if (el.tipo === 'info') {
         const parts = [];
         if (el.dataDoTour) {
           const d = new Date(el.dataDoTour);
-          parts.push(`📅 ${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
+          parts.push(`${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
         }
-        if (el.horarioEncontro) parts.push(`🕒 ${el.horarioEncontro}`);
-        if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
-        if (el.localEncontro) parts.push(`📍 ${el.localEncontro}`);
+        if (el.horarioEncontro) parts.push(`Encontro: ${el.horarioEncontro}`);
+        if (el.duracaoTour) parts.push(`Duração: ${el.duracaoTour}`);
+        if (el.localEncontro) parts.push(`Local: ${el.localEncontro}`);
         if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
         return '';
       } else if (el.tipo === 'texto') {
@@ -640,7 +640,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         const destino = el.cidadeDestino || 'Destino';
         const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha})` : 'Deslocamento a definir';
         const ctg = el.categoria ? ` - ${el.categoria}` : '';
-        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[⏱ ${el.tempo}]</span>` : '';
+        const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[${el.tempo}]</span>` : '';
         const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
         const h = el.horario ? `${el.horario}` : '';
         const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
@@ -655,25 +655,25 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
 
           if (v) {
             const editAction = `window.uploadRapidoVoucherAdmin('${clienteId}', '${(v.atracaoNome || '').replace(/'/g, "\\'")}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')`;
-            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Ingresso anexado. Clique para editar.">🎟️ Ingresso Ok</span>`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Ingresso anexado. Clique para editar."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Ingresso Ok</span>`;
           } else {
             const suggestionsName = `Bilhete - ${el.tipoTransporte}`;
             const suggestionsDate = el.data || dataDoDiaStr || '';
             const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'transporte:${el.tipoTransporte.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
-            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Falta o bilhete! Clique para upload rápido.">⚠️ Sem Ingresso</span>`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Falta o bilhete! Clique para upload rápido."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-alert-triangle"></use></svg> Sem Ingresso</span>`;
           }
         } else if (el.compradoHeian !== false) {
-          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>`;
+          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>`;
         }
         
         let instrucaoAdicional = '';
         if (v) {
           if (el.instrucoesPosCompra) {
-            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">💡 Pós-compra: ${el.instrucoesPosCompra}</div>`;
+            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">Pós-compra: ${el.instrucoesPosCompra}</div>`;
           }
         } else {
           if (el.instrucoesPreCompra) {
-            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">⚠️ Pré-compra: ${el.instrucoesPreCompra}</div>`;
+            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">Pré-compra: ${el.instrucoesPreCompra}</div>`;
           }
         }
         
@@ -687,7 +687,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
             ${instrucaoAdicional}
           </div>`;
       } else if (el.tipo === 'experiencia') {
-        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
+        const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; ${pText}` : `${pText}`) : '';
         const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
         
         let voucherBadge = '';
@@ -700,25 +700,25 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
 
           if (v) {
             const editAction = `window.uploadRapidoVoucherAdmin('${clienteId}', '${(v.atracaoNome || '').replace(/'/g, "\\'")}', '${v.nome.replace(/'/g, "\\'")}', '${v.dataUso || ''}', '${v.id}')`;
-            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Ingresso anexado. Clique para editar.">🎟️ Ingresso Ok</span>`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${editAction}" style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Ingresso anexado. Clique para editar."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Ingresso Ok</span>`;
           } else {
             const suggestionsName = `Ingresso - ${el.nomeExp}`;
             const suggestionsDate = el.dataDoTour || el.data || dataDoDiaStr || '';
             const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'experiencia:${el.nomeExp.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
-            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;" title="Falta o ingresso! Clique para upload rápido.">⚠️ Sem Ingresso</span>`;
+            voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Falta o ingresso! Clique para upload rápido."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-alert-triangle"></use></svg> Sem Ingresso</span>`;
           }
         } else if (el.compradoHeian !== false) {
-          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>`;
+          voucherBadge = `<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>`;
         }
 
         let instrucaoAdicional = '';
         if (v) {
           if (el.instrucoesPosCompra) {
-            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">💡 Pós-compra: ${el.instrucoesPosCompra}</div>`;
+            instrucaoAdicional = `<div style="font-size:11px; color:#15803d; margin-top:4px; font-style:italic">Pós-compra: ${el.instrucoesPosCompra}</div>`;
           }
         } else {
           if (el.instrucoesPreCompra) {
-            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">⚠️ Pré-compra: ${el.instrucoesPreCompra}</div>`;
+            instrucaoAdicional = `<div style="font-size:11px; color:#b45309; margin-top:4px; font-style:italic">Pré-compra: ${el.instrucoesPreCompra}</div>`;
           }
         }
 
@@ -991,20 +991,20 @@ window.novoRoteiro = function() {
         const temDeslocamento = dia.elementos.some(el => el.tipo === 'transporte');
         const temExperiencia = dia.elementos.some(el => el.tipo === 'experiencia');
         
-        const badgeGuiado = dia.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center;">⭐ Tour Guiado</span>` : '';
-        const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">🚆 Deslocamento</span>` : '';
-        const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4);">🎫 Experiência</span>` : '';
+        const badgeGuiado = dia.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-compass"></use></svg> Tour Guiado</span>` : '';
+        const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">Deslocamento</span>` : '';
+        const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4); gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Experiência</span>` : '';
         
         let elementosHtml = dia.elementos.map((el, eIdx) => {
           if (el.tipo === 'info') {
             const parts = [];
             if (el.dataDoTour) {
               const d = new Date(el.dataDoTour);
-              parts.push(`📅 ${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
+              parts.push(`${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
             }
-            if (el.horarioEncontro) parts.push(`🕒 ${el.horarioEncontro}`);
-            if (el.duracaoTour) parts.push(`⏳ ${el.duracaoTour}`);
-            if (el.localEncontro) parts.push(`📍 ${el.localEncontro}`);
+            if (el.horarioEncontro) parts.push(`Encontro: ${el.horarioEncontro}`);
+            if (el.duracaoTour) parts.push(`Duração: ${el.duracaoTour}`);
+            if (el.localEncontro) parts.push(`Local: ${el.localEncontro}`);
             if (parts.length > 0) return `<div style="font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
             return '';
           } else if (el.tipo === 'texto') {
@@ -1062,7 +1062,7 @@ window.novoRoteiro = function() {
             const destino = el.cidadeDestino || 'Destino';
             const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha})` : 'Deslocamento a definir';
             const ctg = el.categoria ? ` - ${el.categoria}` : '';
-            const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[⏱ ${el.tempo}]</span>` : '';
+            const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[${el.tempo}]</span>` : '';
             const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
             const h = el.horario ? `${el.horario}` : '';
             const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
@@ -1073,10 +1073,10 @@ window.novoRoteiro = function() {
                   <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
-                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
               </div>`;
           } else if (el.tipo === 'experiencia') {
-            const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; 👥 ${pText}` : `👥 ${pText}`) : '';
+            const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; ${pText}` : `${pText}`) : '';
             const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
             return `
               <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
@@ -1084,7 +1084,7 @@ window.novoRoteiro = function() {
                   <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
-                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em">✅ Emitido p/ Heian</span>' : ''}</div>
+                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
               </div>`;
           }
           return '';
@@ -1314,7 +1314,7 @@ function abrirEditorRoteiro(nome) {
     if(el) { el.readOnly = rotTemCliente; el.style.cssText = rotLockedStyle; }
   });
   const btnEditarRot = document.getElementById('btnEditarClienteRoteiro');
-  if(btnEditarRot) btnEditarRot.innerHTML = rotTemCliente ? '👤 Editar Cliente' : '💾 Salvar Cliente no Notion';
+  if(btnEditarRot) btnEditarRot.innerHTML = rotTemCliente ? '<svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg> Editar Cliente' : '<svg class="v-icon"><use href="#icon-save"></use></svg> Salvar Cliente no Notion';
   const btnImportRot = document.getElementById('btnImportNotionRoteiro');
   if (btnImportRot) btnImportRot.style.display = rotTemCliente ? 'none' : 'inline-block';
   
@@ -1381,7 +1381,7 @@ window.atualizarBotoesCotacao = function() {
     
     if (typeof state === 'undefined' || !state || !state.orcamentosDB || !Array.isArray(state.orcamentosDB)) {
         actionsDiv.innerHTML = `
-            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', true)">📄 Gerar Cotação</button>
+            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', true)" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Gerar Cotação</button>
         `;
         return;
     }
@@ -1390,12 +1390,12 @@ window.atualizarBotoesCotacao = function() {
     
     if (existingCotacao) {
         actionsDiv.innerHTML = `
-            <button class="btn-secondary" onclick="abrirOrcamento('${existingCotacao.id}'); navToPage('orcamento');" title="Visualizar a cotação existente sem alterar nada">👀 Ver Cotação</button>
-            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', false)" title="Atualizar a cotação existente com os dados atuais deste roteiro">🔄 Atualizar Cotação</button>
+            <button class="btn-secondary" onclick="abrirOrcamento('${existingCotacao.id}'); navToPage('orcamento');" title="Visualizar a cotação existente sem alterar nada" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Ver Cotação</button>
+            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', false)" title="Atualizar a cotação existente com os dados atuais deste roteiro" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Atualizar Cotação</button>
         `;
     } else {
         actionsDiv.innerHTML = `
-            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', true)">📄 Gerar Cotação</button>
+            <button class="btn-secondary" onclick="roteiroParaCotacao(roteiroEmEdicao, '${roteiroNome}', true)" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Gerar Cotação</button>
         `;
     }
 }
@@ -1415,15 +1415,15 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
     dia.elementos.forEach((el, eIdx) => {
       const isFirst = eIdx === 0;
       const isLast = eIdx === dia.elementos.length - 1;
-      const btnUp = isFirst ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Cima" onclick="moverElemento(${idx}, ${eIdx}, -1)">⬆️</button>`;
-      const btnDown = isLast ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Baixo" onclick="moverElemento(${idx}, ${eIdx}, 1)">⬇️</button>`;
+      const btnUp = isFirst ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Cima" onclick="moverElemento(${idx}, ${eIdx}, -1)">▲</button>`;
+      const btnDown = isLast ? '' : `<button class="btn-icon" style="padding:2px 4px;font-size:12px" title="Mover para Baixo" onclick="moverElemento(${idx}, ${eIdx}, 1)">▼</button>`;
       const controles = `<div style="display:flex; flex-wrap:wrap;gap:4px">${btnUp}${btnDown}<button class="btn-secondary" style="padding:2px 6px; font-size:10px" onclick="delElemento(${idx}, ${eIdx})">✕ Remover</button></div>`;
 
       if (el.tipo === 'info') {
         elementosHtml += `
           <div style="border-left: 2px solid var(--gold-lt); padding-left: 12px; margin-bottom: 16px; background:#fcfcfc; padding-top:8px; padding-bottom:8px; border-radius:8px">
             <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">📅 Info de Encontro</strong>
+              <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">Info de Encontro</strong>
               ${controles}
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px">
@@ -1444,7 +1444,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         elementosHtml += `
           <div style="border-left: 2px solid var(--ink-lt); padding-left: 12px; margin-bottom: 16px; padding-top:8px; padding-bottom:8px">
             <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">📝 Texto Livre / Comunicação</strong>
+              <strong style="color:var(--text-sec); font-size:11px; text-transform:uppercase">Texto Livre / Comunicação</strong>
               ${controles}
             </div>
             <div class="field" style="margin:0">
@@ -1503,11 +1503,11 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <input type="text" placeholder="Instrução pós-compra..." value="${el.instrucoesPosCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPosCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
               </div>
             </div>
-            ${el.tipoTransporte ? `<div style="font-size:11px; margin-top:8px; color:var(--text-sec)">Selecionado: <strong>${el.tipoTransporte}</strong> (${el.linha}) - ${el.categoria} ${el.tempo ? `<strong style="color:var(--gold-dk); margin-left:8px;">⏱ ${el.tempo}</strong>` : ''}</div>` : ''}
+            ${el.tipoTransporte ? `<div style="font-size:11px; margin-top:8px; color:var(--text-sec)">Selecionado: <strong>${el.tipoTransporte}</strong> (${el.linha}) - ${el.categoria} ${el.tempo ? `<strong style="color:var(--gold-dk); margin-left:8px;">${el.tempo}</strong>` : ''}</div>` : ''}
           </div>`;
       } else if (el.tipo === 'experiencia') {
-        const controles = `<span style="cursor:pointer; font-size:12px; margin-right:8px; color:var(--ink-mid)" onclick="moverElemento(${idx}, ${eIdx}, -1)">⬆️</span>` +
-                          `<span style="cursor:pointer; font-size:12px; margin-right:12px; color:var(--ink-mid)" onclick="moverElemento(${idx}, ${eIdx}, 1)">⬇️</span>` +
+        const controles = `<span style="cursor:pointer; font-size:12px; margin-right:8px; color:var(--ink-mid)" onclick="moverElemento(${idx}, ${eIdx}, -1)">▲</span>` +
+                          `<span style="cursor:pointer; font-size:12px; margin-right:12px; color:var(--ink-mid)" onclick="moverElemento(${idx}, ${eIdx}, 1)">▼</span>` +
                           `<span style="cursor:pointer; color:var(--crimson); font-size:12px" onclick="delElemento(${idx}, ${eIdx})">Excluir</span>`;
         elementosHtml += `
           <div style="border-left: 4px solid var(--crimson); padding-left: 12px; margin-bottom: 16px; background:rgba(107,31,42,0.08); padding-top:8px; padding-bottom:8px; border-radius:8px">
@@ -1568,10 +1568,10 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
           if (chk.fechado) {
             extraClass = ' fechada';
             if (chk.tipoBloqueio === 'semanal') {
-              warnIcon = '⚠️ ';
+              warnIcon = '';
               warnTitle = ` (fecha às ${chk.diaSemanaNome.toLowerCase()}s)`;
             } else if (chk.tipoBloqueio === 'manutencao') {
-              warnIcon = '⚠️ ';
+              warnIcon = '';
               warnTitle = ` (manutenção: ${chk.motivo})`;
             }
           }
@@ -1590,7 +1590,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         elementosHtml += `
           <div style="border-left: 2px solid var(--gold); padding-left: 12px; margin-bottom: 16px; padding-top:8px; padding-bottom:8px">
             <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <strong style="color:var(--crimson); font-size:12px">🚩 Sequência de Atrações</strong>
+              <strong style="color:var(--crimson); font-size:12px">Sequência de Atrações</strong>
               ${controles}
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
@@ -1632,7 +1632,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         <div style="display:flex; flex-wrap:wrap; align-items:center;">
           <label style="font-size:12px; margin-right:12px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; padding:4px 12px; border-radius:16px; font-weight:600; background:${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.2)'}; color:${dia.tourGuiado ? 'var(--crimson)' : '#fff'}; border: 1px solid ${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.4)'}">
             <input type="checkbox" ${dia.tourGuiado ? 'checked' : ''} onchange="updDiaEdit(${idx}, 'tourGuiado', this.checked)" style="margin-right:6px; accent-color:var(--crimson)">
-            ${dia.tourGuiado ? '⭐ TOUR GUIADO' : 'Tour Guiado'}
+             ${dia.tourGuiado ? 'TOUR GUIADO' : 'Tour Guiado'}
           </label>
           <div style="display:flex; flex-wrap:wrap; gap: 4px; margin-right: 8px;">
             <button class="btn-secondary" onclick="moverDia(${idx}, 'up')" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para cima">↑</button>
@@ -1843,7 +1843,7 @@ window.atualizarOpcoesTransporte = function(idx, eIdx) {
     // Sempre adicionar a opção personalizada no topo
     const optCustom = document.createElement('option');
     optCustom.value = 'custom';
-    optCustom.textContent = '✏️ + Adicionar Transporte Personalizado...';
+    optCustom.textContent = '+ Adicionar Transporte Personalizado...';
     optCustom.style.fontWeight = 'bold';
     if (el.trechoId === 'custom') optCustom.selected = true;
     sel.appendChild(optCustom);
@@ -1875,7 +1875,7 @@ window.atualizarOpcoesTransporte = function(idx, eIdx) {
       
       const opt = document.createElement('option');
       opt.value = t.id; // usa o id base
-      opt.textContent = t.trecho + ' - ' + t.tipo + ' (' + t.linha + ') | ' + t.categoria + (t.tempo ? ' (⏱ ' + t.tempo + ')' : '');
+      opt.textContent = t.trecho + ' - ' + t.tipo + ' (' + t.linha + ') | ' + t.categoria + (t.tempo ? ' (' + t.tempo + ')' : '');
       if (t.ids.includes(String(el.trechoId))) opt.selected = true;
       
       if ((matchOrigem && matchDestino) || (oEmpty && dEmpty)) {
@@ -2210,8 +2210,8 @@ window.renderRotEstadias = function() {
       <div class="item-row-header" style="display: flex; align-items: center; justify-content: space-between;">
         <span class="item-row-num">Estadia ${i+1}</span>
         <div style="display: flex; gap: 4px; align-items: center;">
-          <button type="button" class="btn-move-up" onclick="moverRotEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔼</button>
-          <button type="button" class="btn-move-down" onclick="moverRotEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">🔽</button>
+          <button type="button" class="btn-move-up" onclick="moverRotEstadia(${i}, -1)" ${isFirst ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">▲</button>
+          <button type="button" class="btn-move-down" onclick="moverRotEstadia(${i}, 1)" ${isLast ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''} style="background:none; border:none; color:var(--ink-mid); cursor:pointer; padding:2px 6px; font-size:12px;">▼</button>
           <button type="button" class="btn-remove" onclick="rmRotEstadia(${est.id})">✕</button>
         </div>
       </div>
@@ -2529,7 +2529,7 @@ window.renderListaRoteiros = function(filtro = '') {
       <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
         <div class="list-card-title" style="color:var(--crimson); font-weight: 600; margin-bottom: 0;">${nome}</div>
         <button class="btn-card-edit-minimalist" onclick="event.stopPropagation(); window.editarRoteiroCard('${nome}')" title="Editar">
-          ✏️
+          <svg class="v-icon no-margin"><use href="#icon-edit"></use></svg>
         </button>
       </div>
       <div class="list-card-subtitle" style="margin-top: 4px;">${numDias} dia(s) de roteiro</div>
@@ -2614,7 +2614,7 @@ window.desfazerAcaoRoteiro = function() {
   
   window.triggerRoteiroAutoSave();
   
-  showToast('Desfeito! ↩');
+  showToast('Desfeito!');
 };
 
 window.abrirModalGeradorIA = async function() {
@@ -2721,7 +2721,7 @@ window.gerarRoteiroComIA = async function() {
       // Disparar o salvamento automático
       window.triggerRoteiroAutoSave();
 
-      showToast('Roteiro gerado com IA com sucesso! 🪄');
+      showToast('Roteiro gerado com IA com sucesso!');
       window.fecharModalPromptIA();
     } else {
       throw new Error('Formato de resposta da IA inválido.');
@@ -2831,7 +2831,7 @@ window.editarElementoRoteiroRapido = function(roteiroNome, diaIdx, elIdx) {
     <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:500px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:16px; position:relative;" onclick="event.stopPropagation()">
       <span onclick="window.fecharModalEditarElementoRoteiroRapido()" style="position:absolute; top:12px; right:16px; font-size:20px; font-weight:bold; cursor:pointer; color:#7f7f7f;">✕</span>
       <h3 style="margin:0; font-family:var(--ff-display); color:var(--crimson); font-size:16px; font-weight:600;">
-        ✏️ Editar Item do Roteiro (Dia ${diaIdx + 1})
+        Editar Item do Roteiro (Dia ${diaIdx + 1})
       </h3>
       
       <form id="formEditarElementoRoteiroRapido" onsubmit="window.salvarEditarElementoRoteiroRapido(event, '${roteiroNome.replace(/'/g, "\\'")}', ${diaIdx}, ${elIdx})" style="display:flex; flex-direction:column; gap:16px;">
@@ -2840,7 +2840,7 @@ window.editarElementoRoteiroRapido = function(roteiroNome, diaIdx, elIdx) {
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
           <button type="button" onclick="window.fecharModalEditarElementoRoteiroRapido()" class="btn-secondary" style="padding:8px 16px; font-size:12.5px;">Cancelar</button>
           <button type="submit" class="btn-primary" style="padding:8px 20px; font-size:12.5px; font-weight:600;">
-            💾 Salvar Alterações
+            Salvar Alterações
           </button>
         </div>
       </form>
@@ -2935,7 +2935,7 @@ window.salvarEditarElementoRoteiroRapido = async function(e, roteiroNome, diaIdx
     alert('Erro ao salvar alterações no roteiro: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerText = '💾 Salvar Alterações';
+    btn.innerText = 'Salvar Alterações';
   }
 };
 
