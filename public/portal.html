@@ -47,6 +47,9 @@
     <symbol id="icon-calendar" viewBox="0 0 24 24">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
     </symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+      <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+    </symbol>
   </svg>
 
   <!-- CABEÇALHO -->
@@ -57,7 +60,9 @@
     <nav class="nav-menu">
       <a href="#conceito" class="nav-link">O Conceito</a>
       <a href="#servicos" class="nav-link">Serviços VIP</a>
-      <a href="#solicitar" class="nav-link">Planejar Viagem</a>
+      <a href="#inspiração" class="nav-link">Roteiros</a>
+      <a href="#memorias" class="nav-link">Memórias</a>
+      <a href="#solicitar" class="nav-link">Planejar</a>
       <button class="btn-vip-access" onclick="abrirModalAcesso()">Área do Viajante</button>
     </nav>
   </header>
@@ -82,11 +87,11 @@
   <!-- O CONCEITO / FILOSOFIA -->
   <section id="conceito" class="philosophy-section">
     <span class="section-label">A Filosofia Heian</span>
-    <h2 class="section-title">Tranquilidade, Equilíbrio e Alta Curadoria</h2>
+    <h2 class="section-title">Omotenashi — A Arte da Hospitalidade Sincera</h2>
     <div class="philosophy-text-wrapper">
-      <p class="philosophy-highlight">"Inspirados no refinamento estético e na paz do período clássico japonês (Heian), nós elevamos a viagem a uma obra de arte personalizada."</p>
+      <p class="philosophy-highlight">"Inspirados no refinamento estético e na harmonia do período clássico japonês (Heian), nós antecipamos cada necessidade da sua viagem antes mesmo que você a sinta."</p>
       <p class="philosophy-body">
-        Não acreditamos em roteiros prontos ou passeios genéricos. Para nós, cada viajante é único. Nossa operação boutique envolve o planejamento minucioso de cada detalhe da sua imersão no Japão. Cuidamos de toda a logística, reservas nos melhores Ryokans tradicionais do país com águas termais (Onsens) privativas, e oferecemos acompanhamento com guias bilíngues experientes para que sua única preocupação seja absorver a essência da cultura japonesa.
+        Não acreditamos em roteiros prontos, excursões impessoais ou horários engessados. A Heian Tour opera sob um modelo boutique de altíssima curadoria. Cada rota é desenhada artesanalmente para se ajustar ao seu ritmo de vida, preferências e paixões. Cuidamos de toda a complexidade logística, reservas nos ryokans mais exclusivos e de difícil acesso do país, e oferecemos acompanhamento de guias em português altamente instruídos para que você vivencie a alma do Japão com total tranquilidade.
       </p>
     </div>
   </section>
@@ -105,7 +110,7 @@
           <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-compass"></use></svg>
         </div>
         <h3>Roteiros Sob Medida</h3>
-        <p>Planejamento de itinerários dia a dia feito sob medida com base no seu ritmo, desejos e estilo de viagem, equilibrando passeios icônicos e segredos locais escondidos.</p>
+        <p>Itinerários totalmente adaptados aos seus interesses, equilibrando noites em metrópoles tecnológicas, caminhadas contemplativas por florestas sagradas e visitas a ateliês de artesãos tradicionais.</p>
       </div>
       
       <!-- Card 2 -->
@@ -113,8 +118,8 @@
         <div class="service-icon-box">
           <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-hotel"></use></svg>
         </div>
-        <h3>Hospedagem & Ryokans</h3>
-        <p>Acesso e reserva nas melhores hospedagens de luxo do Japão, incluindo Ryokans tradicionais de alto padrão com serviços de jantar Kaiseki privativo e banhos termais terápicos.</p>
+        <h3>Ryokans & Onsens</h3>
+        <p>Acesso e curadoria nas estadias mais prestigiadas. Reservamos vilas de luxo e Ryokans tradicionais centenários com águas termais privativas e serviço impecável de mordomia Kaiseki.</p>
       </div>
       
       <!-- Card 3 -->
@@ -123,28 +128,223 @@
           <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-map"></use></svg>
         </div>
         <h3>Experiências Exclusivas</h3>
-        <p>Curadoria de atividades exclusivas: cerimônia do chá particular em templos reservados, workshops com mestres artesãos, ingressos VIP e reservas em restaurantes estrelados.</p>
+        <p>Reservas em restaurantes com estrelas Michelin de acesso restrito, cerimônia do chá particular conduzida por mestres budistas e transfers privativos em veículos executivos de alto padrão.</p>
       </div>
     </div>
   </section>
 
-  <!-- SOLICITAÇÃO VIP (FORMULÁRIO DE CONTATO) -->
+  <!-- JORNADAS DE INSPIRAÇÃO (ROTEIROS CONCEITO) -->
+  <section id="inspiração" class="itineraries-section">
+    <div style="text-align: center;">
+      <span class="section-label">Roteiros de Inspiração</span>
+      <h2 class="section-title">Nossas Rotas de Alta Curadoria</h2>
+      <p style="font-size: 14.5px; color: var(--ink-muted); max-width: 600px; margin: 0 auto; font-weight: 300;">
+        Conheça alguns dos conceitos que desenhamos para nossos clientes. Cada um desses roteiros serve como base inspiracional e é inteiramente customizado para a sua viagem.
+      </p>
+    </div>
+
+    <div class="itineraries-grid">
+      <!-- Roteiro 1 -->
+      <div class="itinerary-card">
+        <div class="itinerary-img-box">
+          <span class="itinerary-badge">Clássico & Luxo</span>
+          <img src="assets/heian_portal_hero.png" alt="O Japão Imperial">
+        </div>
+        <div class="itinerary-info">
+          <div>
+            <h3>O Japão Imperial & Hakone</h3>
+            <p>Uma imersão refinada conectando Tóquio moderna, uma estadia dos sonhos em Ryokan de luxo com vista para o Monte Fuji em Hakone, finalizando nos templos e distritos de gueixas em Kyoto.</p>
+          </div>
+          <div class="itinerary-meta">
+            <span>Duração: 12 Dias</span>
+            <span>Estilo: VIP Class</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roteiro 2 -->
+      <div class="itinerary-card">
+        <div class="itinerary-img-box">
+          <span class="itinerary-badge">Cultural & Profundo</span>
+          <img src="assets/heian_social_2.png" alt="Tradições Ocultas">
+        </div>
+        <div class="itinerary-info">
+          <div>
+            <h3>Tradições Ocultas dos Alpes Japoneses</h3>
+            <p>Explore as históricas casas de palha em Shirakawa-go, caminhe pelas ruas preservadas do período Edo em Takayama, hospede-se em templos sagrados em Koyasan e faça rituais termais em Kinosaki Onsen.</p>
+          </div>
+          <div class="itinerary-meta">
+            <span>Duração: 15 Dias</span>
+            <span>Estilo: Imersivo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roteiro 3 -->
+      <div class="itinerary-card">
+        <div class="itinerary-img-box">
+          <span class="itinerary-badge">Gastronomia & Design</span>
+          <img src="assets/heian_social_1.png" alt="Sabores e Arte">
+        </div>
+        <div class="itinerary-info">
+          <div>
+            <h3>Sabores Centenários & Arte Moderna</h3>
+            <p>Uma jornada que mescla os sabores mais exclusivos de mercados e restaurantes de Tóquio e Osaka, jantares com a verdadeira carne de Kobe, e a visita à espetacular ilha de arte contemporânea de Naoshima.</p>
+          </div>
+          <div class="itinerary-meta">
+            <span>Duração: 10 Dias</span>
+            <span>Estilo: Boutique</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIÁRIOS DE BORDO & PROVA SOCIAL -->
+  <section id="memorias" class="testimonials-section">
+    <span class="section-label">Prova Social</span>
+    <h2 class="section-title">Diários de Bordo e Experiências Reais</h2>
+    <p style="font-size: 14.5px; color: var(--ink-muted); max-width: 600px; margin: 0 auto 50px; font-weight: 300;">
+      A satisfação de quem viajou sob os cuidados da Heian Tour. Nossos clientes vivenciam momentos únicos planejados exclusivamente para eles.
+    </p>
+
+    <div class="testimonials-grid">
+      <!-- Depoimento 1 -->
+      <div class="testimonial-card">
+        <div class="testimonial-quote">
+          "Nossa lua de mel foi absolutamente impecável. A Heian Tour organizou tudo, desde os assentos na classe executiva do trem bala até as reservas em restaurantes que normalmente exigem meses de antecedência e contatos locais em Kyoto. O suporte 24h em português nos deu uma segurança inestimável."
+        </div>
+        <div class="testimonial-author">
+          <img src="assets/heian_social_1.png" alt="Roberto e Carla" class="author-img">
+          <div class="author-info">
+            <h4>Roberto & Carla Silva</h4>
+            <span>São Paulo / SP &nbsp;·&nbsp; Viagem em Outubro/2025</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Depoimento 2 -->
+      <div class="testimonial-card">
+        <div class="testimonial-quote">
+          "Viajar em família com crianças pequenas para um país com cultura tão diferente parecia um desafio. Mas a Heian organizou tudo no nosso ritmo, com transfers privativos, hotéis espaçosos e guias brasileiros carinhosos que engajaram as crianças em cada atividade. A cerimônia do chá foi maravilhosa."
+        </div>
+        <div class="testimonial-author">
+          <img src="assets/heian_social_2.png" alt="Mariana Souza" class="author-img">
+          <div class="author-info">
+            <h4>Família Souza</h4>
+            <span>Rio de Janeiro / RJ &nbsp;·&nbsp; Viagem em Abril/2026</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Galeria de Fotos Clientes -->
+    <div class="social-gallery-wrapper">
+      <h3>Momentos Compartilhados</h3>
+      <div class="social-gallery">
+        <div class="gallery-item">
+          <img src="assets/heian_portal_hero.png" alt="Templo em Kyoto">
+          <div class="gallery-overlay">
+            <div>
+              <span>Kyoto</span>
+              <h4>Paz e Contemplação em Kinkaku-ji</h4>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-item">
+          <img src="assets/heian_social_2.png" alt="Família na Cerimônia de Chá">
+          <div class="gallery-overlay">
+            <div>
+              <span>Kanazawa</span>
+              <h4>Cerimônia Tradicional do Chá Matcha</h4>
+            </div>
+          </div>
+        </div>
+        <div class="gallery-item">
+          <img src="assets/heian_social_1.png" alt="Casal em Kyoto">
+          <div class="gallery-overlay">
+            <div>
+              <span>Kyoto</span>
+              <h4>Outono nos Templos Clássicos</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION (ACCORDION INTERATIVO) -->
+  <section class="faq-section">
+    <span class="section-label">Perguntas Frequentes</span>
+    <h2 class="section-title">Esclareça Suas Dúvidas Sobre o Japão</h2>
+    
+    <div class="faq-container">
+      <!-- FAQ 1 -->
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Como funciona a criação de roteiros personalizados?
+          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
+        </div>
+        <div class="faq-answer">
+          Iniciamos com uma call de alinhamento para entender seu estilo, interesses, orçamento e datas. Com base nisso, nossa equipe boutique elabora um roteiro inicial dia a dia. Você analisa e ajustamos cada detalhe (hospedagens, atrações, guias) até que fique perfeito e de acordo com o que você deseja.
+        </div>
+      </div>
+
+      <!-- FAQ 2 -->
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Os guias acompanham durante toda a viagem?
+          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
+        </div>
+        <div class="faq-answer">
+          Os guias acompanham você nas cidades e atividades selecionadas conforme o roteiro aprovado (por exemplo, passeios de dia inteiro em Kyoto ou Tóquio). Nos momentos livres, você tem total flexibilidade para explorar o país, contando sempre com o nosso suporte 24h via chat/WhatsApp para qualquer imprevisto ou necessidade.
+        </div>
+      </div>
+
+      <!-- FAQ 3 -->
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          A Heian Tour cuida das passagens aéreas internacionais?
+          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
+        </div>
+        <div class="faq-answer">
+          Nosso foco de especialização é a curadoria e operação local de luxo no Japão (hospedagem, transporte terrestre, ingressos de experiências e guias). Nós não vendemos passagens aéreas internacionais diretamente, mas auxiliamos na emissão indicando as melhores rotas e horários para sincronizar perfeitamente com o seu roteiro terrestre.
+        </div>
+      </div>
+      
+      <!-- FAQ 4 -->
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Qual é a melhor época para visitar o Japão?
+          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
+        </div>
+        <div class="faq-answer">
+          A primavera (final de março a meados de abril) é famosa pelas flores de cerejeira (Sakura). O outono (novembro) traz as cores deslumbrantes das folhas avermelhadas (Momiji) e clima ameno. O inverno é perfeito para esportes de neve em Hokkaido e banhos em fontes termais, enquanto o verão oferece belos festivais tradicionais (Matsuri). Cada estação tem sua magia única.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLICITAÇÃO VIP (FORMULÁRIO DE CONTATO CONCIERGE INTERATIVO) -->
   <section id="solicitar" class="request-section">
     <div class="form-container">
       <div class="form-header">
-        <h2>Solicite Sua Viagem VIP</h2>
-        <p>Deixe suas informações básicas. Nossa equipe boutique entrará em contato para agendar uma call de alinhamento e iniciar o rascunho da sua jornada personalizada.</p>
+        <h2>Desenhe Sua Viagem VIP</h2>
+        <p>Forneça as preferências de viagem iniciais abaixo. Nosso concierge de luxo usará esses dados para desenhar o conceito inicial da sua jornada no Japão.</p>
       </div>
       
       <form id="solicitacaoForm" class="vip-form" onsubmit="enviarSolicitacao(event)">
+        <!-- Dados Pessoais -->
         <div class="form-group">
           <label for="formNome">Nome Completo</label>
           <input type="text" id="formNome" placeholder="Ex: Roberto Silva" required>
         </div>
         <div class="form-group">
-          <label for="formEmail">E-mail</label>
+          <label for="formEmail">E-mail de Contato</label>
           <input type="email" id="formEmail" placeholder="roberto@email.com" required>
         </div>
+        
+        <!-- Participantes -->
         <div class="form-group">
           <label for="formAdultos">Qtd. Adultos</label>
           <input type="number" id="formAdultos" min="1" value="2" required>
@@ -153,6 +353,8 @@
           <label for="formCriancas">Qtd. Crianças</label>
           <input type="number" id="formCriancas" min="0" value="0">
         </div>
+        
+        <!-- Datas -->
         <div class="form-group">
           <label for="formDataInicio">Data Estimada de Início</label>
           <input type="date" id="formDataInicio">
@@ -161,9 +363,31 @@
           <label for="formDataFim">Data Estimada de Fim</label>
           <input type="date" id="formDataFim">
         </div>
+
+        <!-- Seleção de Chips Interativos: Estilo de Hospedagem -->
         <div class="form-group full-width">
-          <label for="formObservacoes">O que você busca nessa experiência?</label>
-          <textarea id="formObservacoes" placeholder="Conte-nos mais sobre seus sonhos de viagem, hotéis de preferência ou experiências especiais que gostaria de realizar..."></textarea>
+          <label>Estilo de Estadia Preferido</label>
+          <div class="concierge-chips-grid" id="gridHospedagem">
+            <div class="concierge-chip active" onclick="selectChip('gridHospedagem', this)" data-value="Ryokan Tradicional de Luxo">Ryokan Tradicional (Onsen)</div>
+            <div class="concierge-chip" onclick="selectChip('gridHospedagem', this)" data-value="Hotel Boutique 5 Estrelas">Hotel Boutique 5★</div>
+            <div class="concierge-chip" onclick="selectChip('gridHospedagem', this)" data-value="Mesclado (Metrópole contemporânea e vilas tradicionais)">Mesclado (Ambos)</div>
+          </div>
+        </div>
+
+        <!-- Seleção de Chips Interativos: Ritmo -->
+        <div class="form-group full-width">
+          <label>Ritmo Desejado da Viagem</label>
+          <div class="concierge-chips-grid" id="gridRitmo">
+            <div class="concierge-chip active" onclick="selectChip('gridRitmo', this)" data-value="Contemplativo (Foco em bem-estar e pausas)">Contemplativo (Sem pressa)</div>
+            <div class="concierge-chip" onclick="selectChip('gridRitmo', this)" data-value="Equilibrado (Mistura passeios e tempo livre)">Equilibrado</div>
+            <div class="concierge-chip" onclick="selectChip('gridRitmo', this)" data-value="Explorador (Aproveitar o máximo possível de locais)">Explorador (Completo)</div>
+          </div>
+        </div>
+
+        <!-- Campo Texto livre -->
+        <div class="form-group full-width">
+          <label for="formObservacoes">Observações ou Desejos Especiais</label>
+          <textarea id="formObservacoes" placeholder="Ex: Gostaríamos de incluir reservas em restaurantes Kaiseki estrelados e passeios guiados focados em fotografia tradicional..."></textarea>
         </div>
         
         <button type="submit" id="btnSubmitForm" class="btn-form-submit">Enviar Solicitação VIP</button>
@@ -196,6 +420,8 @@
     <div class="footer-links">
       <a href="#conceito">O Conceito</a>
       <a href="#servicos">Serviços VIP</a>
+      <a href="#inspiração">Roteiros</a>
+      <a href="#memorias">Memórias</a>
       <a href="#solicitar">Planejar</a>
       <a href="/admin" target="_blank">Acesso Admin</a>
     </div>
@@ -227,6 +453,27 @@
         fecharModalAcesso();
       }
     });
+
+    // Função de Accordion do FAQ
+    function toggleFaq(questionEl) {
+      const item = questionEl.closest('.faq-item');
+      const isActive = item.classList.contains('active');
+      
+      // Fecha todos os FAQs ativos
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+      
+      // Se não estava ativo, abre
+      if (!isActive) {
+        item.classList.add('active');
+      }
+    }
+
+    // Seleção de Chips Interativos do Concierge
+    function selectChip(gridId, chipEl) {
+      const grid = document.getElementById(gridId);
+      grid.querySelectorAll('.concierge-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+    }
 
     // Função de Busca e Redirecionamento da Área do Cliente
     async function buscarViagemCliente(e) {
@@ -271,6 +518,15 @@
       e.preventDefault();
       const btn = document.getElementById('btnSubmitForm');
       const oldText = btn.textContent;
+
+      // Coletar valores dos chips ativos
+      const hospedagemAtiva = document.querySelector('#gridHospedagem .concierge-chip.active')?.dataset.value || '';
+      const ritmoAtivo = document.querySelector('#gridRitmo .concierge-chip.active')?.dataset.value || '';
+      
+      const obsTexto = document.getElementById('formObservacoes').value.trim();
+      
+      // Monta as observações agregando as preferências do Concierge
+      const observacoesCompletas = `Estilo de Estadia: ${hospedagemAtiva}\nRitmo de Viagem: ${ritmoAtivo}\n\nObservações Adicionais:\n${obsTexto || 'Nenhuma'}`;
       
       const payload = {
         nome: document.getElementById('formNome').value.trim(),
@@ -279,7 +535,7 @@
         criancas: document.getElementById('formCriancas').value,
         dataInicio: document.getElementById('formDataInicio').value || undefined,
         dataFim: document.getElementById('formDataFim').value || undefined,
-        observacoes: document.getElementById('formObservacoes').value.trim()
+        observacoes: observacoesCompletas
       };
 
       try {
@@ -301,6 +557,13 @@
 
         alert('Sua solicitação de roteiro VIP foi enviada com sucesso! Nossa equipe boutique entrará em contato em breve.');
         document.getElementById('solicitacaoForm').reset();
+        
+        // Mantém ativo o primeiro chip padrão após o reset
+        document.querySelectorAll('.concierge-chips-grid').forEach(grid => {
+          grid.querySelectorAll('.concierge-chip').forEach(c => c.classList.remove('active'));
+          grid.querySelector('.concierge-chip').classList.add('active');
+        });
+
       } catch (err) {
         console.error(err);
         alert('Erro ao enviar solicitação: ' + err.message);

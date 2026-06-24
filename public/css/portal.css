@@ -1,6 +1,6 @@
 /* ==========================================================================
    HEIAN TOUR — PORTAL INSTITUCIONAL
-   Folha de Estilos de Luxo & VIP
+   Folha de Estilos de Luxo & VIP (Atualizado com Prova Social, FAQ e Concierge)
    ========================================================================== */
 
 /* ── TOKENS DE DESIGN ────────────────────────────────────────────────────── */
@@ -330,6 +330,341 @@ img {
   font-weight: 300;
 }
 
+/* ── JORNADAS DE INSPIRAÇÃO (ROTEIROS CONCEITO) ──────────────────────────── */
+.itineraries-section {
+  padding: 100px 8%;
+  background-color: var(--warm-cream);
+}
+
+.itineraries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 40px;
+  margin-top: 50px;
+}
+
+.itinerary-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lux);
+  transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+}
+
+.itinerary-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-glass);
+  border-color: rgba(196, 163, 90, 0.25);
+}
+
+.itinerary-img-box {
+  height: 240px;
+  overflow: hidden;
+  position: relative;
+}
+
+.itinerary-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.itinerary-card:hover .itinerary-img-box img {
+  transform: scale(1.08);
+}
+
+.itinerary-badge {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: var(--crimson-imperial);
+  color: var(--warm-white);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.itinerary-info {
+  padding: 30px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.itinerary-info h3 {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--crimson-imperial);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.itinerary-info p {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+  font-weight: 300;
+}
+
+.itinerary-meta {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gold-champagne);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ── DIÁRIOS DE BORDO & PROVA SOCIAL ────────────────────────────────────── */
+.testimonials-section {
+  padding: 100px 8%;
+  background: linear-gradient(180deg, var(--warm-cream) 0%, rgba(196, 163, 90, 0.03) 100%);
+  text-align: center;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  margin-top: 50px;
+}
+
+.testimonial-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: left;
+  box-shadow: var(--shadow-lux);
+  transition: var(--transition-smooth);
+}
+
+.testimonial-card:hover {
+  border-color: rgba(196, 163, 90, 0.25);
+  box-shadow: var(--shadow-glass);
+}
+
+.testimonial-quote {
+  font-size: 14.5px;
+  color: var(--ink-muted);
+  font-style: italic;
+  line-height: 1.8;
+  margin-bottom: 24px;
+  position: relative;
+  font-weight: 300;
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 20px;
+}
+
+.author-img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gold-champagne);
+}
+
+.author-info h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--crimson-imperial);
+}
+
+.author-info span {
+  font-size: 11.5px;
+  color: var(--ink-light);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.social-gallery-wrapper {
+  margin-top: 80px;
+}
+
+.social-gallery-wrapper h3 {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  color: var(--crimson-imperial);
+  margin-bottom: 30px;
+}
+
+.social-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.gallery-item {
+  height: 280px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--shadow-lux);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.08);
+}
+
+.gallery-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to top, rgba(26, 9, 13, 0.8) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+  text-align: left;
+  color: var(--warm-white);
+}
+
+.gallery-item:hover .gallery-overlay {
+  opacity: 1;
+}
+
+.gallery-overlay span {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--gold-champagne);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  display: block;
+}
+
+.gallery-overlay h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── FAQ SECTION (ACCORDION INTERATIVO) ─────────────────────────────────── */
+.faq-section {
+  padding: 100px 8%;
+  background-color: var(--warm-cream);
+  text-align: center;
+}
+
+.faq-container {
+  max-width: 780px;
+  margin: 50px auto 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  background: var(--warm-white);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lux);
+  transition: var(--transition-smooth);
+}
+
+.faq-item.active {
+  border-color: rgba(196, 163, 90, 0.35);
+  box-shadow: var(--shadow-glass);
+}
+
+.faq-question {
+  padding: 22px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--crimson-imperial);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.faq-icon {
+  width: 18px;
+  height: 18px;
+  stroke: var(--gold-champagne);
+  transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, padding 0.35s ease;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 250px; /* Tamanho suficiente para acomodar a resposta */
+  padding: 0 28px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  padding-top: 16px;
+}
+
+/* ── CONCIERGE VIP SELETORES (CHIPS) ────────────────────────────────────── */
+.concierge-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.concierge-chip {
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.concierge-chip:hover {
+  background: rgba(196, 163, 90, 0.05);
+  border-color: var(--gold-champagne);
+}
+
+.concierge-chip.active {
+  background: var(--crimson-imperial);
+  color: var(--warm-white);
+  border-color: var(--crimson-imperial);
+  box-shadow: 0 4px 10px rgba(107, 31, 42, 0.15);
+}
+
 /* ── SEÇÃO SOLICITAÇÃO VIP (FORMULÁRIO) ────────────────────────────────── */
 .request-section {
   padding: 100px 8%;
@@ -392,8 +727,7 @@ img {
 }
 
 .vip-form input,
-.vip-form textarea,
-.vip-form select {
+.vip-form textarea {
   width: 100%;
   padding: 12px 14px;
   border-radius: 6px;
@@ -407,8 +741,7 @@ img {
 }
 
 .vip-form input:focus,
-.vip-form textarea:focus,
-.vip-form select:focus {
+.vip-form textarea:focus {
   background-color: var(--warm-white);
   border-color: var(--gold-champagne);
   box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.08);
