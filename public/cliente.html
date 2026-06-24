@@ -1933,7 +1933,7 @@
           
           const diaData = somarDias(dataInicioStr, index);
           const headerTag = dia.tourGuiado 
-            ? '<span class="timeline-day-tag">🚗 Tour Guiado</span>' 
+            ? '<span class="timeline-day-tag">Tour Guiado</span>' 
             : '<span class="timeline-day-tag guide-no">自由 Roteiro Livre</span>';
             
           let elementsHTML = '';
@@ -1952,7 +1952,7 @@
                 temConteudo = true;
                 elementsHTML += `
                   <div class="event-pill info" style="border-left-color: var(--accent); background: var(--accent-light); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span>🕒 <strong>Encontro com Guia:</strong> ${el.horarioEncontro || '--:--'} no ${el.localEncontro || 'Local combinado'} ${el.duracaoTour ? `(Duração: ${el.duracaoTour})` : ''}</span>
+                    <span><strong>Encontro com Guia:</strong> ${el.horarioEncontro || '--:--'} — ${el.localEncontro || 'Local combinado'} ${el.duracaoTour ? `(${el.duracaoTour})` : ''}</span>
                   </div>
                 `;
               } else if (el.tipo === 'sequencia') {
@@ -1964,7 +1964,7 @@
                   : '';
                 elementsHTML += `
                   <div style="margin-bottom: 14px; width: 100%;">
-                    <div style="margin-bottom: 6px;">📍 <strong style="color: var(--primary);">${el.nomeDaRota || 'Atividades recomendadas'}</strong></div>
+                    <div style="margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary);">${el.nomeDaRota || 'Atividades recomendadas'}</div>
                     ${atrHtml}
                   </div>
                 `;
@@ -1989,28 +1989,30 @@
                     : `window.rolarParaVoucher('${expVoucher.id}')`;
                   
                   clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
-                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: var(--accent); background: rgba(223, 183, 108, 0.1); color: var(--primary); font-weight: 700; flex-shrink:0; padding: 4px 10px;">🎟️ Ver Bilhete</span>`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: var(--accent); background: rgba(223, 183, 108, 0.1); color: var(--primary); font-weight: 700; flex-shrink:0; padding: 4px 10px;">Ver Bilhete</span>`;
                   
                   if (el.instrucoesPosCompra) {
-                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>💡</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
                   }
                 } else {
                   vchIndicator = `
                     <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
-                      ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
+                      ${el.compradoHeian !== false ? 'Pela Heian' : 'Pelo Cliente'}
                     </span>
                   `;
                   
                   if (el.instrucoesPreCompra) {
-                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>⚠️</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
                   }
                 }
 
                 elementsHTML += `
                   <div class="event-pill experience" ${clickAttr}>
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                      <span>🎟️ <strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--primary);">(${el.horaPartida})</span>` : ''}</span>
-                      ${vchIndicator}
+                    <div style="width: 100%;">
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+                        <span><strong>${el.nomeExp || 'Ingresso'}</strong>${el.horaPartida ? ` <span style="font-weight:600; color:var(--primary);">(${el.horaPartida})</span>` : ''}</span>
+                        ${vchIndicator}
+                      </div>
                     </div>
                     ${instrucaoAdicional}
                   </div>
@@ -2036,33 +2038,35 @@
                     : `window.rolarParaVoucher('${transVoucher.id}')`;
                   
                   clickAttr = `onclick="${clickAction}" style="cursor:pointer;"`;
-                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); color: #2563eb; font-weight: 700; flex-shrink:0; padding: 4px 10px;">🎟️ Ver Bilhete</span>`;
+                  vchIndicator = `<span class="meta-badge" style="font-size: 11px; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); color: #2563eb; font-weight: 700; flex-shrink:0; padding: 4px 10px;">Ver Bilhete</span>`;
                   
                   if (el.instrucoesPosCompra) {
-                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>💡</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.15); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPosCompra}</span></div>`;
                   }
                 } else {
                   vchIndicator = `
                     <span class="meta-badge" style="font-size: 11px; border-color: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.2)' : 'rgba(35, 31, 27, 0.15)'}; background: ${el.compradoHeian !== false ? 'rgba(76, 175, 80, 0.08)' : 'rgba(35, 31, 27, 0.04)'}; color: ${el.compradoHeian !== false ? '#2e7d32' : 'var(--ink-mid)'}; font-weight: 700; flex-shrink:0; padding: 4px 10px;">
-                      ${el.compradoHeian !== false ? 'Emitido pela Heian' : 'Pelo Cliente'}
+                      ${el.compradoHeian !== false ? 'Pela Heian' : 'Pelo Cliente'}
                     </span>
                   `;
                   
                   if (el.instrucoesPreCompra) {
-                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; width: 100%;"><span>⚠️</span> <span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
+                    instrucaoAdicional = `<div style="font-size: 12px; color: #a16207; background: #fef9c3; border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; gap: 6px; width: 100%;"><span style="font-style: normal; font-weight: 500; text-align: left;">${el.instrucoesPreCompra}</span></div>`;
                   }
                 }
                 
                 const rotaStr = el.cidadeOrigem || el.cidadeDestino 
-                  ? `<div style="font-size: 11.5px; color: var(--ink-mid); margin-top: 2px;"><strong>${el.cidadeOrigem || ''}</strong> ${el.cidadeDestino ? `➔ <strong>${el.cidadeDestino}</strong>` : ''}${el.linha ? ` | Linha: ${el.linha}` : ''}${el.categoria ? ` (${el.categoria})` : ''}${el.tempo ? ` | ⏱ ${el.tempo}` : ''}</div>`
+                  ? `<div style="font-size: 11.5px; color: var(--ink-mid); margin-top: 4px;"><strong>${el.cidadeOrigem || ''}</strong> ${el.cidadeDestino ? `→ <strong>${el.cidadeDestino}</strong>` : ''}${el.linha ? ` · ${el.linha}` : ''}${el.categoria ? ` · ${el.categoria}` : ''}${el.tempo ? ` · ${el.tempo}` : ''}</div>`
                   : '';
                 elementsHTML += `
                   <div class="event-pill transport" ${clickAttr}>
-                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                      <span>🚄 <strong>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb;">(${el.horario})</span>` : ''}</span>
-                      ${vchIndicator}
+                    <div style="width: 100%;">
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+                        <span><strong>${el.tipoTransporte || 'Deslocamento'}</strong>${el.horario ? ` <span style="font-weight:600; color:#2563eb;">(${el.horario})</span>` : ''}</span>
+                        ${vchIndicator}
+                      </div>
+                      ${rotaStr}
                     </div>
-                    ${rotaStr}
                     ${instrucaoAdicional}
                   </div>
                 `;
