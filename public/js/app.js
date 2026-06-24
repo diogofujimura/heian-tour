@@ -4585,37 +4585,6 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
           onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
         });
       }
-      if (!v.validadePassaporte) {
-        pendenciasDados.push({
-          texto: `Falta validade do passaporte para o viajante: ${v.nome || 'Sem Nome'}.`,
-          tipo: "error",
-          labelAcao: "Preencher",
-          onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
-        });
-      } else {
-        try {
-          const valDate = new Date(v.validadePassaporte);
-          const limitDate = new Date();
-          limitDate.setMonth(limitDate.getMonth() + 6);
-          if (valDate < new Date()) {
-            pendenciasDados.push({
-              texto: `Passaporte do viajante ${v.nome || 'Sem Nome'} está VENCIDO (${v.validadePassaporte}).`,
-              tipo: "error",
-              labelAcao: "Preencher",
-              onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
-            });
-          } else if (valDate < limitDate) {
-            pendenciasDados.push({
-              texto: `Passaporte do viajante ${v.nome || 'Sem Nome'} expira em < 6 meses (${v.validadePassaporte}).`,
-              tipo: "warning",
-              labelAcao: "Preencher",
-              onclick: `window.switchClientTab('dados', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
-            });
-          }
-        } catch (e) {
-          console.error("Erro ao validar passaporte:", e);
-        }
-      }
     });
   }
 
@@ -4712,27 +4681,35 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
         dia.elementos.forEach(el => {
           if (el.tipo === 'transporte') {
             const t = el.transportInfo || {};
-            const desc = `${t.tipoTransporte || el.tipoServico || 'Transporte'}${el.cidadeOrigem && el.cidadeDestino ? ` (${el.cidadeOrigem} ➔ ${el.cidadeDestino})` : ''}`;
-            const hora = t.horario || el.horaEncontro;
+            // tipoTransporte e campos ficam direto em el.*
+            const transpNome = el.tipoTransporte || t.tipoTransporte || el.tipoServico || 'Transporte';
+            const origem = el.cidadeOrigem || t.origem || '';
+            const destino = el.cidadeDestino || t.destino || '';
+            const trechoValido = origem && destino && origem.toLowerCase() !== destino.toLowerCase();
+            const desc = `${transpNome}${trechoValido ? ` (${origem} ➔ ${destino})` : (origem ? ` (${origem})` : '')}`;
+            const hora = el.horario || t.horario || el.horaEncontro;
 
             // 1. Shinkansen/trem sem horário
-            const isTrem = (t.tipoTransporte || '').toLowerCase().includes('shinkansen') || (t.tipoTransporte || '').toLowerCase().includes('trem') || (el.tipoServico || '').toLowerCase().includes('shinkansen') || (el.tipoServico || '').toLowerCase().includes('trem');
+            const isTrem = transpNome.toLowerCase().includes('shinkansen') || transpNome.toLowerCase().includes('trem');
             if (isTrem && (!hora || hora === 'Definir' || hora.trim() === '')) {
               pendenciasEmissoes.push({
-                texto: `Shinkansen/Trem sem horário: ${desc} (${diaLabel}).`,
+                texto: `Shinkansen/Trem sem horário definido: ${desc} (${diaLabel}).`,
                 tipo: "error",
                 labelAcao: "Ver Roteiro",
                 onclick: `window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
               });
             }
 
-            // 2. Comprado Heian sem voucher anexado
-            const compradoPelaHeian = t.compradoHeian !== false;
+            // 2. Comprado Heian sem voucher
+            const compradoPelaHeian = el.compradoHeian !== false && t.compradoHeian !== false;
             if (compradoPelaHeian) {
-              const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('transporte:') && v.atracaoNome.includes(t.tipoTransporte || el.tipoServico));
+              const trechoSlug = origem && destino ? `|${origem}>${destino}` : '';
+              const transpKey = `transporte:${transpNome}${trechoSlug}:d${dIdx}`;
+              const temVoucher = vouchers.some(vx => vx.atracaoNome === transpKey)
+                || vouchers.some(vx => vx.atracaoNome === `transporte:${transpNome}`);
               if (!temVoucher) {
                 pendenciasEmissoes.push({
-                  texto: `Falta anexo do voucher de Transporte Heian: ${desc} (${diaLabel}).`,
+                  texto: `Falta bilhete/voucher de ${transpNome}${trechoValido ? `: ${origem} ➔ ${destino}` : ''} (${diaLabel}).`,
                   tipo: "error",
                   labelAcao: "Anexar",
                   onclick: `window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
@@ -4741,26 +4718,31 @@ window.renderAbaResumoCliente = async function(cliente, estadias = [], viajantes
             }
           } else if (el.tipo === 'experiencia') {
             const e = el.expInfo || {};
-            const nomeExp = e.nomeExp || el.titulo || 'Experiência';
-            const hora = e.horaPartida || el.horaEncontro;
+            // nomeExp e campos ficam direto em el.*
+            const nomeExp = el.nomeExp || e.nomeExp || el.titulo || 'Experiência';
+            // Ignorar itens sem nome real (evita "Experiência (Dia X ())")
+            if (!nomeExp || nomeExp === 'Experiência') return;
+            const hora = el.horaPartida || e.horaPartida || el.horaEncontro || e.horaEncontro;
 
-            // 1. Experiência sem horário
+            // 1. Experiência sem horário (apenas se realmente não tiver)
             if (!hora || hora === 'Definir' || hora.trim() === '') {
               pendenciasEmissoes.push({
-                texto: `Experiência sem horário: ${nomeExp} (${diaLabel}).`,
+                texto: `Horário não definido: ${nomeExp} (${diaLabel}).`,
                 tipo: "warning",
                 labelAcao: "Ver Roteiro",
                 onclick: `window.switchClientTab('roteiros', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
               });
             }
 
-            // 2. Comprado Heian sem voucher anexado
-            const compradoPelaHeian = e.compradoHeian !== false;
+            // 2. Comprado Heian sem voucher
+            const compradoPelaHeian = el.compradoHeian !== false && e.compradoHeian !== false;
             if (compradoPelaHeian) {
-              const temVoucher = vouchers.some(v => v.atracaoNome && v.atracaoNome.startsWith('experiencia:') && v.atracaoNome.includes(nomeExp));
+              const expKey = `experiencia:${nomeExp}:d${dIdx}`;
+              const temVoucher = vouchers.some(vx => vx.atracaoNome === expKey)
+                || vouchers.some(vx => vx.atracaoNome === `experiencia:${nomeExp}`);
               if (!temVoucher) {
                 pendenciasEmissoes.push({
-                  texto: `Falta anexo do voucher de Experiência Heian: ${nomeExp} (${diaLabel}).`,
+                  texto: `Falta ingresso/voucher: ${nomeExp} (${diaLabel}).`,
                   tipo: "error",
                   labelAcao: "Anexar",
                   onclick: `window.switchClientTab('vouchers', '${cliente.id}', '${estadiasStr}', '${viajantesStr}', '${emailsStr}')`
