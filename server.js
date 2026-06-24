@@ -660,6 +660,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+});
+
 app.get('/cadastro', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
 });
@@ -794,6 +798,10 @@ if (process.env.APP_PASS) {
     realm: 'HeianQuoteAuth'
   }));
 }
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, path) => {

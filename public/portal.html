@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heian Tour — Viagens de Luxo e Roteiros Personalizados para o Japão</title>
+  <meta name="description" content="Planeje sua imersão exclusiva pelo Japão. Roteiros de luxo totalmente personalizados, ryokans tradicionais, gastronomia estrelada e guias dedicados em português.">
+  
+  <!-- SEO Open Graph -->
+  <meta property="og:title" content="Heian Tour — Japão Sob Medida & Experiências VIP">
+  <meta property="og:description" content="Roteiros personalizados e experiências exclusivas pelo Japão para viajantes exigentes.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/heian_portal_hero.png">
+  
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS do Portal -->
+  <link rel="stylesheet" href="css/portal.css">
+</head>
+<body>
+
+  <!-- SVG Sprite de Ícones de Linha Fina (Lucide/VIP) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-compass" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+    </symbol>
+    <symbol id="icon-briefcase" viewBox="0 0 24 24">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+    </symbol>
+    <symbol id="icon-hotel" viewBox="0 0 24 24">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </symbol>
+    <symbol id="icon-map" viewBox="0 0 24 24">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
+    </symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24">
+      <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+    </symbol>
+  </svg>
+
+  <!-- CABEÇALHO -->
+  <header class="site-header">
+    <a href="#" class="site-logo">
+      <img src="assets/logo.png" alt="Heian Tour">
+    </a>
+    <nav class="nav-menu">
+      <a href="#conceito" class="nav-link">O Conceito</a>
+      <a href="#servicos" class="nav-link">Serviços VIP</a>
+      <a href="#solicitar" class="nav-link">Planejar Viagem</a>
+      <button class="btn-vip-access" onclick="abrirModalAcesso()">Área do Viajante</button>
+    </nav>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <svg class="v-icon" style="width: 1.2em; height: 1.2em; stroke: currentColor;"><use href="#icon-compass"></use></svg>
+        Japão Boutique & Exclusivo
+      </div>
+      <h1>A arte de vivenciar o Japão de forma <span>VIP e sob medida.</span></h1>
+      <p>Desenhamos jornadas personalizadas de alto padrão, combinando sofisticação, curadoria de luxo e suporte completo em português para viajantes exigentes.</p>
+      <div class="hero-buttons">
+        <a href="#solicitar" class="btn-primary">Solicitar Roteiro VIP</a>
+        <button class="btn-secondary" onclick="abrirModalAcesso()">Consultar Minha Viagem</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- O CONCEITO / FILOSOFIA -->
+  <section id="conceito" class="philosophy-section">
+    <span class="section-label">A Filosofia Heian</span>
+    <h2 class="section-title">Tranquilidade, Equilíbrio e Alta Curadoria</h2>
+    <div class="philosophy-text-wrapper">
+      <p class="philosophy-highlight">"Inspirados no refinamento estético e na paz do período clássico japonês (Heian), nós elevamos a viagem a uma obra de arte personalizada."</p>
+      <p class="philosophy-body">
+        Não acreditamos em roteiros prontos ou passeios genéricos. Para nós, cada viajante é único. Nossa operação boutique envolve o planejamento minucioso de cada detalhe da sua imersão no Japão. Cuidamos de toda a logística, reservas nos melhores Ryokans tradicionais do país com águas termais (Onsens) privativas, e oferecemos acompanhamento com guias bilíngues experientes para que sua única preocupação seja absorver a essência da cultura japonesa.
+      </p>
+    </div>
+  </section>
+
+  <!-- SERVIÇOS VIP -->
+  <section id="servicos" class="services-section">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span class="section-label">Curadoria Heian</span>
+      <h2 class="section-title" style="margin-bottom: 0;">Serviços Exclusivos & VIP</h2>
+    </div>
+    
+    <div class="services-grid">
+      <!-- Card 1 -->
+      <div class="service-card">
+        <div class="service-icon-box">
+          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-compass"></use></svg>
+        </div>
+        <h3>Roteiros Sob Medida</h3>
+        <p>Planejamento de itinerários dia a dia feito sob medida com base no seu ritmo, desejos e estilo de viagem, equilibrando passeios icônicos e segredos locais escondidos.</p>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="service-card">
+        <div class="service-icon-box">
+          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-hotel"></use></svg>
+        </div>
+        <h3>Hospedagem & Ryokans</h3>
+        <p>Acesso e reserva nas melhores hospedagens de luxo do Japão, incluindo Ryokans tradicionais de alto padrão com serviços de jantar Kaiseki privativo e banhos termais terápicos.</p>
+      </div>
+      
+      <!-- Card 3 -->
+      <div class="service-card">
+        <div class="service-icon-box">
+          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-map"></use></svg>
+        </div>
+        <h3>Experiências Exclusivas</h3>
+        <p>Curadoria de atividades exclusivas: cerimônia do chá particular em templos reservados, workshops com mestres artesãos, ingressos VIP e reservas em restaurantes estrelados.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLICITAÇÃO VIP (FORMULÁRIO DE CONTATO) -->
+  <section id="solicitar" class="request-section">
+    <div class="form-container">
+      <div class="form-header">
+        <h2>Solicite Sua Viagem VIP</h2>
+        <p>Deixe suas informações básicas. Nossa equipe boutique entrará em contato para agendar uma call de alinhamento e iniciar o rascunho da sua jornada personalizada.</p>
+      </div>
+      
+      <form id="solicitacaoForm" class="vip-form" onsubmit="enviarSolicitacao(event)">
+        <div class="form-group">
+          <label for="formNome">Nome Completo</label>
+          <input type="text" id="formNome" placeholder="Ex: Roberto Silva" required>
+        </div>
+        <div class="form-group">
+          <label for="formEmail">E-mail</label>
+          <input type="email" id="formEmail" placeholder="roberto@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="formAdultos">Qtd. Adultos</label>
+          <input type="number" id="formAdultos" min="1" value="2" required>
+        </div>
+        <div class="form-group">
+          <label for="formCriancas">Qtd. Crianças</label>
+          <input type="number" id="formCriancas" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="formDataInicio">Data Estimada de Início</label>
+          <input type="date" id="formDataInicio">
+        </div>
+        <div class="form-group">
+          <label for="formDataFim">Data Estimada de Fim</label>
+          <input type="date" id="formDataFim">
+        </div>
+        <div class="form-group full-width">
+          <label for="formObservacoes">O que você busca nessa experiência?</label>
+          <textarea id="formObservacoes" placeholder="Conte-nos mais sobre seus sonhos de viagem, hotéis de preferência ou experiências especiais que gostaria de realizar..."></textarea>
+        </div>
+        
+        <button type="submit" id="btnSubmitForm" class="btn-form-submit">Enviar Solicitação VIP</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- MODAL BUSCA CLIENTE (ÁREA VIP) -->
+  <div id="modalAcesso" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="fecharModalAcesso()">
+        <svg class="v-icon no-margin" style="stroke: currentColor; width: 1.2em; height: 1.2em;"><use href="#icon-x"></use></svg>
+      </button>
+      <h3>Área do Viajante VIP</h3>
+      <p>Insira seu código exclusivo ou nome de viajante para acessar seu roteiro interativo e vouchers.</p>
+      
+      <form class="client-search-form" onsubmit="buscarViagemCliente(event)">
+        <input type="text" id="inputCodCliente" placeholder="Digite seu código ou nome" required>
+        <button type="submit" class="btn-search-submit">Acessar Meu Roteiro</button>
+        <div id="msgErroBusca" class="search-error">Nenhum roteiro ativo encontrado para este código.</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-logo">
+      <img src="assets/logo.png" alt="Heian Tour">
+    </div>
+    <div class="footer-links">
+      <a href="#conceito">O Conceito</a>
+      <a href="#servicos">Serviços VIP</a>
+      <a href="#solicitar">Planejar</a>
+      <a href="/admin" target="_blank">Acesso Admin</a>
+    </div>
+    <div class="footer-copy">
+      <p>&copy; 2026 Heian Tour. Todos os direitos reservados. Experiências exclusivas e roteiros sob medida.</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT DE INTERAÇÕES E APIS -->
+  <script>
+    // Controle do Modal
+    function abrirModalAcesso() {
+      const modal = document.getElementById('modalAcesso');
+      modal.classList.add('active');
+      document.getElementById('inputCodCliente').focus();
+    }
+
+    function fecharModalAcesso() {
+      const modal = document.getElementById('modalAcesso');
+      modal.classList.remove('active');
+      document.getElementById('msgErroBusca').style.display = 'none';
+      document.getElementById('inputCodCliente').value = '';
+    }
+
+    // Fecha modal clicando fora dele
+    window.addEventListener('click', function(e) {
+      const modal = document.getElementById('modalAcesso');
+      if (e.target === modal) {
+        fecharModalAcesso();
+      }
+    });
+
+    // Função de Busca e Redirecionamento da Área do Cliente
+    async function buscarViagemCliente(e) {
+      e.preventDefault();
+      const query = document.getElementById('inputCodCliente').value.trim();
+      const errorEl = document.getElementById('msgErroBusca');
+      errorEl.style.display = 'none';
+
+      if (!query) return;
+
+      // Sanitiza a string digitada para gerar um slug correspondente
+      // Exemplo: "Carlos Alberto" -> "carlos-alberto"
+      const slug = query.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
+        .trim();
+
+      try {
+        // Consulta o endpoint público do servidor para ver se a viagem existe
+        const res = await fetch(`/api/public/client-data/slug/${slug}`);
+        if (!res.ok) throw new Error('Não encontrado');
+        
+        const data = await res.json();
+        if (data.success && data.clientInfo) {
+          // Se encontrou com sucesso, redireciona o cliente para a Área do Cliente
+          window.location.href = `/cliente/${slug}`;
+        } else {
+          errorEl.textContent = 'Nenhuma viagem ativa encontrada para este nome.';
+          errorEl.style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = 'Erro ao buscar viagem. Verifique a grafia do seu nome.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    // Envio do formulário de solicitação de Viagem VIP
+    async function enviarSolicitacao(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitForm');
+      const oldText = btn.textContent;
+      
+      const payload = {
+        nome: document.getElementById('formNome').value.trim(),
+        email: document.getElementById('formEmail').value.trim(),
+        adultos: document.getElementById('formAdultos').value,
+        criancas: document.getElementById('formCriancas').value,
+        dataInicio: document.getElementById('formDataInicio').value || undefined,
+        dataFim: document.getElementById('formDataFim').value || undefined,
+        observacoes: document.getElementById('formObservacoes').value.trim()
+      };
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Enviando Solicitação...';
+        
+        const res = await fetch('/api/public/cadastro', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Erro na requisição');
+        }
+
+        alert('Sua solicitação de roteiro VIP foi enviada com sucesso! Nossa equipe boutique entrará em contato em breve.');
+        document.getElementById('solicitacaoForm').reset();
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao enviar solicitação: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    }
+  </script>
+</body>
+</html>
