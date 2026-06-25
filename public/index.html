@@ -493,6 +493,7 @@ window.addEventListener('unhandledrejection', function(e) {
                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
                      <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
                      <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                     <button id="btnVerPerfilClienteRoteiro" class="btn-secondary" style="background:rgba(196,163,90,0.06); border-color:rgba(196,163,90,0.25); color:var(--gold-dk); font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirDrawerPerfilCliente()"><svg class="v-icon" style="margin-right:2px; stroke:var(--gold-dk);"><use href="#icon-user"></use></svg>Ver Perfil do Cliente</button>
                      <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()"><svg class="v-icon" style="margin-right:2px; stroke:#6d28d9;"><use href="#icon-sparkles"></use></svg>Gerar com IA</button>
                      <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
                      <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
@@ -1920,6 +1921,21 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="btn-primary" id="btnConfirmarGerarIA" onclick="window.gerarRoteiroComIA()" style="margin-top:0; padding:8px 16px; font-size:12px; background-color:#6d28d9; border-color:#5b21b6; font-weight:600;">🪄 Gerar Roteiro</button>
     </div>
 
+  </div>
+</div>
+
+<!-- DRAWER LATERAL DE PERFIL DO CLIENTE -->
+<div id="drawerPerfilCliente" style="position: fixed; top: 0; left: -450px; width: 450px; max-width: 90vw; height: 100vh; background: var(--warm-white); border-right: 1px solid var(--border); box-shadow: 5px 0 25px rgba(0,0,0,0.15); z-index: 10000; transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; box-sizing: border-box;">
+  <!-- Header do Drawer -->
+  <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff;">
+    <h3 style="margin: 0; color: var(--gold-dk); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+      <svg class="v-icon" style="width:1.2em; height:1.2em; margin:0;"><use href="#icon-user"></use></svg> Ficha de Preferências do Viajante
+    </h3>
+    <button onclick="window.fecharDrawerPerfilCliente()" style="background: transparent; border: none; font-size: 24px; color: var(--ink-lt); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; line-height: 1;">&times;</button>
+  </div>
+  <!-- Conteúdo do Drawer -->
+  <div id="drawerPerfilClienteContent" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 20px;">
+    <!-- Dados carregados via AJAX -->
   </div>
 </div>
 

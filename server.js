@@ -670,7 +670,33 @@ app.get('/cadastro', (req, res) => {
 
 app.post('/api/public/cadastro', async (req, res) => {
   try {
-    const { nome, email, viajantes, adultos, criancas, dataInicio, dataFim, vooChegada, vooPartida, hotel, observacoes } = req.body;
+    const {
+      nome,
+      email,
+      viajantes,
+      adultos,
+      criancas,
+      dataInicio,
+      dataFim,
+      vooChegada,
+      vooPartida,
+      hotel,
+      observacoes,
+      // novos campos de preferências
+      profissoes,
+      necessidadesEspeciais,
+      cidadesPretendeVisitar,
+      prioridades,
+      ritmo,
+      templos,
+      caminhada,
+      refeicoes,
+      interessesTour,
+      experienciasSazonais,
+      primeiraVez,
+      ocasiaoEspecial,
+      experienciasImperdiveis
+    } = req.body;
     
     if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
 
@@ -701,6 +727,184 @@ app.post('/api/public/cadastro', async (req, res) => {
     if (viajantes) properties['Nome dos Viajantes'] = { rich_text: [{ text: { content: viajantes } }] };
     if (observacoes) properties['Observações'] = { rich_text: [{ text: { content: observacoes } }] };
 
+    // Adiciona as 3 colunas estruturadas novas no Notion se fornecidas
+    if (profissoes) properties["Profissão dos Viajantes"] = { rich_text: [{ text: { content: profissoes } }] };
+    if (ocasiaoEspecial) properties["Ocasião Especial"] = { rich_text: [{ text: { content: ocasiaoEspecial } }] };
+    if (necessidadesEspeciais) properties["Necessidades Especiais"] = { rich_text: [{ text: { content: necessidadesEspeciais } }] };
+
+    // Construção dos blocos do Notion (children) para o relatório estruturado no corpo do card
+    const childrenBlocks = [];
+    
+    childrenBlocks.push({
+      object: "block",
+      type: "heading_2",
+      heading_2: {
+        rich_text: [{ type: "text", text: { content: "⛩️ Perfil de Viagem & Preferências" } }]
+      }
+    });
+
+    if (cidadesPretendeVisitar) {
+      childrenBlocks.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [
+            { type: "text", text: { content: "Cidades que pretende visitar: " }, annotations: { bold: true } },
+            { type: "text", text: { content: cidadesPretendeVisitar } }
+          ]
+        }
+      });
+    }
+
+    childrenBlocks.push({
+      object: "block",
+      type: "heading_3",
+      heading_3: {
+        rich_text: [{ type: "text", text: { content: "🏃 Estilo e Ritmo" } }]
+      }
+    });
+
+    if (ritmo) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Ritmo de Viagem: " }, annotations: { bold: true } },
+            { type: "text", text: { content: ritmo } }
+          ]
+        }
+      });
+    }
+
+    if (templos) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Visita a Templos: " }, annotations: { bold: true } },
+            { type: "text", text: { content: templos } }
+          ]
+        }
+      });
+    }
+
+    if (caminhada) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Ritmo de Caminhada: " }, annotations: { bold: true } },
+            { type: "text", text: { content: caminhada } }
+          ]
+        }
+      });
+    }
+
+    if (refeicoes) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Estilo de Refeições: " }, annotations: { bold: true } },
+            { type: "text", text: { content: refeicoes } }
+          ]
+        }
+      });
+    }
+
+    childrenBlocks.push({
+      object: "block",
+      type: "heading_3",
+      heading_3: {
+        rich_text: [{ type: "text", text: { content: "🎯 Interesses & Prioridades" } }]
+      }
+    });
+
+    if (prioridades) {
+      const prioText = Array.isArray(prioridades) ? prioridades.join(', ') : prioridades;
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Prioridades de Viagem: " }, annotations: { bold: true } },
+            { type: "text", text: { content: prioText } }
+          ]
+        }
+      });
+    }
+
+    if (interessesTour) {
+      const intText = Array.isArray(interessesTour) ? interessesTour.join(', ') : interessesTour;
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Foco dos Tours Guiados: " }, annotations: { bold: true } },
+            { type: "text", text: { content: intText } }
+          ]
+        }
+      });
+    }
+
+    if (primeiraVez) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Primeira vez no Japão? " }, annotations: { bold: true } },
+            { type: "text", text: { content: primeiraVez } }
+          ]
+        }
+      });
+    }
+
+    if (experienciasSazonais) {
+      childrenBlocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [
+            { type: "text", text: { content: "Interesse em experiências sazonais? " }, annotations: { bold: true } },
+            { type: "text", text: { content: experienciasSazonais } }
+          ]
+        }
+      });
+    }
+
+    if (experienciasImperdiveis) {
+      childrenBlocks.push({
+        object: "block",
+        type: "heading_3",
+        heading_3: {
+          rich_text: [{ type: "text", text: { content: "🌸 Experiências Imperdíveis & Desejos" } }]
+        }
+      });
+
+      childrenBlocks.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [{ type: "text", text: { content: experienciasImperdiveis } }]
+        }
+      });
+    }
+
+    const payloadNotion = {
+      parent: { database_id: NOTION_CLIENTS_DB_ID },
+      properties: properties
+    };
+
+    if (childrenBlocks.length > 0) {
+      payloadNotion.children = childrenBlocks;
+    }
+
     const response = await fetch(`https://api.notion.com/v1/pages`, {
       method: 'POST',
       headers: {
@@ -708,10 +912,7 @@ app.post('/api/public/cadastro', async (req, res) => {
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        parent: { database_id: NOTION_CLIENTS_DB_ID },
-        properties: properties
-      })
+      body: JSON.stringify(payloadNotion)
     });
 
     const result = await response.json();
@@ -773,7 +974,22 @@ app.post('/api/public/cadastro', async (req, res) => {
           estadias: currentEditingEstadias,
           viajantes: currentEditingViajantes,
           emails: currentEditingEmails,
-          fotoPerfil: req.body.fotoPerfil || ""
+          fotoPerfil: req.body.fotoPerfil || "",
+          preferencias: {
+            profissoes,
+            necessidadesEspeciais,
+            cidadesPretendeVisitar,
+            prioridades,
+            ritmo,
+            templos,
+            caminhada,
+            refeicoes,
+            interessesTour,
+            experienciasSazonais,
+            primeiraVez,
+            ocasiaoEspecial,
+            experienciasImperdiveis
+          }
         }
       });
     } catch (dbErr) {

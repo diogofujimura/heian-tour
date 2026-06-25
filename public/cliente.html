@@ -1641,6 +1641,7 @@
         <button class="tab-btn" onclick="switchTab(event, 'tab-info')"><svg class="v-icon"><use href="#icon-plane"></use></svg>Voos & Hotéis</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-payments')"><svg class="v-icon"><use href="#icon-credit-card"></use></svg>Extrato Financeiro</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-vouchers')"><svg class="v-icon"><use href="#icon-ticket"></use></svg>Ingressos & Vouchers</button>
+        <button class="tab-btn" id="tab-btn-preferencias" onclick="switchTab(event, 'tab-preferencias')" style="display:none;"><svg class="v-icon"><use href="#icon-user"></use></svg>Perfil de Viagem</button>
       </nav>
 
       <!-- TAB 1: ITINERARY -->
@@ -1805,6 +1806,18 @@
         </div>
         <div class="vouchers-grid" id="vouchers-list-container">
           <!-- Vouchers renderizados dinamicamente pelo JS -->
+        </div>
+      </section>
+
+      <!-- TAB 6: PREFERENCIAS (Perfil de Viagem) -->
+      <section id="tab-preferencias" class="tab-content">
+        <div class="preferencias-header-section" style="margin-bottom: 28px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+          <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--primary); margin-bottom: 6px;"><svg class="v-icon v-icon-lg"><use href="#icon-flower"></use></svg>Seu Estilo de Viagem</h2>
+          <p style="color: var(--ink-mid); font-size: 14px;">Estas são as preferências de viagem que você cadastrou. Nós as usamos para personalizar cada detalhe da sua jornada.</p>
+        </div>
+        
+        <div id="preferencias-container">
+          <!-- Renderizado dinamicamente pelo JS -->
         </div>
       </section>
     </main>
@@ -2504,6 +2517,9 @@
 
       // 7. Renderizar Vouchers na Central
       renderClientVouchers(clientLocalInfo.vouchers || []);
+
+      // 8. Renderizar Perfil / Estilo de Viagem se disponível
+      renderClientPreferencias(clientLocalInfo.preferencias);
     }
 
     // --- RENDERIZAR VOUCHERS NA CENTRAL ---
@@ -2754,6 +2770,224 @@
         }
       }, 100);
     };
+
+    // --- RENDERIZAR PERFIL / ESTILO DE VIAGEM ---
+    function renderClientPreferencias(preferencias) {
+      const tabBtn = document.getElementById('tab-btn-preferencias');
+      const container = document.getElementById('preferencias-container');
+      if (!tabBtn || !container) return;
+
+      if (!preferencias || Object.keys(preferencias).length === 0 || !preferencias.prioridades) {
+        tabBtn.style.display = 'none';
+        return;
+      }
+
+      // Exibe a aba na navegação
+      tabBtn.style.display = 'inline-flex';
+
+      // Monta as prioridades como badges
+      const prioridadesBadges = (preferencias.prioridades || [])
+        .map(p => `<span class="pref-badge">${p}</span>`)
+        .join('');
+
+      // Monta os interesses em tour
+      const interessesBadges = (preferencias.interessesTour || [])
+        .map(i => `<span class="pref-badge-outline">${i}</span>`)
+        .join('');
+
+      // Montar HTML estilizado
+      container.innerHTML = `
+        <style>
+          .pref-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 16px;
+          }
+          .pref-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+          }
+          .pref-card:hover {
+            transform: translateY(-2px);
+          }
+          .pref-card-title {
+            font-family: var(--ff-display);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--crimson);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+          }
+          .pref-card-title svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--crimson);
+          }
+          .pref-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--crimson) 0%, #4A151D 100%);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(107,31,42,0.12);
+          }
+          .pref-badge-outline {
+            display: inline-block;
+            border: 1px solid var(--gold);
+            color: var(--gold-dk);
+            background: var(--gold-ultra-lt);
+            padding: 5px 13px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 8px;
+          }
+          .pref-info-item {
+            margin-bottom: 16px;
+          }
+          .pref-info-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ink-lt);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+          }
+          .pref-info-value {
+            font-size: 14px;
+            color: var(--ink-mid);
+            font-weight: 500;
+            line-height: 1.5;
+          }
+          @media (max-width: 768px) {
+            .pref-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        </style>
+        
+        <div class="pref-grid">
+          <!-- CARD 1: ESTILO & RITMO -->
+          <div class="pref-card">
+            <h3 class="pref-card-title">
+              <svg class="v-icon"><use href="#icon-compass"></use></svg>
+              Ritmo & Estilo de Viagem
+            </h3>
+            
+            <div class="pref-info-item">
+              <div class="pref-info-label">Ritmo Geral das Atividades</div>
+              <div class="pref-info-value">🏃 ${preferencias.ritmo || 'Não informado'}</div>
+            </div>
+            
+            <div class="pref-info-item">
+              <div class="pref-info-label">Visitas a Templos & Santuários</div>
+              <div class="pref-info-value">⛩️ ${preferencias.templos || 'Não informado'}</div>
+            </div>
+            
+            <div class="pref-info-item">
+              <div class="pref-info-label">Disposição para Caminhadas</div>
+              <div class="pref-info-value">👣 ${preferencias.caminhada || 'Não informado'}</div>
+            </div>
+            
+            <div class="pref-info-item">
+              <div class="pref-info-label">Preferência Alimentar (Dia a Dia)</div>
+              <div class="pref-info-value">🍣 ${preferencias.refeicoes || 'Não informado'}</div>
+            </div>
+          </div>
+          
+          <!-- CARD 2: PRIORIDADES & INTERESSES -->
+          <div class="pref-card">
+            <h3 class="pref-card-title">
+              <svg class="v-icon"><use href="#icon-flower"></use></svg>
+              Foco & Interesses no Japão
+            </h3>
+            
+            <div class="pref-info-item">
+              <div class="pref-info-label">Focos de Destaque da Viagem</div>
+              <div style="margin-top: 8px;">
+                ${prioridadesBadges || '<span style="color:var(--ink-lt); font-size:13px;">Não informado</span>'}
+              </div>
+            </div>
+            
+            <div class="pref-info-item" style="margin-top: 20px;">
+              <div class="pref-info-label">Foco dos Tours com Nossos Guias</div>
+              <div style="margin-top: 8px;">
+                ${interessesBadges || '<span style="color:var(--ink-lt); font-size:13px;">Não informado</span>'}
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 16px; margin-top: 20px;">
+              <div class="pref-info-item" style="flex:1;">
+                <div class="pref-info-label">Primeira vez no Japão?</div>
+                <div class="pref-info-value">${preferencias.primeiraVez || 'Não informado'}</div>
+              </div>
+              <div class="pref-info-item" style="flex:1;">
+                <div class="pref-info-label">Experiências Sazonais?</div>
+                <div class="pref-info-value">${preferencias.experienciasSazonais || 'Não informado'}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- CARD 3: LOGÍSTICA & DETALHES -->
+          <div class="pref-card" style="grid-column: span 2;">
+            <h3 class="pref-card-title">
+              <svg class="v-icon"><use href="#icon-briefcase"></use></svg>
+              Detalhes Complementares & Ocasião Especial
+            </h3>
+            
+            <div class="pref-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; border:none; padding:0; margin:0; box-shadow:none;">
+              <div>
+                <div class="pref-info-item">
+                  <div class="pref-info-label">Profissões dos Viajantes</div>
+                  <div class="pref-info-value">💼 ${preferencias.profissoes || 'Não informado'}</div>
+                </div>
+                
+                <div class="pref-info-item">
+                  <div class="pref-info-label">Cidades Desejadas</div>
+                  <div class="pref-info-value">🗺️ ${preferencias.cidadesPretendeVisitar || 'Não informado'}</div>
+                </div>
+                
+                <div class="pref-info-item">
+                  <div class="pref-info-label">Ocasião Especial Celebrada</div>
+                  <div class="pref-info-value">🎉 ${preferencias.ocasiaoEspecial || 'Não, nenhuma especial no momento.'}</div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="pref-info-item">
+                  <div class="pref-info-label">Necessidades Especiais ou Cuidados</div>
+                  <div class="pref-info-value" style="white-space: pre-line;">♿ ${preferencias.necessidadesEspeciais || 'Nenhuma restrição registrada.'}</div>
+                </div>
+              </div>
+            </div>
+
+            ${preferencias.experienciasImperdiveis ? `
+              <div class="section-divider" style="margin: 16px 0; height: 1px; background: rgba(196,163,90,0.15);"></div>
+              <div class="pref-info-item" style="margin-bottom: 0;">
+                <div class="pref-info-label">⭐ Atrações dos Sonhos / Experiências Imperdíveis</div>
+                <div class="pref-info-value" style="font-style: italic; color: var(--crimson); font-size: 15px; margin-top: 6px; white-space: pre-line; line-height: 1.6;">
+                  "${preferencias.experienciasImperdiveis}"
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
 
     // --- LÓGICA DO POPOVER E CHIPS DE ATRAÇÃO NA ÁREA DO CLIENTE ---
     let atracaoMap = new Map();

@@ -5777,6 +5777,82 @@ window.visualizarVoucherAdmin = function(voucherId) {
   }
 };
 
+function buildPreferenciasHTML(preferencias) {
+  let prioridadesHTML = '';
+  if (preferencias.prioridades && preferencias.prioridades.length > 0) {
+    const prioArr = Array.isArray(preferencias.prioridades) ? preferencias.prioridades : [preferencias.prioridades];
+    prioridadesHTML = prioArr.map(p => `
+      <span style="display:inline-block; font-size:12px; background:rgba(196,163,90,0.06); border:1px solid rgba(196,163,90,0.25); color:var(--gold-dk); padding:4px 10px; border-radius:12px; margin-right:6px; margin-bottom:6px; font-weight:500;">${p}</span>
+    `).join('');
+  } else {
+    prioridadesHTML = '<span style="font-size:12px; color:var(--ink-lt); font-style:italic;">Nenhuma prioridade selecionada</span>';
+  }
+
+  let toursHTML = '';
+  if (preferencias.interessesTour && preferencias.interessesTour.length > 0) {
+    const tourArr = Array.isArray(preferencias.interessesTour) ? preferencias.interessesTour : [preferencias.interessesTour];
+    toursHTML = tourArr.map(t => `
+      <span style="display:inline-block; font-size:12px; background:rgba(107,31,42,0.04); border:1px solid rgba(107,31,42,0.12); color:var(--crimson); padding:4px 10px; border-radius:12px; margin-right:6px; margin-bottom:6px; font-weight:500;">${t}</span>
+    `).join('');
+  }
+
+  return `
+    <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 24px;">
+      <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-dk); margin-bottom: 16px; font-weight: 600; display:inline-flex; align-items:center; gap:4px;">
+        <svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:0;"><use href="#icon-star"></use></svg> Preferências & Perfil de Viagem
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        <!-- Card 1: Ritmo & Perfil Físico -->
+        <div style="background: rgba(196,163,90,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-sizing: border-box;">
+          <h4 style="font-size: 12px; color: var(--crimson); text-transform: uppercase; margin-top: 0; margin-bottom: 12px; font-weight: 600; letter-spacing:0.04em;">🏃 Ritmo & Estilo</h4>
+          <div style="font-size: 13px; display: flex; flex-direction: column; gap: 8px; color: var(--ink-dk); line-height: 1.4;">
+            <div><strong>Ritmo dos dias:</strong> ${preferencias.ritmo || 'Não informado'}</div>
+            <div><strong>Visitas a Templos:</strong> ${preferencias.templos || 'Não informado'}</div>
+            <div><strong>Caminhadas Diárias:</strong> ${preferencias.caminhada || 'Não informado'}</div>
+            <div><strong>Alimentação no Dia a Dia:</strong> ${preferencias.refeicoes || 'Não informado'}</div>
+          </div>
+        </div>
+
+        <!-- Card 2: Foco & Interesses -->
+        <div style="background: rgba(196,163,90,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-sizing: border-box;">
+          <h4 style="font-size: 12px; color: var(--crimson); text-transform: uppercase; margin-top: 0; margin-bottom: 12px; font-weight: 600; letter-spacing:0.04em;">🎯 Prioridades & Focos</h4>
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 11px; color: var(--ink-lt); margin-bottom: 6px; font-weight:500; text-transform: uppercase; letter-spacing: 0.05em;">Prioridades Gerais:</div>
+            <div>${prioridadesHTML}</div>
+          </div>
+          ${toursHTML ? `
+          <div>
+            <div style="font-size: 11px; color: var(--ink-lt); margin-bottom: 6px; font-weight:500; text-transform: uppercase; letter-spacing: 0.05em;">Foco nos Tours Guiados:</div>
+            <div>${toursHTML}</div>
+          </div>
+          ` : ''}
+        </div>
+
+        <!-- Card 3: Informações de Onboarding & Especial -->
+        <div style="background: rgba(196,163,90,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-sizing: border-box;">
+          <h4 style="font-size: 12px; color: var(--crimson); text-transform: uppercase; margin-top: 0; margin-bottom: 12px; font-weight: 600; letter-spacing:0.04em;">✨ Detalhes do Grupo</h4>
+          <div style="font-size: 13px; display: flex; flex-direction: column; gap: 8px; color: var(--ink-dk); line-height: 1.4;">
+            <div><strong>Primeira vez no Japão?</strong> ${preferencias.primeiraVez || 'Não informado'}</div>
+            <div><strong>Interesse Sazonal:</strong> ${preferencias.experienciasSazonais || 'Não informado'}</div>
+            ${preferencias.profissoes ? `<div><strong>Profissão dos Viajantes:</strong> ${preferencias.profissoes}</div>` : ''}
+            ${preferencias.ocasiaoEspecial ? `<div style="background: rgba(196,163,90,0.06); padding: 8px 12px; border-radius: 6px; border-left: 3px solid var(--gold); margin-top: 4px; font-size: 12.5px; color: var(--ink-dk);">🎉 <strong>Celebração:</strong> ${preferencias.ocasiaoEspecial}</div>` : ''}
+            ${preferencias.necessidadesEspeciais ? `<div style="background: rgba(220,53,69,0.03); padding: 8px 12px; border-radius: 6px; border-left: 3px solid var(--crimson); margin-top: 4px; font-size: 12.5px; color: var(--ink-dk);">⚠️ <strong>Necessidades Especiais:</strong> ${preferencias.necessidadesEspeciais}</div>` : ''}
+          </div>
+        </div>
+      </div>
+
+      ${preferencias.experienciasImperdiveis ? `
+      <!-- Destaque: Experiências dos Sonhos -->
+      <div style="background: rgba(107,31,42,0.02); border: 1px dashed rgba(107,31,42,0.25); border-radius: 12px; padding: 16px; margin-top: 16px; box-sizing: border-box;">
+        <h4 style="font-size: 12px; color: var(--crimson); text-transform: uppercase; margin-top: 0; margin-bottom: 8px; font-weight: 600; letter-spacing:0.04em; display:flex; align-items:center; gap:4px;">🌸 Experiência dos Sonhos / Imperdível</h4>
+        <p style="font-size: 13px; color: var(--ink-dk); font-style: italic; margin: 0; line-height: 1.5;">"${preferencias.experienciasImperdiveis}"</p>
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
   const contentDiv = document.getElementById('clientTabContent');
   if (!contentDiv) return;
@@ -5906,8 +5982,23 @@ function renderAbaDadosCliente(cliente, estadias, viajantes, emails) {
           ${estadiasHTML}
         </div>
       </div>
+      
+      <div id="preferenciasContainer"></div>
     </div>
   `;
+
+  // Busca assincronamente as preferências locais do cliente
+  fetch(`/api/clientes/local/${cliente.id}?t=${Date.now()}`)
+    .then(res => res.json())
+    .then(localData => {
+      if (localData && localData.preferencias) {
+        const container = document.getElementById('preferenciasContainer');
+        if (container) {
+          container.innerHTML = buildPreferenciasHTML(localData.preferencias);
+        }
+      }
+    })
+    .catch(err => console.error("Erro ao carregar preferências locais no painel:", err));
 }
 
 function renderAbaRoteiros(cliente) {

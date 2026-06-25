@@ -24,46 +24,202 @@
       min-height: 100vh !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
+      margin: 0;
+      padding: 0;
     }
     body {
       background-color: var(--bg-main, #F8F5F0);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 20px;
       font-family: var(--ff-body);
     }
+    
+    /* Split Layout Wrapper */
+    .cadastro-wrapper {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+    
+    /* Left Panel: Immersive Brand Sidebar */
+    .cadastro-sidebar {
+      width: 38%;
+      background-image: linear-gradient(rgba(61, 15, 22, 0.88), rgba(107, 31, 42, 0.94)), url('/assets/heian_portal_hero.png');
+      background-size: cover;
+      background-position: center;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #fff;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 2;
+      box-sizing: border-box;
+      border-right: 1px solid rgba(196, 163, 90, 0.2);
+    }
+    
+    .cadastro-sidebar-logo {
+      margin-bottom: 32px;
+    }
+    .cadastro-sidebar-logo img {
+      max-height: 90px;
+      object-fit: contain;
+    }
+    
+    .cadastro-sidebar h2 {
+      font-family: var(--ff-display);
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--gold-lt);
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+    .cadastro-sidebar p {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 320px;
+      line-height: 1.6;
+      margin: 0 auto;
+    }
+    
+    /* Right Panel: Content Main */
+    .cadastro-main {
+      margin-left: 38%;
+      width: 62%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 40px;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 1;
+    }
+
     .cadastro-container {
       width: 100%;
-      max-width: 700px;
-      background: rgba(255, 255, 255, 0.85);
+      max-width: 640px;
+      background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-radius: 24px;
-      box-shadow: 0 16px 48px rgba(107, 31, 42, 0.05);
+      box-shadow: 0 16px 48px rgba(107, 31, 42, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.8);
       padding: 40px;
-      position: relative;
+      box-sizing: border-box;
     }
+    
     .cadastro-header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
     .cadastro-header h1 {
       font-family: var(--ff-display);
       color: var(--crimson);
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 500;
       margin-bottom: 8px;
     }
     .cadastro-header p {
       color: var(--ink-mid);
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.5;
     }
+    
+    /* Progress Bar */
+    .progress-bar-container {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin-bottom: 35px;
+      padding: 0 10px;
+    }
+    .progress-line {
+      position: absolute;
+      top: 16px;
+      left: 0;
+      height: 3px;
+      background: rgba(196, 163, 90, 0.2);
+      width: 100%;
+      z-index: 1;
+    }
+    .progress-line::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: var(--crimson);
+      width: var(--progress-width, 0%);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+      flex: 1;
+    }
+    .step-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid rgba(196, 163, 90, 0.3);
+      color: var(--ink-lt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.3s ease;
+    }
+    .step-title {
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink-lt);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+    .progress-step.active .step-num {
+      border-color: var(--crimson);
+      background: var(--crimson);
+      color: #fff;
+      box-shadow: 0 0 0 5px rgba(107, 31, 42, 0.1);
+    }
+    .progress-step.active .step-title {
+      color: var(--crimson);
+      font-weight: 700;
+    }
+    .progress-step.completed .step-num {
+      border-color: var(--gold);
+      background: var(--gold);
+      color: #fff;
+    }
+    .progress-step.completed .step-title {
+      color: var(--gold-dk);
+    }
+
+    /* Wizard Steps */
+    .wizard-step {
+      display: none;
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .wizard-step.active {
+      display: block;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 22px;
     }
     .form-row {
       display: flex;
@@ -74,21 +230,42 @@
     }
     label {
       display: block;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--ink-lt);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      color: var(--ink-mid);
+      margin-bottom: 8px;
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+    .form-group-card {
+      background: rgba(196, 163, 90, 0.03);
+      border: 1px solid rgba(196, 163, 90, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+    .form-group-card:focus-within {
+      background: rgba(107, 31, 42, 0.02);
+      border-color: rgba(107, 31, 42, 0.18);
+    }
+    .form-group-card label {
+      font-family: var(--ff-display);
+      font-size: 14.5px;
+      color: var(--crimson);
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: none !important;
     }
     input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea {
       width: 100%;
-      padding: 14px 16px;
+      padding: 13px 16px;
       background: #ffffff;
-      border: 1px solid rgba(196, 163, 90, 0.3);
+      border: 1px solid rgba(196, 163, 90, 0.25);
       border-radius: 12px;
       font-family: var(--ff-body);
-      font-size: 15px;
+      font-size: 14px;
       color: var(--ink);
       transition: all 0.3s;
       box-sizing: border-box;
@@ -103,23 +280,110 @@
       box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.1);
       background: #fff;
     }
+
+    /* Selection Chips */
+    .chip-group, .chip-group-multiple {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+      margin-bottom: 22px;
+    }
+    .chip-label {
+      cursor: pointer;
+      user-select: none;
+      text-transform: none !important;
+      display: inline-block !important;
+    }
+    .chip-label input {
+      display: none;
+    }
+    .chip-label span {
+      display: inline-block;
+      padding: 11px 20px;
+      background: #ffffff;
+      border: 1px solid rgba(196, 163, 90, 0.2);
+      border-radius: 24px;
+      font-size: 13.5px;
+      color: var(--ink-mid);
+      font-weight: 500;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(107, 31, 42, 0.02);
+      text-transform: none !important;
+    }
+    .chip-label:hover span {
+      border-color: var(--gold);
+      background: var(--gold-ultra-lt);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(196, 163, 90, 0.12);
+    }
+    .chip-label input:checked + span {
+      background: linear-gradient(135deg, var(--crimson) 0%, #4A151D 100%);
+      color: #fff;
+      border-color: var(--crimson);
+      box-shadow: 0 6px 16px rgba(107, 31, 42, 0.22);
+      transform: scale(1.02);
+    }
+
+    /* Buttons Footer */
+    .wizard-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 32px;
+      border-top: 1px solid rgba(196, 163, 90, 0.15);
+      padding-top: 24px;
+    }
+    .btn-wizard {
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-family: var(--ff-body);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-prev {
+      background: #fff;
+      border: 1px solid rgba(196, 163, 90, 0.4);
+      color: var(--crimson);
+      min-width: 120px;
+    }
+    .btn-prev:hover {
+      background: var(--gold-ultra-lt);
+      border-color: var(--gold);
+    }
+    .btn-next {
+      background: linear-gradient(135deg, var(--crimson) 0%, #4A151D 100%);
+      border: none;
+      color: #fff;
+      flex: 1;
+    }
+    .btn-next:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(107, 31, 42, 0.22);
+    }
     .btn-submit {
-      width: 100%;
       background: linear-gradient(135deg, var(--crimson) 0%, #4A151D 100%);
       color: #fff;
       border: none;
-      padding: 16px;
+      padding: 14px 28px;
       border-radius: 12px;
       font-family: var(--ff-body);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-top: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      flex: 1;
     }
     .btn-submit:hover {
       transform: translateY(-2px);
@@ -149,41 +413,42 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .dynamic-row .form-group { margin-bottom: 0; flex: 1; }
     .dynamic-row .fg-small { max-width: 100px; flex: 0 0 100px; }
-    .btn-add-row { background: none; border: 1px dashed var(--gold); color: var(--gold-dk); padding: 12px; border-radius: 12px; cursor: pointer; font-family: var(--ff-body); font-size: 14px; font-weight: 500; transition: all 0.2s; width: 100%; text-align: center; }
+    .btn-add-row { background: none; border: 1px dashed var(--gold); color: var(--gold-dk); padding: 12px; border-radius: 12px; cursor: pointer; font-family: var(--ff-body); font-size: 13px; font-weight: 500; transition: all 0.2s; width: 100%; text-align: center; }
     .btn-add-row:hover { background: rgba(196, 163, 90, 0.05); }
     .btn-rm { background: #fee; border: none; color: #c00; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
     .btn-rm:hover { background: #fcc; }
     
-    .section-divider { height: 1px; background: rgba(196, 163, 90, 0.2); margin: 30px 0; }
-    .section-label { font-family: var(--ff-display); font-size: 18px; color: var(--crimson); font-weight: 500; margin-bottom: 16px; }
+    .section-divider { height: 1px; background: rgba(196, 163, 90, 0.15); margin: 24px 0; }
+    .section-label { font-family: var(--ff-display); font-size: 16px; color: var(--crimson); font-weight: 500; margin-bottom: 12px; }
 
     /* Success State */
     .success-state {
       display: none;
       text-align: center;
-      padding: 20px 0;
+      padding: 30px 0;
     }
     .success-icon {
       width: 80px;
       height: 80px;
-      background: var(--gold-soft);
-      color: var(--gold-dk);
+      background: var(--gold-soft, #FDFAF6);
+      color: var(--gold-dk, #C4A35A);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 32px;
       margin: 0 auto 24px;
+      border: 2px solid var(--gold);
     }
     .success-state h2 {
       font-family: var(--ff-display);
       color: var(--crimson);
-      font-size: 28px;
+      font-size: 26px;
       margin-bottom: 12px;
     }
     .success-state p {
       color: var(--ink-mid);
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.6;
     }
     
@@ -197,12 +462,72 @@
     .circle-1 { top: -100px; right: -100px; width: 500px; height: 500px; }
     .circle-2 { bottom: -150px; left: -100px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(107,31,42,0.05) 0%, rgba(107,31,42,0) 70%); }
 
-    @media (max-width: 600px) {
-      .cadastro-container { padding: 30px 20px; }
-      .form-row { flex-direction: column; gap: 0; }
-      .dynamic-row { flex-wrap: wrap; position: relative; padding-right: 50px; }
-      .dynamic-row .btn-rm { position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; font-size: 14px; }
-      .dynamic-row .fg-small { max-width: none; flex: 1 1 auto; }
+    /* Mobile header container, hidden on desktop */
+    .cadastro-mobile-header {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .cadastro-wrapper {
+        flex-direction: column;
+      }
+      .cadastro-sidebar {
+        display: none !important; /* Hide sidebar completely to avoid vertical clutter on mobile */
+      }
+      .cadastro-main {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px 12px; /* Optimize lateral spacing for smaller devices */
+      }
+      .cadastro-container {
+        padding: 24px 16px; /* Decrease padding inside the form card */
+        border-radius: 16px;
+      }
+      .cadastro-mobile-header {
+        display: block !important;
+        text-align: center;
+        margin: -24px -16px 24px -16px; /* Offset the container padding to make the banner flush */
+        padding: 30px 20px;
+        background-image: linear-gradient(rgba(61, 15, 22, 0.88), rgba(107, 31, 42, 0.94)), url('/assets/heian_portal_hero.png');
+        background-size: cover;
+        background-position: center;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        border-bottom: 1px solid rgba(196, 163, 90, 0.2);
+        color: #fff;
+      }
+      .mobile-logo {
+        margin-bottom: 12px;
+      }
+      .mobile-logo img {
+        max-height: 60px;
+        object-fit: contain;
+      }
+      .cadastro-mobile-header p {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.6;
+        margin: 0;
+      }
+      .cadastro-header {
+        display: none !important; /* Hide standard desktop title inside the card */
+      }
+      .progress-bar-container { 
+        padding: 0; 
+        margin-bottom: 24px;
+      }
+      .step-title { font-size: 8px; }
+      .step-num { width: 28px; height: 28px; font-size: 11px; }
+      
+      /* Make list dynamic rows fit mobile screens gracefully */
+      .dynamic-row {
+        padding: 10px;
+        gap: 8px;
+      }
+      .chip-label span {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -211,103 +536,520 @@
   <div class="bg-circle circle-1"></div>
   <div class="bg-circle circle-2"></div>
 
-  <div class="cadastro-container">
-    <div id="formSection">
-      <div class="cadastro-header">
-        <h1>Planeje sua Viagem</h1>
-        <p>Preencha os detalhes abaixo para que possamos personalizar o seu roteiro no Japão.</p>
+  <div class="cadastro-wrapper">
+    <!-- LADO ESQUERDO: SIDEBAR COM A LOGO TRANSPARENTE E IMAGEM DE FUNDO -->
+    <div class="cadastro-sidebar">
+      <div class="cadastro-sidebar-logo">
+        <img src="/assets/heian-logo-transparent.png" alt="Heian Tour">
       </div>
-      
-      <form id="cadastroForm">
-        <!-- NOME DO GRUPO -->
-        <div class="form-group">
-          <label>Nome do Grupo / Família *</label>
-          <input type="text" id="nomeGrupo" required placeholder="Ex: Família Sampaio, Grupo Sakuras, Amigas de São Paulo...">
-        </div>
-
-        <div class="form-group">
-          <label>Email de Contato *</label>
-          <input type="email" id="email" required placeholder="Ex: joao@email.com">
-        </div>
-
-        <!-- FOTO DE PERFIL -->
-        <div class="form-group" style="background: rgba(196, 163, 90, 0.04); border: 1px dashed rgba(196, 163, 90, 0.3); border-radius: 12px; padding: 16px;">
-          <label>Foto de Perfil (Opcional)</label>
-          <div style="display:flex; align-items:center; gap:16px; margin-top: 8px;">
-            <div id="avatarPreviewContainer" style="width:64px; height:64px; border-radius:50%; background:var(--gold-soft, #FDFAF6); color:var(--gold-dk, #9c8248); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; border:2px dashed var(--gold, #C4A35A); overflow:hidden; flex-shrink:0;">
-              <span>HT</span>
-            </div>
-            <div style="flex:1">
-              <input type="file" id="fotoPerfilFile" accept="image/*" style="display:none;" onchange="previewFotoPerfil(this)">
-              <button type="button" class="btn-submit" onclick="document.getElementById('fotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
-              <button type="button" id="btnRemoverFoto" class="btn-submit" onclick="removerFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
-              <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem quadrada de até 250KB.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-divider"></div>
-
-        <!-- VIAJANTES -->
-        <div class="section-label">👥 Viajantes</div>
-        <p style="font-size: 13px; color: var(--ink-lt); margin-bottom: 16px;">Adicione todos os viajantes do grupo, incluindo o titular.</p>
-        <div id="viajantesList" class="dynamic-list"></div>
-        <button type="button" class="btn-add-row" onclick="addViajante()">+ Adicionar Viajante</button>
-
-        <div class="section-divider"></div>
-
-        <!-- DATAS -->
-        <div class="section-label">📅 Datas da Viagem</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Data Prevista de Início</label>
-            <input type="date" id="dataInicio">
-          </div>
-          <div class="form-group">
-            <label>Data Prevista de Fim</label>
-            <input type="date" id="dataFim">
-          </div>
-        </div>
-
-        <div class="section-divider"></div>
-
-        <!-- HOSPEDAGEM -->
-        <div class="section-label">🏨 Hospedagem</div>
-        <div id="hoteisList" class="dynamic-list"></div>
-        <button type="button" class="btn-add-row" onclick="addHotel()">+ Adicionar Hospedagem</button>
-
-        <div class="section-divider"></div>
-
-        <!-- VOOS -->
-        <div class="section-label">✈️ Voos</div>
-        <div id="voosList" class="dynamic-list"></div>
-        <button type="button" class="btn-add-row" onclick="addVoo()">+ Adicionar Voo</button>
-
-        <div class="section-divider"></div>
-
-        <!-- OBSERVAÇÕES -->
-        <div class="form-group">
-          <label>Observações / Outros Pedidos Especiais</label>
-          <textarea id="observacoes" placeholder="Restrições alimentares, passeios específicos que não quer perder, alergias, etc."></textarea>
-        </div>
-
-        <button type="submit" class="btn-submit" id="btnSubmit">
-          <span>Enviar Informações</span>
-          <div class="spinner" id="submitSpinner"></div>
-        </button>
-      </form>
+      <h2>Sua jornada sob medida começa aqui.</h2>
+      <p>Preencha os detalhes a seguir para que possamos entender melhor o seu perfil e personalizar a sua experiência no Japão.</p>
     </div>
 
-    <div id="successSection" class="success-state">
-      <div class="success-icon">✓</div>
-      <h2>Tudo Certo!</h2>
-      <p>Recebemos seus dados com sucesso. Em breve a nossa equipe entrará em contato com você para finalizar os detalhes do seu roteiro dos sonhos no Japão.</p>
+    <!-- LADO DIREITO: FORMULÁRIO MULTISTEP -->
+    <div class="cadastro-main">
+      <div class="cadastro-container">
+        <div id="formSection">
+          <!-- Cabeçalho Exclusivo para Dispositivos Móveis -->
+          <div class="cadastro-mobile-header">
+            <div class="mobile-logo">
+              <img src="/assets/heian-logo-transparent.png" alt="Heian Tour">
+            </div>
+            <p>Preencha os detalhes a seguir para que possamos entender melhor o seu perfil e personalizar a sua experiência no Japão.</p>
+          </div>
+
+          <!-- Cabeçalho para Desktop -->
+          <div class="cadastro-header">
+            <h1>Ficha de Viagem</h1>
+            <p>Registre seus detalhes e preferências de viagem para personalizarmos o seu roteiro.</p>
+          </div>
+
+          <!-- Barra de Progresso do Wizard -->
+          <div class="progress-bar-container">
+            <div class="progress-line" id="progressLine"></div>
+            <div class="progress-step active" data-step="1">
+              <div class="step-num">1</div>
+              <div class="step-title">Grupo</div>
+            </div>
+            <div class="progress-step" data-step="2">
+              <div class="step-num">2</div>
+              <div class="step-title">Logística</div>
+            </div>
+            <div class="progress-step" data-step="3">
+              <div class="step-num">3</div>
+              <div class="step-title">Estilo</div>
+            </div>
+            <div class="progress-step" data-step="4">
+              <div class="step-num">4</div>
+              <div class="step-title">Desejos</div>
+            </div>
+          </div>
+          
+          <form id="cadastroForm">
+            
+            <!-- STEP 1: DADOS INICIAIS & VIAJANTES -->
+            <div class="wizard-step active" id="step-1">
+              <div class="section-label">👥 Identificação & Viajantes</div>
+              
+              <div class="form-group">
+                <label>Nome do Grupo / Família *</label>
+                <input type="text" id="nomeGrupo" required placeholder="Ex: Família Sampaio, Grupo Sakuras...">
+              </div>
+
+              <div class="form-group">
+                <label>Email de Contato *</label>
+                <input type="email" id="email" required placeholder="Ex: contato@email.com">
+              </div>
+
+              <!-- FOTO DE PERFIL -->
+              <div class="form-group" style="background: rgba(196, 163, 90, 0.04); border: 1px dashed rgba(196, 163, 90, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <label>Foto de Perfil (Opcional)</label>
+                <div style="display:flex; align-items:center; gap:16px; margin-top: 8px;">
+                  <div id="avatarPreviewContainer" style="width:64px; height:64px; border-radius:50%; background:var(--gold-soft, #FDFAF6); color:var(--gold-dk, #9c8248); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; border:2px dashed var(--gold, #C4A35A); overflow:hidden; flex-shrink:0;">
+                    <span>HT</span>
+                  </div>
+                  <div style="flex:1">
+                    <input type="file" id="fotoPerfilFile" accept="image/*" style="display:none;" onchange="previewFotoPerfil(this)">
+                    <button type="button" class="btn-submit" onclick="document.getElementById('fotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
+                    <button type="button" id="btnRemoverFoto" class="btn-submit" onclick="removerFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
+                    <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem de até 250KB.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Profissão ou Ocupação dos Viajantes</label>
+                <input type="text" id="profissoes" placeholder="Ex: Empresário e Médica, Engenheiro...">
+              </div>
+
+              <div class="section-divider"></div>
+              <div class="section-label">Viajantes do Grupo</div>
+              <p style="font-size: 13px; color: var(--ink-lt); margin-bottom: 16px;">Adicione todas as pessoas que irão viajar, incluindo você.</p>
+              <div id="viajantesList" class="dynamic-list"></div>
+              <button type="button" class="btn-add-row" onclick="addViajante()">+ Adicionar Viajante</button>
+            </div>
+
+
+            <!-- STEP 2: LOGÍSTICA & HOSPEDAGEM -->
+            <div class="wizard-step" id="step-2">
+              <div class="section-label">📅 Período & Logística</div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Data de Chegada (Previsão)</label>
+                  <input type="date" id="dataInicio">
+                </div>
+                <div class="form-group">
+                  <label>Data de Retorno (Previsão)</label>
+                  <input type="date" id="dataFim">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Cidades que pretendem visitar</label>
+                <input type="text" id="cidadesPretendeVisitar" placeholder="Ex: Tóquio, Quioto, Osaka, Hakone, Hiroshima...">
+              </div>
+
+              <div class="form-group">
+                <label>Necessidades Especiais ou Restrições</label>
+                <textarea id="necessidadesEspeciais" placeholder="Alergias graves, restrições alimentares, mobilidade reduzida, problemas de saúde que exijam cuidados..."></textarea>
+              </div>
+
+              <div class="section-divider"></div>
+              
+              <div class="section-label">🏨 Hospedagem de Interesse</div>
+              <p style="font-size: 13px; color: var(--ink-lt); margin-bottom: 12px;">Se você já possui reservas de hotéis, adicione os detalhes abaixo.</p>
+              <div id="hoteisList" class="dynamic-list"></div>
+              <button type="button" class="btn-add-row" onclick="addHotel()">+ Adicionar Preferência de Hotel</button>
+
+              <div class="section-divider"></div>
+
+              <div class="section-label">✈️ Informações de Voos</div>
+              <p style="font-size: 13px; color: var(--ink-lt); margin-bottom: 16px;">Se já possui os voos comprados ou datas aproximadas.</p>
+              
+              <!-- Voo de Chegada (Fixo) -->
+              <div class="static-voo-block" style="background: rgba(255,255,255,0.4); padding: 16px; border-radius: 12px; border: 1px solid rgba(196, 163, 90, 0.15); margin-bottom: 16px; box-sizing: border-box;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--crimson); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                  🛬 Voo de Chegada
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                  <div class="form-row" style="margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Dia</label>
+                      <input type="date" id="vooChegadaDia" title="Data do Voo de Chegada">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Nº do Voo</label>
+                      <input type="text" id="vooChegadaCodigo" placeholder="ex: AA123">
+                    </div>
+                  </div>
+                  <div class="form-row" style="margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Horário</label>
+                      <input type="text" id="vooChegadaHora" placeholder="ex: 14:00">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voo de Saída (Fixo) -->
+              <div class="static-voo-block" style="background: rgba(255,255,255,0.4); padding: 16px; border-radius: 12px; border: 1px solid rgba(196, 163, 90, 0.15); margin-bottom: 16px; box-sizing: border-box;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--crimson); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                  🛫 Voo de Saída
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                  <div class="form-row" style="margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Dia</label>
+                      <input type="date" id="vooSaidaDia" title="Data do Voo de Saída">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Nº do Voo</label>
+                      <input type="text" id="vooSaidaCodigo" placeholder="ex: AA124">
+                    </div>
+                  </div>
+                  <div class="form-row" style="margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1;">
+                      <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Horário</label>
+                      <input type="text" id="vooSaidaHora" placeholder="ex: 18:30">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="voosList" class="dynamic-list"></div>
+              <button type="button" class="btn-add-row" onclick="addVoo()">+ Adicionar Outro Voo / Conexão</button>
+            </div>
+
+
+            <!-- STEP 3: ESTILO DE VIAGEM -->
+            <div class="wizard-step" id="step-3">
+              <div class="section-label">🏃 Ritmo & Estilo de Viagem</div>
+              
+              <div class="form-group-card">
+                <label>Como descreve o ritmo ideal dos dias da viagem?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="ritmo" value="Calmo e Profundo">
+                    <span>Calmo e Profundo (Explorar com calma)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="ritmo" value="Equilibrado" checked>
+                    <span>Equilibrado (Mistura equilibrada)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="ritmo" value="Acelerado">
+                    <span>Acelerado (Ver o máximo possível)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Qual o ritmo ideal para visitas a templos e santuários?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="templos" value="Poucos com Calma">
+                    <span>Poucos com calma e história</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="templos" value="Equilíbrio Principal" checked>
+                    <span>Apenas os principais do país</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="templos" value="Qurow Conhecer Vários">
+                    <span>Bastante interesse em conhecer vários</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Como é o seu perfil em relação a caminhadas diárias?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="caminhada" value="Pequenos Trajetos">
+                    <span>Leve (Trajetos curtos e escadas leves)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="caminhada" value="Moderado" checked>
+                    <span>Moderado (Caminho normal ao longo do dia)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="caminhada" value="Longas Distâncias">
+                    <span>Intenso (Consigo caminhar bastante)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Qual o estilo de refeição preferido para o dia a dia?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="refeicoes" value="Restaurantes Tradicionais">
+                    <span>Restaurantes tradicionais planejados</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="refeicoes" value="Mesclado" checked>
+                    <span>Mesclado (Restaurantes e comida rápida/rua)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="refeicoes" value="Rápido">
+                    <span>Comida rápida/conveniência (Ganhar tempo)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Prioridades da Viagem (Selecione de 2 a 4 principais) *</label>
+                <div class="chip-group-multiple" id="prioridadesGroup">
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Natureza & Paisagens">
+                    <span>🌸 Natureza & Paisagens</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Cultura Pop & Anime">
+                    <span>🎮 Cultura Pop & Anime</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="História & Tradição">
+                    <span>⛩️ História & Tradição</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Tecnologia & Modernidade">
+                    <span>🤖 Tecnologia & Modernidade</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Gastronomia">
+                    <span>🍣 Gastronomia</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Onsens & Relaxamento">
+                    <span>♨️ Onsens & Relaxamento</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="prioridades" value="Compras">
+                    <span>🛍️ Compras</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- STEP 4: INTERESSES & COMPLEMENTAR -->
+            <div class="wizard-step" id="step-4">
+              <div class="section-label">🌸 Interesses & Detalhes Especiais</div>
+
+              <div class="form-group-card">
+                <label>Primeira vez viajando ao Japão?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="primeiraVez" value="Sim" checked>
+                    <span>Sim, primeira vez</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="primeiraVez" value="Não">
+                    <span>Não, já visitei o Japão antes</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Interesse em experiências sazonais?</label>
+                <div class="chip-group">
+                  <label class="chip-label">
+                    <input type="radio" name="experienciasSazonais" value="Sim" checked>
+                    <span>Sim, tenho interesse (ex: sakura, festivais)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="experienciasSazonais" value="Indiferente">
+                    <span>Indiferente</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Qual o foco preferido dos Tours Guiados?</label>
+                <div class="chip-group-multiple">
+                  <label class="chip-label">
+                    <input type="checkbox" name="interessesTour" value="História Imperial">
+                    <span>História Imperial</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="interessesTour" value="Religião & Espiritualidade">
+                    <span>Religião & Espiritualidade</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="interessesTour" value="Cultura Geral">
+                    <span>Cultura Geral & Sociedade</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="interessesTour" value="Curiosidades Locais">
+                    <span>Curiosidades & Dia a Dia</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>A viagem celebra alguma ocasião especial?</label>
+                <div class="chip-group" style="margin-bottom: 0;">
+                  <label class="chip-label">
+                    <input type="radio" name="ocasiaoEspecialCheck" value="Não" checked onclick="toggleOcasiaoInput(false)">
+                    <span>Não</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="radio" name="ocasiaoEspecialCheck" value="Sim" onclick="toggleOcasiaoInput(true)">
+                    <span>Sim, comemoração especial</span>
+                  </label>
+                </div>
+                
+                <div id="ocasiaoEspecialContainer" style="display: none; margin-top: 16px; animation: fadeIn 0.3s ease;">
+                  <label style="font-size: 11px; color: var(--ink-lt);">Qual a Ocasião Especial?</label>
+                  <input type="text" id="ocasiaoEspecial" placeholder="Ex: Lua de Mel, Aniversário, Bodas...">
+                </div>
+              </div>
+
+              <div class="form-group-card">
+                <label>Experiências dos seus sonhos ou atrações imperdíveis</label>
+                <textarea id="experienciasImperdiveis" placeholder="Descreva os passeios ou atrações que são o grande sonho da viagem (ex: jantar tradicional com gueixa, dormir em um Ryokan tradicional, ver o Monte Fuji de perto, visitar museu teamLab...)"></textarea>
+              </div>
+
+              <div class="form-group-card">
+                <label>Outras observações ou pedidos especiais</label>
+                <textarea id="observacoes" placeholder="Qualquer informação adicional relevante para o seu roteiro..."></textarea>
+              </div>
+            </div>
+
+            <!-- BOTOES DE NAVEGAÇÃO -->
+            <div class="wizard-buttons">
+              <button type="button" class="btn-wizard btn-prev" id="btnPrev" style="display: none;">
+                ← Voltar
+              </button>
+              <button type="button" class="btn-wizard btn-next" id="btnNext">
+                Avançar →
+              </button>
+              <button type="submit" class="btn-submit" id="btnSubmit" style="display: none;">
+                <span>Enviar Informações</span>
+                <div class="spinner" id="submitSpinner"></div>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- TELA DE SUCESSO -->
+        <div id="successSection" class="success-state">
+          <div class="success-icon">✓</div>
+          <h2>Cadastro Concluído!</h2>
+          <p>Recebemos suas preferências com sucesso. A nossa equipe analisará o seu perfil detalhadamente para estruturar uma experiência inesquecível no Japão. Acompanhe as novidades pela Área do Cliente!</p>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    let currentStep = 1;
+    const totalSteps = 4;
     let fotoPerfilBase64 = "";
 
+    // Navegação do Wizard
+    function updateWizard() {
+      // Ocultar todas as etapas
+      document.querySelectorAll('.wizard-step').forEach(step => {
+        step.classList.remove('active');
+      });
+      
+      // Mostrar etapa atual
+      document.getElementById(`step-${currentStep}`).classList.add('active');
+      
+      // Atualizar barra de progresso
+      document.querySelectorAll('.progress-step').forEach(pStep => {
+        const stepNum = parseInt(pStep.dataset.step);
+        pStep.classList.remove('active', 'completed');
+        if (stepNum === currentStep) {
+          pStep.classList.add('active');
+        } else if (stepNum < currentStep) {
+          pStep.classList.add('completed');
+        }
+      });
+      
+      // Atualizar linha de progresso
+      const progressPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
+      document.getElementById('progressLine').style.setProperty('--progress-width', `${progressPercent}%`);
+      
+      // Controlar visibilidade dos botões
+      if (currentStep === 1) {
+        document.getElementById('btnPrev').style.display = 'none';
+      } else {
+        document.getElementById('btnPrev').style.display = 'flex';
+      }
+      
+      if (currentStep === totalSteps) {
+        document.getElementById('btnNext').style.display = 'none';
+        document.getElementById('btnSubmit').style.display = 'flex';
+      } else {
+        document.getElementById('btnNext').style.display = 'flex';
+        document.getElementById('btnSubmit').style.display = 'none';
+      }
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('btnNext').addEventListener('click', () => {
+      if (currentStep === 1) {
+        const nomeGrupo = document.getElementById('nomeGrupo').value.trim();
+        const email = document.getElementById('email').value.trim();
+        
+        if (!nomeGrupo) {
+          alert("Por favor, preencha o Nome do Grupo / Família.");
+          document.getElementById('nomeGrupo').focus();
+          return;
+        }
+        if (!email) {
+          alert("Por favor, preencha o Email de Contato.");
+          document.getElementById('email').focus();
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          alert("Por favor, insira um e-mail válido.");
+          document.getElementById('email').focus();
+          return;
+        }
+      }
+
+      if (currentStep === 3) {
+        // Validar prioridades (opcional, mas recomendado marcar de 2 a 4)
+        const checkedPrioridades = document.querySelectorAll('#prioridadesGroup input[name="prioridades"]:checked');
+        if (checkedPrioridades.length < 2) {
+          alert("Por favor, escolha pelo menos 2 prioridades de viagem para nos ajudar na personalização.");
+          return;
+        }
+      }
+      
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateWizard();
+      }
+    });
+
+    document.getElementById('btnPrev').addEventListener('click', () => {
+      if (currentStep > 1) {
+        currentStep--;
+        updateWizard();
+      }
+    });
+
+    // Controlar visibilidade do input de Ocasião Especial
+    function toggleOcasiaoInput(show) {
+      const container = document.getElementById('ocasiaoEspecialContainer');
+      if (show) {
+        container.style.display = 'block';
+        document.getElementById('ocasiaoEspecial').focus();
+      } else {
+        container.style.display = 'none';
+        document.getElementById('ocasiaoEspecial').value = '';
+      }
+    }
+
+    // Gerenciamento da Foto de Perfil
     function previewFotoPerfil(input) {
       const file = input.files[0];
       if (!file) return;
@@ -328,6 +1070,7 @@
       reader.readAsDataURL(file);
     }
 
+    // Remover Foto de Perfil
     function removerFotoPerfil() {
       fotoPerfilBase64 = "";
       document.getElementById('fotoPerfilFile').value = "";
@@ -360,14 +1103,31 @@
     function addHotel() {
       const div = document.createElement('div');
       div.className = 'dynamic-row';
+      div.style.flexDirection = 'row';
       div.innerHTML = `
-        <div class="form-group" style="max-width: 200px;">
-          <input type="text" class="hotel-cidade" placeholder="Cidade (ex: Tóquio)">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+          <!-- Linha 1: Cidade e Hotel -->
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1;">
+              <input type="text" class="hotel-cidade" placeholder="Cidade (ex: Tóquio)">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <input type="text" class="hotel-pref" placeholder="(Nome do Hotel)">
+            </div>
+          </div>
+          <!-- Linha 2: Check-in e Check-out -->
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Check-in</label>
+              <input type="date" class="hotel-in" title="Data de Check-in">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Check-out</label>
+              <input type="date" class="hotel-out" title="Data de Check-out">
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <input type="text" class="hotel-pref" placeholder="Hotel ou bairro de preferência">
-        </div>
-        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover">✕</button>
+        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover" style="align-self: center; margin-top: 14px; margin-left: 8px;">✕</button>
       `;
       document.getElementById('hoteisList').appendChild(div);
       div.querySelector('.hotel-cidade').focus();
@@ -377,20 +1137,39 @@
     function addVoo() {
       const div = document.createElement('div');
       div.className = 'dynamic-row';
+      div.style.flexDirection = 'row';
       div.innerHTML = `
-        <div class="form-group" style="max-width: 150px;">
-          <select class="voo-tipo">
-            <option value="Chegada">Chegada</option>
-            <option value="Partida">Partida</option>
-          </select>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+          <!-- Linha 1: Tipo e Dia -->
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Tipo</label>
+              <select class="voo-tipo">
+                <option value="Chegada">Chegada</option>
+                <option value="Saída">Saída</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Dia</label>
+              <input type="date" class="voo-dia" title="Data do Voo">
+            </div>
+          </div>
+          <!-- Linha 2: Voo e Horário -->
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Nº do Voo</label>
+              <input type="text" class="voo-codigo" placeholder="ex: AA123">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label style="font-size: 9px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Horário</label>
+              <input type="text" class="voo-hora" placeholder="ex: 14:00">
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <input type="text" class="voo-detalhe" placeholder="Ex: 15/04 às 14:00 (NRT) - AA123">
-        </div>
-        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover">✕</button>
+        <button type="button" class="btn-rm" onclick="this.parentElement.remove()" title="Remover" style="align-self: center; margin-top: 14px; margin-left: 8px;">✕</button>
       `;
       document.getElementById('voosList').appendChild(div);
-      div.querySelector('.voo-detalhe').focus();
+      div.querySelector('.voo-dia').focus();
     }
 
     // ── SUBMIT ──────────────────────────────────────────────────────────────
@@ -400,7 +1179,6 @@
       const btn = document.getElementById('btnSubmit');
       const spinner = document.getElementById('submitSpinner');
       
-      // Coletar viajantes no formato "Nome Sobrenome (Idade)" — exato do app
       const viajantesArr = [];
       let adultos = 0;
       let criancas = 0;
@@ -414,7 +1192,6 @@
           if (idade) txt += ` (${idade})`;
           viajantesArr.push(txt);
 
-          // Contar adultos/crianças
           const idadeNum = parseInt(idade);
           if (!isNaN(idadeNum) && idadeNum < 12) {
             criancas++;
@@ -424,27 +1201,64 @@
         }
       });
 
-      // Se não preencheu nenhum viajante, default
       if (adultos === 0 && criancas === 0) adultos = 1;
 
-      // Coletar hotéis
+      const formatToBRDate = (dateStr) => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return '';
+        const [y, m, d] = parts;
+        return `${d}/${m}/${y}`;
+      };
+
       const hoteisArr = [];
       document.querySelectorAll('#hoteisList .dynamic-row').forEach(node => {
         const c = (node.querySelector('.hotel-cidade').value || '').trim();
         const p = (node.querySelector('.hotel-pref').value || '').trim();
-        if (c || p) hoteisArr.push(`${c ? c + ' - ' : ''}${p}`);
+        const checkin = node.querySelector('.hotel-in').value;
+        const checkout = node.querySelector('.hotel-out').value;
+        
+        let line = `${c ? c + ' - ' : ''}${p}`;
+        if (checkin && checkout) {
+          line += ` (${formatToBRDate(checkin)} até ${formatToBRDate(checkout)})`;
+        }
+        
+        if (c || p) {
+          hoteisArr.push(line);
+        }
       });
 
-      // Coletar voos
       const vooChegadaArr = [];
       const vooPartidaArr = [];
       document.querySelectorAll('#voosList .dynamic-row').forEach(node => {
         const tipo = node.querySelector('.voo-tipo').value;
-        const det = (node.querySelector('.voo-detalhe').value || '').trim();
-        if (det) {
-          if (tipo === 'Chegada') vooChegadaArr.push(det);
-          else vooPartidaArr.push(det);
+        const dia = (node.querySelector('.voo-dia').value || '').trim();
+        const codigo = (node.querySelector('.voo-codigo').value || '').trim();
+        const hora = (node.querySelector('.voo-hora').value || '').trim();
+        
+        if (dia || codigo || hora) {
+          const detail = [
+            dia ? `Dia: ${dia}` : '',
+            codigo ? `Voo: ${codigo}` : '',
+            hora ? `Horário: ${hora}` : ''
+          ].filter(Boolean).join(' | ');
+          
+          if (tipo === 'Chegada') {
+            vooChegadaArr.push(detail);
+          } else {
+            vooPartidaArr.push(detail);
+          }
         }
+      });
+
+      const prioridadesArr = [];
+      document.querySelectorAll('input[name="prioridades"]:checked').forEach(cb => {
+        prioridadesArr.push(cb.value);
+      });
+
+      const interessesTourArr = [];
+      document.querySelectorAll('input[name="interessesTour"]:checked').forEach(cb => {
+        interessesTourArr.push(cb.value);
       });
 
       const payload = {
@@ -459,7 +1273,26 @@
         hotel: hoteisArr.join('\n'),
         vooChegada: vooChegadaArr.join('\n'),
         vooPartida: vooPartidaArr.join('\n'),
-        fotoPerfil: fotoPerfilBase64
+        fotoPerfil: fotoPerfilBase64,
+        
+        profissoes: document.getElementById('profissoes').value.trim(),
+        cidadesPretendeVisitar: document.getElementById('cidadesPretendeVisitar').value.trim(),
+        necessidadesEspeciais: document.getElementById('necessidadesEspeciais').value.trim(),
+        
+        ritmo: document.querySelector('input[name="ritmo"]:checked')?.value || '',
+        templos: document.querySelector('input[name="templos"]:checked')?.value || '',
+        caminhada: document.querySelector('input[name="caminhada"]:checked')?.value || '',
+        refeicoes: document.querySelector('input[name="refeicoes"]:checked')?.value || '',
+        
+        prioridades: prioridadesArr,
+        interessesTour: interessesTourArr,
+        primeiraVez: document.querySelector('input[name="primeiraVez"]:checked')?.value || '',
+        experienciasSazonais: document.querySelector('input[name="experienciasSazonais"]:checked')?.value || '',
+        
+        ocasiaoEspecial: document.querySelector('input[name="ocasiaoEspecialCheck"]:checked')?.value === 'Sim'
+          ? document.getElementById('ocasiaoEspecial').value.trim() 
+          : '',
+        experienciasImperdiveis: document.getElementById('experienciasImperdiveis').value.trim()
       };
 
       try {
@@ -493,11 +1326,9 @@
       }
     });
 
-    // Inicializar com uma linha de cada
     document.addEventListener('DOMContentLoaded', () => {
       addViajante();
       addHotel();
-      addVoo();
     });
   </script>
   

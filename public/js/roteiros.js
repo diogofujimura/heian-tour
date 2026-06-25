@@ -2939,3 +2939,207 @@ window.salvarEditarElementoRoteiroRapido = async function(e, roteiroNome, diaIdx
   }
 };
 
+window.abrirDrawerPerfilCliente = async function() {
+  const drawer = document.getElementById('drawerPerfilCliente');
+  const content = document.getElementById('drawerPerfilClienteContent');
+  if (!drawer || !content) return;
+
+  // Obter o ID do cliente em edição
+  let clienteId = '';
+  if (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao) {
+    clienteId = roteiroEmEdicao.notionClienteId || (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId);
+  }
+
+  if (!clienteId) {
+    alert("Nenhum cliente vinculado a este roteiro no momento. Vincule um cliente primeiro!");
+    return;
+  }
+
+  // Mostrar drawer
+  drawer.style.left = '0';
+  content.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--crimson); font-weight:600;">⏳ Carregando perfil do viajante...</div>`;
+
+  try {
+    // 1. Carregar dados completos (Notion + Supabase)
+    const resNotion = await fetch('/api/public/client-data/' + clienteId);
+    if (!resNotion.ok) throw new Error("Erro ao carregar dados");
+    const resData = await resNotion.json();
+
+    const clientNotion = resData.clientInfo || {};
+    const clientLocal = resData.clientLocalInfo || {};
+    const preferencias = clientLocal.preferencias || {};
+
+    // 2. Montar o HTML completo
+    let datasViagem = 'Sem data definida';
+    if (clientNotion.dataInicio && clientNotion.dataFim) {
+      datasViagem = `${fmtDate(clientNotion.dataInicio)} a ${fmtDate(clientNotion.dataFim)}`;
+    } else if (clientNotion.dataInicio) {
+      datasViagem = fmtDate(clientNotion.dataInicio);
+    }
+
+    // E-mail do cadastro
+    const emailStr = clientLocal.email || (clientLocal.emails && clientLocal.emails[0]?.email) || 'Sem e-mail';
+
+    // Lista de Passageiros/Viajantes
+    let viajantesHTML = '';
+    if (clientLocal.viajantes && clientLocal.viajantes.length > 0) {
+      viajantesHTML = clientLocal.viajantes.map(v => {
+        const nomeCompleto = [v.nome, v.sobrenome].filter(Boolean).join(' ') || 'Sem nome';
+        const tipo = (parseInt(v.idade) < 12 && !isNaN(parseInt(v.idade))) ? '👶 Criança' : '🧑 Adulto';
+        const ageStr = v.idade ? `(${v.idade} anos)` : '';
+        return `<div style="padding: 6px 12px; background: rgba(0,0,0,0.02); border: 1px solid var(--border); border-radius: 6px; font-size:12.5px; margin-bottom: 4px; display:flex; justify-content:space-between;">
+          <span>${tipo}: <strong>${nomeCompleto}</strong></span>
+          <span style="color:var(--ink-lt);">${ageStr}</span>
+        </div>`;
+      }).join('');
+    } else if (clientNotion.viajantes) {
+      viajantesHTML = `<div style="padding: 10px 12px; background: rgba(0,0,0,0.02); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--ink-dk); white-space: pre-wrap;">${clientNotion.viajantes}</div>`;
+    } else {
+      viajantesHTML = '<p style="font-size:12px; color:var(--ink-lt); font-style:italic; margin:0;">Nenhum viajante informado.</p>';
+    }
+
+    // Lista de Estadias/Hotéis
+    let estadiasHTML = '';
+    if (clientLocal.estadias && clientLocal.estadias.length > 0) {
+      estadiasHTML = clientLocal.estadias.map(est => `
+        <div style="padding: 10px 12px; background: rgba(196,163,90,0.03); border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; margin-bottom: 6px;">
+          <div style="display:flex; justify-content:space-between; font-weight:600; color:var(--crimson); margin-bottom: 2px;">
+            <span>📍 ${est.cidade || 'Cidade'}</span>
+            <span style="font-weight:normal; font-size:11px; color:var(--ink-lt);">${est.dataInicio && est.dataFim ? `${fmtDate(est.dataInicio)} a ${fmtDate(est.dataFim)}` : ''}</span>
+          </div>
+          <div style="color:var(--ink-dk);">${est.hotel || 'Hotel'}</div>
+        </div>
+      `).join('');
+    } else if (clientNotion.hotel) {
+      estadiasHTML = `<div style="padding: 10px 12px; background: rgba(196,163,90,0.03); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--ink-dk); white-space: pre-wrap;">${clientNotion.hotel}</div>`;
+    } else {
+      estadiasHTML = '<p style="font-size:12px; color:var(--ink-lt); font-style:italic; margin:0;">Nenhuma estadia informada.</p>';
+    }
+
+    // Preferências de Ritmo e Estilo
+    let prefHTML = '';
+    if (preferencias && Object.keys(preferencias).length > 0) {
+      // Badges
+      let prioridadesHTML = '';
+      if (preferencias.prioridades && preferencias.prioridades.length > 0) {
+        const prioArr = Array.isArray(preferencias.prioridades) ? preferencias.prioridades : [preferencias.prioridades];
+        prioridadesHTML = prioArr.map(p => `
+          <span style="display:inline-block; font-size:11.5px; background:rgba(196,163,90,0.06); border:1px solid rgba(196,163,90,0.2); color:var(--gold-dk); padding:3px 8px; border-radius:10px; margin-right:4px; margin-bottom:4px; font-weight:500;">${p}</span>
+        `).join('');
+      }
+
+      let toursHTML = '';
+      if (preferencias.interessesTour && preferencias.interessesTour.length > 0) {
+        const tourArr = Array.isArray(preferencias.interessesTour) ? preferencias.interessesTour : [preferencias.interessesTour];
+        toursHTML = tourArr.map(t => `
+          <span style="display:inline-block; font-size:11.5px; background:rgba(107,31,42,0.03); border:1px solid rgba(107,31,42,0.1); color:var(--crimson); padding:3px 8px; border-radius:10px; margin-right:4px; margin-bottom:4px; font-weight:500;">${t}</span>
+        `).join('');
+      }
+
+      prefHTML = `
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          <h4 style="margin: 0 0 12px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">🏃 Ritmo & Estilo de Viagem</h4>
+          <div style="font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-dk); margin-bottom: 16px;">
+            <div><strong>Ritmo dos dias:</strong> ${preferencias.ritmo || 'Não informado'}</div>
+            <div><strong>Visitas a Templos:</strong> ${preferencias.templos || 'Não informado'}</div>
+            <div><strong>Caminhadas Diárias:</strong> ${preferencias.caminhada || 'Não informado'}</div>
+            <div><strong>Alimentação:</strong> ${preferencias.refeicoes || 'Não informado'}</div>
+          </div>
+
+          <h4 style="margin: 0 0 10px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">🎯 Focos & Prioridades</h4>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size:11px; color:var(--ink-lt); margin-bottom:4px;">Prioridades:</div>
+            <div>${prioridadesHTML}</div>
+          </div>
+          ${toursHTML ? `
+          <div style="margin-bottom: 16px;">
+            <div style="font-size:11px; color:var(--ink-lt); margin-bottom:4px;">Foco nos Tours:</div>
+            <div>${toursHTML}</div>
+          </div>
+          ` : ''}
+
+          <h4 style="margin: 0 0 12px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">✨ Informações Adicionais</h4>
+          <div style="font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-dk); margin-bottom: 16px;">
+            <div><strong>Primeira vez no Japão?</strong> ${preferencias.primeiraVez || 'Não informado'}</div>
+            <div><strong>Interesse Sazonal:</strong> ${preferencias.experienciasSazonais || 'Não informado'}</div>
+            ${preferencias.profissoes ? `<div><strong>Profissão:</strong> ${preferencias.profissoes}</div>` : ''}
+            ${preferencias.ocasiaoEspecial ? `<div style="background: rgba(196,163,90,0.06); padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--gold); margin-top: 4px;">🎉 <strong>Celebração:</strong> ${preferencias.ocasiaoEspecial}</div>` : ''}
+            ${preferencias.necessidadesEspeciais ? `<div style="background: rgba(220,53,69,0.03); padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--crimson); margin-top: 4px;">⚠️ <strong>Necessidades Especiais:</strong> ${preferencias.necessidadesEspeciais}</div>` : ''}
+          </div>
+
+          ${preferencias.experienciasImperdiveis ? `
+          <div style="background: rgba(107,31,42,0.02); border: 1px dashed rgba(107,31,42,0.2); border-radius: 8px; padding: 12px; margin-top: 12px;">
+            <div style="font-size: 11px; color: var(--crimson); text-transform: uppercase; font-weight:600; margin-bottom:4px;">🌸 Atração dos Sonhos / Imperdível</div>
+            <p style="font-size: 12.5px; color: var(--ink-dk); font-style: italic; margin:0; line-height:1.4;">"${preferencias.experienciasImperdiveis}"</p>
+          </div>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      prefHTML = `
+        <div style="border-top: 1px solid var(--border); padding-top: 16px; text-align:center;">
+          <p style="font-size: 12.5px; color: var(--ink-lt); font-style: italic;">Nenhuma ficha de preferências preenchida para este cliente.</p>
+        </div>
+      `;
+    }
+
+    // Helper simples para formatar datas AAAA-MM-DD para DD/MM
+    function fmtDate(isoDate) {
+      if(!isoDate) return '';
+      const parts = isoDate.split('-');
+      if(parts.length < 3) return isoDate;
+      return `${parts[2]}/${parts[1]}`;
+    }
+
+    content.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Cabeçalho Rápido -->
+        <div style="background: #fff; padding: 14px; border:1px solid var(--border); border-radius:10px;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 2px;">Nome do Grupo</div>
+          <div style="font-size: 16px; color: var(--gold-dk); font-weight: 600;">${clientNotion.nome || 'Sem nome'}</div>
+          <div style="font-size: 12px; color: var(--ink-dk); margin-top: 4px;">✉️ ${emailStr}</div>
+          <div style="font-size: 12px; color: var(--ink-dk); margin-top: 2px;">📅 Período: ${datasViagem}</div>
+        </div>
+
+        <!-- Passageiros -->
+        <div>
+          <h4 style="margin: 0 0 8px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">🧑 Viajantes</h4>
+          ${viajantesHTML}
+        </div>
+
+        <!-- Voos -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div style="background:rgba(0,0,0,0.01); border:1px solid var(--border); border-radius:8px; padding:10px;">
+            <div style="font-size:10px; text-transform:uppercase; color:var(--ink-lt); margin-bottom:2px;">🛫 Chegada</div>
+            <div style="font-size:12px; color:var(--ink-dk); font-weight:500; line-height:1.3;">${clientNotion.vooChegada || 'Não informado'}</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.01); border:1px solid var(--border); border-radius:8px; padding:10px;">
+            <div style="font-size:10px; text-transform:uppercase; color:var(--ink-lt); margin-bottom:2px;">🛬 Saída</div>
+            <div style="font-size:12px; color:var(--ink-dk); font-weight:500; line-height:1.3;">${clientNotion.vooPartida || 'Não informado'}</div>
+          </div>
+        </div>
+
+        <!-- Hotéis -->
+        <div>
+          <h4 style="margin: 0 0 8px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">🏨 Hotéis & Estadias</h4>
+          ${estadiasHTML}
+        </div>
+
+        <!-- Preferências do Questionário -->
+        ${prefHTML}
+      </div>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    content.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--crimson);">❌ Erro ao carregar informações do cliente: ${err.message}</div>`;
+  }
+};
+
+window.fecharDrawerPerfilCliente = function() {
+  const drawer = document.getElementById('drawerPerfilCliente');
+  if (drawer) {
+    drawer.style.left = '-450px';
+  }
+};
+
