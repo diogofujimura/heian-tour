@@ -1652,16 +1652,19 @@ async function deletarItemCalendarioTabela(id, titulo) {
   }
 }
 
-function iniciarPagamentoGuia(eventoId, colaboradorId, colaboradorNome, servicoNome, valorDiaria) {
+window.iniciarPagamentoGuia = function(eventoId, colaboradorId, colaboradorNome, servicoNome, valorDiaria, clienteId = null) {
   const chk = document.getElementById(`chk-guia-${eventoId}-${colaboradorId}`);
   if (chk && !chk.checked) {
     return;
   }
   
+  const ev = typeof calEventos !== 'undefined' ? calEventos.find(e => e.id === eventoId) : null;
+  const cliId = clienteId || (ev ? ev.clienteId : null) || document.getElementById('dashClienteSelect')?.value || 'cliente_desconhecido';
+
   currentPagamentoGuia = {
     eventoId,
     colaboradorId,
-    clienteId: document.getElementById('dashClienteSelect').value,
+    clienteId: cliId,
     valorDiaria
   };
 
@@ -1680,9 +1683,10 @@ function iniciarPagamentoGuia(eventoId, colaboradorId, colaboradorNome, servicoN
   modal.style.display = 'flex';
   modal.classList.remove('hidden');
   modal.classList.add('active');
-}
+};
+const iniciarPagamentoGuia = window.iniciarPagamentoGuia;
 
-function fecharModalPagarGuia() {
+window.fecharModalPagarGuia = function() {
   const modal = document.getElementById('modalPagarGuia');
   modal.style.display = 'none';
   modal.classList.add('hidden');
@@ -1693,9 +1697,14 @@ function fecharModalPagarGuia() {
     if (chk && !chk.disabled) {
       chk.checked = false;
     }
+    const sel = document.getElementById(`pago_select_${currentPagamentoGuia.eventoId}`);
+    if (sel) {
+      sel.value = 'false';
+    }
   }
   currentPagamentoGuia = null;
-}
+};
+const fecharModalPagarGuia = window.fecharModalPagarGuia;
 
 function onChangeMoedaPagarGuia() {
   const moeda = document.getElementById('modalPagarGuiaMoeda').value;
@@ -1772,8 +1781,13 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Pagamento registrado com sucesso no Supabase e na base de Saídas do Notion!');
         fecharModalPagarGuia();
         
-        const clientId = document.getElementById('dashClienteSelect').value;
-        await selecionarClienteDashboard(clientId);
+        const clientId = document.getElementById('dashClienteSelect')?.value;
+        if (clientId && typeof selecionarClienteDashboard === 'function') {
+          await selecionarClienteDashboard(clientId);
+        }
+        if (typeof filtrarDashColaborador === 'function' && typeof calSelectedColaboradorId !== 'undefined' && calSelectedColaboradorId) {
+          filtrarDashColaborador();
+        }
         await carregarSaldosContas();
         
       } catch (err) {

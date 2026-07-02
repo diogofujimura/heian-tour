@@ -8240,6 +8240,20 @@ window.salvarDiariaEStatusTour = async function(eventoId, btnEl) {
   const valor = Number(inputValor.value);
   const pago = selectPago.value === 'true';
   
+  // Buscar evento original para checar status anterior
+  const ev = typeof calEventos !== 'undefined' ? calEventos.find(e => e.id === eventoId) : null;
+  const colab = typeof calColaboradores !== 'undefined' ? calColaboradores.find(x => x.id === colabId) : null;
+  const colabName = colab ? colab.name : 'Colaborador';
+  const isOriginallyPago = ev && ev.pagoColab && ev.pagoColab[colabId] === true;
+
+  // Se o usuário mudou para Pago mas antes não estava Pago, abre o modal de Pagamento do Notion
+  if (pago && !isOriginallyPago) {
+    if (typeof window.iniciarPagamentoGuia === 'function') {
+      window.iniciarPagamentoGuia(eventoId, colabId, colabName, ev ? ev.titulo : 'Serviço', valor, ev ? ev.clienteId : null);
+      return;
+    }
+  }
+  
   btnEl.disabled = true;
   btnEl.innerText = 'Salvando...';
   
