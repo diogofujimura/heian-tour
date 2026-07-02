@@ -444,6 +444,9 @@ function abrirOrcamento(id, directEdit = false) {
   if (state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(state.orcamento.notionClienteId);
   }
+  if (!directEdit) {
+    window.mostrarDetailMobile('page-meus');
+  }
 }
 
 window.voltarParaClientesDeCotacao = function() {
@@ -565,7 +568,10 @@ function navToPage(pg) {
     targetPg = 'meus';
   }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active');
+    p.classList.remove('show-detail');
+  });
   const navItem = document.querySelector(`[data-page="${pg}"]`);
   if (navItem) navItem.classList.add('active');
   const pageEl = document.getElementById('page-' + targetPg);
@@ -3550,6 +3556,7 @@ function abrirClienteModal(cliente = null) {
   document.getElementById('clientesDetailWrapper').style.display = 'block';
   document.getElementById('clientesPreviewContainer').style.display = 'none';
   document.getElementById('clientesEditorContainer').style.display = 'block';
+  window.mostrarDetailMobile('page-clientes');
 
   // Configurar input dinâmico de iniciais ao digitar
   const mcNomeInput = document.getElementById('mcNome');
@@ -4240,6 +4247,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// --- MOBILE MASTER-DETAIL TOGGLE ---
+window.mostrarDetailMobile = function(pageId) {
+  if (window.innerWidth <= 768) {
+    const layout = document.getElementById(pageId);
+    if (layout) {
+      layout.classList.add('show-detail');
+      // Rolar painel de detalhes para o topo
+      const paneContent = layout.querySelector('.pane-content');
+      if (paneContent) paneContent.scrollTop = 0;
+    }
+  }
+};
+
+window.fecharDetailMobile = function(pageId) {
+  const layout = document.getElementById(pageId);
+  if (layout) {
+    layout.classList.remove('show-detail');
+  }
+};
+
 
 window.handleAcaoClienteCotacao = async function() {
   if (state.orcamento && state.orcamento.notionClienteId) {
@@ -4387,8 +4414,7 @@ window.abrirDetalhesCliente = function(id, isHover = false) {
 
   // Ocultar a barra lateral de clientes para focar nos detalhes do cliente selecionado APENAS se não for hover
   if (!isHover) {
-    const paneList = document.querySelector('#page-clientes .pane-list');
-    if (paneList) paneList.style.display = 'none';
+    window.mostrarDetailMobile('page-clientes');
   }
   
   // Atualiza classe selected de forma performática
@@ -7867,6 +7893,9 @@ window.renderColaboradoresTabela = function() {
 };
 
 window.selecionarColaboradorDashboard = async function(id) {
+  if (typeof window.mostrarDetailMobile === 'function') {
+    window.mostrarDetailMobile('page-colaboradores');
+  }
   calSelectedColaboradorId = id;
   renderColaboradoresTabela(); // Atualiza classe active
   

@@ -259,9 +259,6 @@ window.addEventListener('unhandledrejection', function(e) {
     <button id="btnSync" class="btn-sync" style="display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-undo"></use></svg>Sincronizar Sheets</button>
     <p id="syncStatus" class="sync-status"></p>
   </div>
-</aside>s</button>
-    <p id="syncStatus" class="sync-status"></p>
-  </div>
 </aside>
 
 <main class="main">
@@ -454,6 +451,9 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
 
     <div class="pane-content" id="roteirosPaneContent">
+      <button class="btn-mobile-back" onclick="fecharDetailMobile('page-roteiros')">
+        <svg class="v-icon" style="margin-right:4px;"><use href="#icon-arrow-left"></use></svg>Voltar para Lista
+      </button>
       <div class="pane-content-inner" id="roteirosContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
         
         <div id="roteirosEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
@@ -570,6 +570,9 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     
     <div class="pane-content" id="orcamentosContent">
+      <button class="btn-mobile-back" onclick="fecharDetailMobile('page-meus')">
+        <svg class="v-icon" style="margin-right:4px;"><use href="#icon-arrow-left"></use></svg>Voltar para Lista
+      </button>
       <!-- Container que segura ou o Preview ou o Editor -->
       <div class="pane-content-inner" id="orcamentosContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
         
@@ -870,6 +873,9 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     
     <div class="pane-content" id="clientesPaneContent">
+      <button class="btn-mobile-back" onclick="fecharDetailMobile('page-clientes')">
+        <svg class="v-icon" style="margin-right:4px;"><use href="#icon-arrow-left"></use></svg>Voltar para Lista
+      </button>
       <div class="pane-content-inner" id="clientesContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
         
         <div id="clientesEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
@@ -1183,6 +1189,9 @@ window.addEventListener('unhandledrejection', function(e) {
     
     <!-- Painel Direito: Dashboard do Colaborador -->
     <div class="pane-content" id="colaboradoresPaneContent">
+      <button class="btn-mobile-back" onclick="fecharDetailMobile('page-colaboradores')">
+        <svg class="v-icon" style="margin-right:4px;"><use href="#icon-arrow-left"></use></svg>Voltar para Lista
+      </button>
       <div class="pane-content-inner" id="colaboradoresContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
         <!-- Empty State -->
         <div id="colaboradoresEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">

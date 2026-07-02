@@ -1563,28 +1563,39 @@ html, body {
 
 /* ── RESPONSIVIDADE ADICIONAL (3-PANE E DASHBOARDS) ────────────────────── */
 @media screen and (max-width: 768px) {
-  /* Pane Layout (Clientes, Roteiros, Cotações) */
+  /* Pane Layout (Clientes, Roteiros, Cotações) - Padrão Master-Detail */
   .pane-layout {
-    flex-direction: column !important;
-    height: auto !important;
-    min-height: 100vh;
-    overflow-y: auto !important;
+    flex-direction: row !important;
+    height: calc(100vh - 80px) !important;
+    overflow: hidden !important;
+    position: relative !important;
   }
-  .pane-list {
+  .pane-list, .pane-sidebar {
     width: 100% !important;
     min-width: 100% !important;
-    max-height: 40vh; /* Permite ver a lista e os detalhes na mesma tela */
-    border-right: none;
-    border-bottom: 2px solid rgba(196, 163, 90, 0.2);
-    box-shadow: 0 4px 15px rgba(107, 31, 42, 0.05);
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    display: flex !important;
   }
   .pane-content {
-    display: block !important;
-    height: auto !important;
-    overflow-y: visible !important;
-    padding: 4px !important;
     width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    display: none !important;
+    padding: 10px !important;
     box-sizing: border-box !important;
+  }
+  .pane-layout.show-detail .pane-list,
+  .pane-layout.show-detail .pane-sidebar {
+    display: none !important;
+  }
+  .pane-layout.show-detail .pane-content {
+    display: block !important;
   }
   .pane-content-inner {
     width: 100% !important;
@@ -1594,6 +1605,28 @@ html, body {
     margin-bottom: 20px !important;
     border-radius: 12px !important;
     box-sizing: border-box !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .btn-mobile-back {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    background: var(--crimson);
+    border: 1px solid rgba(196, 163, 90, 0.15);
+    color: #fff !important;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 10px 10px 15px 0;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-mobile-back:hover {
+    background: var(--crimson-dk);
+    border-color: var(--gold);
   }
   #roteirosDetailWrapper,
   #orcamentosPreviewWrapper,
@@ -2850,6 +2883,11 @@ html, body {
 .v-icon-lg {
   width: 1.5em;
   height: 1.5em;
+}
+
+/* Botão Voltar Mobile (oculto por padrão no desktop) */
+.btn-mobile-back {
+  display: none !important;
 }
 
 

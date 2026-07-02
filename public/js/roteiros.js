@@ -2615,6 +2615,9 @@ window.selecionarRoteiro = function(nome, isHover = false) {
     document.getElementById('roteiroPreviewTitle').textContent = nome;
     
     renderizarRoteiro(nome);
+    if (!isHover && typeof window.mostrarDetailMobile === 'function') {
+      window.mostrarDetailMobile('page-roteiros');
+    }
   }
 };
 
