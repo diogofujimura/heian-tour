@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Entrar — Heian Tour</title>
+  <link rel="icon" href="/assets/logo-192.png">
+  <link rel="apple-touch-icon" href="/assets/logo-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(165deg, #F8F3EB 0%, #F4ECE0 100%);
+      font-family: 'Inter', sans-serif; padding: 20px;
+    }
+    .box {
+      width: 100%; max-width: 380px; background: #fff; border-radius: 18px;
+      padding: 36px 28px; box-shadow: 0 18px 50px rgba(60, 30, 30, 0.12);
+      border: 1px solid rgba(176, 136, 62, 0.18); text-align: center;
+    }
+    .box img { width: 130px; margin-bottom: 8px; }
+    h1 { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 20px; color: #6B1F2A; margin-bottom: 4px; }
+    p.sub { font-size: 13px; color: #8a7f76; margin-bottom: 26px; }
+    label { display: block; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7f76; margin: 14px 0 6px; }
+    input {
+      width: 100%; padding: 13px 14px; font-size: 16px; border: 1px solid rgba(176, 136, 62, 0.35);
+      border-radius: 10px; outline: none; background: #FDFBF7; color: #2C1A1D;
+    }
+    input:focus { border-color: #B0883E; box-shadow: 0 0 0 3px rgba(176, 136, 62, 0.15); }
+    button {
+      width: 100%; margin-top: 22px; padding: 14px; font-size: 15px; font-weight: 600;
+      color: #fff; background: #6B1F2A; border: none; border-radius: 10px; cursor: pointer;
+      font-family: inherit; transition: background 0.2s;
+    }
+    button:hover { background: #521721; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .erro { display: none; margin-top: 14px; font-size: 13px; color: #A32D2D; background: #FCEBEB; border-radius: 8px; padding: 10px; }
+    .nota { margin-top: 18px; font-size: 12px; color: #a99e93; }
+  </style>
+</head>
+<body>
+  <form class="box" id="formLogin">
+    <img src="/assets/logo.png" alt="Heian Tour">
+    <h1>Painel Heian Tour</h1>
+    <p class="sub">Entre uma vez — este aparelho fica conectado.</p>
+    <label for="usuario">Usuário</label>
+    <input type="text" id="usuario" value="admin" autocomplete="username">
+    <label for="senha">Senha</label>
+    <input type="password" id="senha" autocomplete="current-password" autofocus>
+    <button type="submit" id="btnEntrar">Entrar</button>
+    <div class="erro" id="erroLogin"></div>
+    <p class="nota">Sessão válida por 6 meses neste dispositivo.</p>
+  </form>
+  <script>
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnEntrar');
+      const erro = document.getElementById('erroLogin');
+      btn.disabled = true; btn.textContent = 'Entrando...'; erro.style.display = 'none';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            usuario: document.getElementById('usuario').value.trim(),
+            senha: document.getElementById('senha').value
+          })
+        });
+        const j = await res.json();
+        if (j.success) { window.location.href = '/admin'; return; }
+        erro.textContent = j.error || 'Usuário ou senha incorretos.';
+        erro.style.display = 'block';
+      } catch (err) {
+        erro.textContent = 'Erro de conexão. Tente novamente.';
+        erro.style.display = 'block';
+      }
+      btn.disabled = false; btn.textContent = 'Entrar';
+    });
+  </script>
+</body>
+</html>

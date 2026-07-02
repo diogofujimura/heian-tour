@@ -2892,3 +2892,268 @@ html, body {
 
 
 
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PACOTE MOBILE (≤768px) — navegação inferior, tela Hoje, kanban touch,
+   bottom-sheets e alvos de toque. Não altera nada no desktop.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.bottom-nav { display: none; }
+.mob-sheet-overlay { display: none; }
+.kanban-move-btn { display: none; }
+
+@media screen and (max-width: 768px) {
+
+  /* ── Barra de navegação inferior ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1200;
+    display: flex; justify-content: space-around; align-items: stretch;
+    background: #fff; border-top: 1px solid var(--border);
+    padding: 6px 2px calc(8px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 18px rgba(44, 26, 29, 0.08);
+  }
+  .bnav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10.5px; font-weight: 500; color: var(--ink-lt);
+    background: none; border: none; padding: 5px 0 2px; cursor: pointer;
+    font-family: inherit; -webkit-tap-highlight-color: transparent;
+  }
+  .bnav-item svg { width: 21px; height: 21px; stroke: currentColor; fill: none; }
+  .bnav-item.active { color: var(--crimson); }
+  .main { padding-bottom: 96px !important; }
+
+  /* ── Sheet do "Mais" e action-sheets ── */
+  .mob-sheet-overlay {
+    display: block; position: fixed; inset: 0; z-index: 1290;
+    background: rgba(44, 26, 29, 0.4);
+  }
+  .mob-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1300;
+    background: #fff; border-radius: 18px 18px 0 0;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 78vh; overflow-y: auto;
+    box-shadow: 0 -8px 30px rgba(44, 26, 29, 0.18);
+  }
+  .mob-sheet .sheet-grab {
+    width: 38px; height: 4px; border-radius: 99px;
+    background: rgba(44, 26, 29, 0.18); margin: 4px auto 12px;
+  }
+  .mob-sheet h4 {
+    font-size: 13px; color: var(--ink-lt); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 2px 8px;
+  }
+  .mob-sheet-item {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 14px 6px; font-size: 15.5px; color: var(--ink);
+    background: none; border: none; border-bottom: 1px solid var(--border);
+    cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .mob-sheet-item svg { width: 19px; height: 19px; stroke: var(--crimson); flex: none; }
+  .mob-sheet-item.ativo { color: var(--crimson); font-weight: 600; }
+  .mob-sheet-item:last-child { border-bottom: none; }
+
+  /* ── Tela "Hoje": Painel Geral compacto ── */
+  #page-dashboard .page-header { padding: 14px 0 10px; margin-bottom: 14px; }
+  #page-dashboard .page-header h1 { font-size: 24px; }
+  #page-dashboard .page-header > div:last-child { padding: 8px 12px; }
+  #dashClienteSelect { max-width: none !important; width: 100%; }
+  .dashboard-agenda-card, .dashboard-kanban-card { padding: 14px !important; }
+
+  /* ── Kanban vira lista vertical (accordion) ── */
+  .kanban-board-scroll { flex-direction: column; overflow-x: visible; gap: 10px; }
+  .kanban-column {
+    flex: 1 1 auto; min-width: 100%; max-height: none;
+  }
+  .kanban-column-header { cursor: pointer; }
+  .kanban-column.mob-collapsed .kanban-cards-container { display: none; }
+  .kanban-move-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 8px; padding: 7px 12px; font-size: 12px; font-weight: 600;
+    color: var(--crimson); background: rgba(107, 31, 42, 0.06);
+    border: 1px solid rgba(107, 31, 42, 0.15); border-radius: 99px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ── Modais viram bottom-sheets ── */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-box {
+    width: 100% !important; max-width: 100% !important;
+    border-radius: 18px 18px 0 0 !important;
+    max-height: 92vh; overflow-y: auto; margin: 0 !important;
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ── Toque e legibilidade ── */
+  input, select, textarea { font-size: 16px !important; }
+  .btn-primary, .btn-secondary { min-height: 42px; }
+  .header-actions button { flex: 1 1 auto; justify-content: center; }
+  .tabs-client-nav { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .tab-client-btn { padding: 12px 14px; flex: none; }
+  .client-actions-bar button { min-height: 44px; }
+
+  /* Pílula de resumo da cotação acima da barra inferior */
+  .cot-fab { bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+  .cot-aside { bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important; }
+
+  /* Botão flutuante de novo item não colide com a barra */
+  .fab-add, .btn-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+
+/* ── Editores de roteiro e cotação no celular (≤768px) ──────────────────────
+   Barra de ações do roteiro fixa acima da navegação inferior, e a linha de
+   botões dos cabeçalhos vira rolagem horizontal em vez de pilha vertical. */
+@media screen and (max-width: 768px) {
+
+  #roteiroEditorAcoes {
+    position: fixed; left: 0; right: 0;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    z-index: 1190; background: #fff;
+    margin: 0 !important; padding: 8px 10px;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 14px rgba(44, 26, 29, 0.08);
+  }
+  #roteiroEditorAcoes > div:first-child { display: none; }
+  #roteiroEditorBotoes {
+    flex-wrap: nowrap !important; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; gap: 8px !important; width: 100%;
+  }
+  #roteiroEditorBotoes button { flex: 0 0 auto; white-space: nowrap; min-height: 40px; }
+  #roteiroEditorBotoes #roteiroAutoSaveIndicator { flex: 0 0 auto; white-space: nowrap; }
+  #btnSalvarEdicaoRoteiro { order: -3; }
+  #btnSalvarVisualizarRoteiro { order: -2; }
+  #btnDesfazerEdicaoRoteiro { order: -1; }
+  #roteiroEditContainer { padding-bottom: 140px; }
+
+  .page-header .header-actions {
+    flex-wrap: nowrap !important; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; padding-bottom: 4px;
+  }
+  .page-header .header-actions button {
+    flex: 0 0 auto !important; white-space: nowrap;
+  }
+}
+
+
+/* ── Interior dos editores no celular (≤768px): nada espremido ──────────────
+   Os sub-formulários dos cards (sequência, transporte, experiência, info)
+   usam grades inline de 2+ colunas; aqui tudo colapsa para coluna única,
+   com campos e chips em tamanho de dedo. */
+@media screen and (max-width: 768px) {
+
+  #roteiroEditContainer [style*="grid-template-columns"],
+  #roteirosDetailWrapper [style*="grid-template-columns"],
+  #orcamentosEditorWrapper [style*="grid-template-columns"],
+  .dia-card [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dia-card input[type="text"],
+  .dia-card input[type="date"],
+  .dia-card input[type="time"],
+  .dia-card select {
+    min-height: 42px; width: 100%; box-sizing: border-box;
+  }
+
+  .chip-atracao {
+    padding: 10px 12px !important; font-size: 13.5px !important;
+    border-radius: 10px !important; margin: 2px 0;
+    display: inline-flex; align-items: center; max-width: 100%;
+  }
+  .chip-atracao span[onclick] { padding: 4px 6px; font-size: 15px; }
+  .dia-atracoes { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Cabeçalho vinho do dia: duas linhas organizadas, botões de dedo */
+  .dia-card > div:first-child { gap: 8px; padding: 12px 14px !important; }
+  .dia-card > div:first-child button { min-width: 40px; min-height: 36px; }
+  .dia-card > div:first-child input[type="date"] { width: 148px !important; min-height: 34px; }
+
+  /* Botões de adicionar elementos ocupam a linha em pares */
+  .dia-card > div:last-child { gap: 8px !important; }
+  .dia-card > div:last-child button {
+    flex: 1 1 calc(50% - 8px); min-height: 42px; white-space: nowrap;
+  }
+
+  /* Modais estilo evento (pagar guia, entrada/saída, extrato) viram sheets */
+  .event-modal-backdrop { align-items: flex-end !important; padding: 0 !important; }
+  .event-modal-card {
+    max-width: 100% !important; width: 100% !important;
+    border-radius: 18px 18px 0 0 !important;
+    max-height: 92vh; overflow-y: auto;
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Editor de cotação: itens e resumos respiram */
+  #orcamentosEditorWrapper .card { padding: 14px !important; }
+  #orcamentosEditorWrapper .item-row { padding: 10px !important; }
+}
+
+
+/* ── Dias recolhíveis no editor de roteiro (desktop e mobile) ── */
+.dia-resumo {
+  display: none;
+  margin: -4px 0 4px;
+  padding: 10px 12px;
+  background: rgba(196, 163, 90, 0.07);
+  border: 1px dashed rgba(196, 163, 90, 0.35);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-mid);
+}
+.dia-card.dia-colapsado .dia-card-body { display: none; }
+.dia-card.dia-colapsado .dia-resumo { display: block; }
+.dia-card.dia-colapsado { padding-bottom: 14px; }
+.dia-card.dia-colapsado > div:first-child { margin-bottom: 12px; }
+
+
+/* ── Cotação: aproveitar toda a largura da tela ─────────────────────────────
+   O editor e o preview de cotação viviam presos ao max-width de 1000px do
+   pane-content-inner; o editor de roteiro já tinha exceção (rb-editing) e a
+   cotação ficava num corredor central em monitores grandes. */
+#page-meus .pane-content-inner {
+  max-width: none;
+}
+#orcamentosEditorWrapper #page-orcamento {
+  width: 100%;
+}
+/* O documento de pré-visualização continua com largura de leitura, centrado */
+#orcamentosPreviewWrapper .pdf-doc {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media screen and (max-width: 768px) {
+  #orcamentosContentInner { padding: 0 !important; }
+  #orcamentosEditorWrapper { padding: 2px !important; }
+  #orcamentosPreviewWrapper { padding: 4px !important; }
+  #page-orcamento .page-header { padding: 10px 0 8px; margin-bottom: 10px; }
+  #orcamentosEditorWrapper .card { margin-bottom: 12px !important; }
+  #page-meus .pane-content { padding: 6px !important; }
+}
+
+
+/* ── Celular: espremer as margens laterais acumuladas do editor de cotação ── */
+@media screen and (max-width: 768px) {
+  .main { padding-left: 2px !important; padding-right: 2px !important; }
+  #page-meus .pane-content { padding: 2px !important; }
+  .pane-content-inner { padding: 4px 2px !important; }
+
+  #orcamentosEditorWrapper .card {
+    padding: 12px 8px !important;
+    border-radius: 10px !important;
+  }
+  /* grades internas dos itens tinham 16px de recuo lateral extra */
+  .item-row .form-grid,
+  .item-row .form-grid-3,
+  .item-row .form-grid-4 { padding: 0 !important; }
+  .item-row { padding: 0 0 10px !important; margin-bottom: 12px !important; }
+  .item-row-header { padding: 10px 8px !important; }
+
+  /* editor de roteiro recebe o mesmo tratamento de borda a borda */
+  #roteirosDetailWrapper { padding: 2px !important; }
+  #page-roteiros .pane-content { padding: 2px !important; }
+  #page-roteiros.rb-editing .pane-content-inner { padding: 4px 2px !important; }
+  .dia-card.card { padding: 14px 8px !important; }
+  .dia-card > div:first-child { margin: -14px -8px 14px -8px !important; }
+}

@@ -4,12 +4,12 @@
   <title>Heian Tour — Orçamentos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260701">
-  <link rel="stylesheet" href="css/redesign-light.css?v=20260701">
+  <link rel="stylesheet" href="css/style.css?v=20260702">
+  <link rel="stylesheet" href="css/redesign-light.css?v=20260702">
   <link rel="stylesheet" href="css/pdf-redesign.css?v=20260701">
   
   <!-- Configurações PWA -->
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/manifest-admin.json">
   <meta name="theme-color" content="#8e1c1c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -198,7 +198,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </symbol>
     <!-- Mapa (Geral) -->
-    <symbol id="icon-map" viewBox="0 0 24 24">
+    <symbol id="icon-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol><symbol id="icon-map" viewBox="0 0 24 24">
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
     </symbol>
     <!-- Lâmpada -->
@@ -492,9 +492,9 @@ window.addEventListener('unhandledrejection', function(e) {
                    <label>Nome do Roteiro (Salvo na Base)</label>
                    <input type="text" id="editRoteiroNome" placeholder="Ex: Roteiro do Cliente">
                  </div>
-                 <div style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center;">
+                 <div id="roteiroEditorAcoes" style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center;">
                    <div style="flex:1"></div>
-                   <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
+                   <div id="roteiroEditorBotoes" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
                      <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
                      <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
                      <button id="btnVerPerfilClienteRoteiro" class="btn-secondary" style="background:rgba(196,163,90,0.06); border-color:rgba(196,163,90,0.25); color:var(--gold-dk); font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirDrawerPerfilCliente()"><svg class="v-icon" style="margin-right:2px; stroke:var(--gold-dk);"><use href="#icon-user"></use></svg>Ver Perfil do Cliente</button>
@@ -2006,6 +2006,38 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+
+<!-- ── Navegação inferior (aparece só no celular; ver PACOTE MOBILE no style.css) ── -->
+<nav class="bottom-nav" aria-label="Navegação principal">
+  <button class="bnav-item" data-page="dashboard"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>Hoje</button>
+  <button class="bnav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-users"></use></svg>Clientes</button>
+  <button class="bnav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-calendar"></use></svg>Agenda</button>
+  <button class="bnav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-dollar"></use></svg>Caixa</button>
+  <button class="bnav-item" id="bnavMais"><svg class="v-icon"><use href="#icon-menu"></use></svg>Mais</button>
+</nav>
+
+<div class="mob-sheet-overlay" id="mobSheetMais" style="display:none;">
+  <div class="mob-sheet">
+    <div class="sheet-grab"></div>
+    <h4>Produção</h4>
+    <button class="mob-sheet-item" data-page="roteiros"><svg class="v-icon"><use href="#icon-map"></use></svg>Roteiros</button>
+    <button class="mob-sheet-item" data-page="meus"><svg class="v-icon"><use href="#icon-file"></use></svg>Cotações</button>
+    <h4>Sistema</h4>
+    <button class="mob-sheet-item" data-page="colaboradores"><svg class="v-icon"><use href="#icon-user"></use></svg>Colaboradores</button>
+    <button class="mob-sheet-item" data-page="base"><svg class="v-icon"><use href="#icon-database"></use></svg>Base de Dados</button>
+    <button class="mob-sheet-item" data-page="lixeira"><svg class="v-icon"><use href="#icon-trash"></use></svg>Lixeira</button>
+    <button class="mob-sheet-item" data-page="config"><svg class="v-icon"><use href="#icon-settings"></use></svg>Configurações</button>
+  </div>
+</div>
+
+<div class="mob-sheet-overlay" id="mobSheetEtapa" style="display:none;">
+  <div class="mob-sheet">
+    <div class="sheet-grab"></div>
+    <h4 id="mobSheetEtapaTitulo">Mover cliente</h4>
+    <div id="mobSheetEtapaLista"></div>
+  </div>
+</div>
+
 <script src="js/roteiros.js?v=20260701"></script>
 <script src="js/app.js?v=20260701"></script>
 <script src="js/sync_roteiro_cotacao.js?v=20260701"></script>
@@ -2020,6 +2052,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <script src="js/cadastro-form-seed.js?v=20260701"></script>
 <script src="js/cliente-perfil.js?v=20260701"></script>
 <script src="js/roteiro-cliente-autosave.js?v=20260701"></script>
+<script src="js/mobile-nav.js?v=20260702"></script>
 
 <!-- PWA Service Worker Registration -->
 <script>
@@ -2027,4 +2060,9 @@ window.addEventListener('unhandledrejection', function(e) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('service-worker.js')
         .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
-        .catch(err => console.error('Falha ao registrar Service Worker:
+        .catch(err => console.error('Falha ao registrar Service Worker:', err));
+    });
+  }
+</script>
+</body>
+</html>

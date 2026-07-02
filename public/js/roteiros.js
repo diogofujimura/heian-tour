@@ -1356,6 +1356,10 @@ window.novoRoteiro = function() {
 }
 
 function abrirEditorRoteiro(nome) {
+  // Cada roteiro começa com todos os dias expandidos
+  if (window.__diasColapsados) window.__diasColapsados.clear();
+  // No celular (master-detail), abrir o editor precisa trocar da lista para o detalhe
+  if (typeof window.mostrarDetailMobile === 'function') window.mostrarDetailMobile('page-roteiros');
   document.getElementById('editRoteiroNome').value = nome === 'Novo Roteiro' ? '' : nome;
 
   // Abrir o editor não deve gravar: estado atual vira o baseline do autosave
@@ -1484,10 +1488,54 @@ window.atualizarBotoesCotacao = function() {
         `;
     }
 }
+// ── Dias recolhíveis no editor ──────────────────────────────────────────────
+// Estado por índice do dia; sobrevive às re-renderizações (o editor redesenha
+// a cada edição). Zerado ao abrir outro roteiro.
+window.__diasColapsados = window.__diasColapsados || new Set();
+
+window.toggleDiaColapsado = function (idx) {
+  if (window.__diasColapsados.has(idx)) window.__diasColapsados.delete(idx);
+  else window.__diasColapsados.add(idx);
+  renderEditDias();
+};
+
+window.toggleTodosDias = function () {
+  const total = (roteiroEmEdicao && roteiroEmEdicao.dias) ? roteiroEmEdicao.dias.length : 0;
+  const todosRecolhidos = total > 0 && window.__diasColapsados.size >= total;
+  window.__diasColapsados.clear();
+  if (!todosRecolhidos) {
+    for (let i = 0; i < total; i++) window.__diasColapsados.add(i);
+  }
+  renderEditDias();
+};
+
+function resumoDoDia(dia) {
+  const els = dia.elementos || [];
+  const partes = [];
+  const cidades = [...new Set(els.filter(e => e.tipo === 'sequencia' && e.cidade).map(e => e.cidade))];
+  if (cidades.length) partes.push(cidades.join(' · '));
+  const n = els.length;
+  partes.push(n === 0 ? 'vazio' : (n === 1 ? '1 item' : n + ' itens'));
+  return partes.join(' — ');
+}
+
 function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave(); 
   const container = document.getElementById('editRoteiroDiasList');
   if (!container) return;
-  container.innerHTML = '';
+
+  // Barra de controle: recolher/expandir todos os dias
+  const totalDias = (roteiroEmEdicao.dias || []).length;
+  if (totalDias > 0) {
+    const barra = document.createElement('div');
+    barra.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:10px;';
+    const todosRecolhidos = window.__diasColapsados.size >= totalDias;
+    barra.innerHTML = '<button type="button" class="btn-secondary" style="font-size:12px; padding:6px 14px;" onclick="toggleTodosDias()">' +
+      (todosRecolhidos ? '▾ Expandir todos os dias' : '▸ Recolher todos os dias') + '</button>';
+    container.innerHTML = '';
+    container.appendChild(barra);
+  } else {
+    container.innerHTML = '';
+  }
   if (!roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) {
     container.innerHTML = '<p style="color:var(--text-sec); font-size:12px; font-style:italic">Nenhum dia adicionado ainda.</p>';
     return;
@@ -1712,9 +1760,12 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       dataText = ` - ${diasSemana[dateObj.getDay()]}`;
     }
 
+    const colapsado = window.__diasColapsados.has(idx);
+    if (colapsado) card.classList.add('dia-colapsado');
     card.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin:-20px -20px 16px -20px; border-radius:8px 8px 0 0; padding:12px 20px; background:var(--crimson); color:white">
         <div style="display:flex; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="dia-toggle-btn" onclick="toggleDiaColapsado(${idx})" title="${colapsado ? 'Expandir dia' : 'Recolher dia'}" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:6px; width:30px; height:30px; margin-right:10px; cursor:pointer; font-size:13px; flex:none;">${colapsado ? '▸' : '▾'}</button>
           <span style="margin:0; font-family:var(--ff-display); color:white; font-size:18px; margin-right: 6px;">Dia</span>
           <input type="number" min="1" max="99" value="${dia.numeroDia || (idx + 1)}" onchange="updDiaEdit(${idx}, 'numeroDia', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 4px; font-size: 16px; font-family:var(--ff-display); font-weight: bold; width: 44px; margin-right: 12px; text-align:center;" />
           <input type="date" value="${dataValue}" onchange="updDiaEdit(${idx}, 'data', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 6px; font-size: 13px; font-weight: bold; width: 130px; font-family: inherit; color-scheme: dark;" />
@@ -1733,6 +1784,8 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         </div>
       </div>
       
+      <div class="dia-resumo" onclick="toggleDiaColapsado(${idx})" title="Expandir dia" style="cursor:pointer;">${resumoDoDia(dia)}</div>
+      <div class="dia-card-body">
       ${elementosHtml}
       
       <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; flex-wrap:wrap">
@@ -1741,6 +1794,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'info')">+ Info Encontro</button>
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'transporte')">+ Transporte</button>
         <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; color:var(--purple); border-color:var(--purple)" onclick="adicionarElemento(${idx}, 'experiencia')">+ Tickets & Experiências</button>
+      </div>
       </div>
     `;
     container.appendChild(card);
@@ -1797,20 +1851,37 @@ window.moverDia = function(idx, direcao) {
   if (!roteiroEmEdicao || !roteiroEmEdicao.dias) return;
   const dias = roteiroEmEdicao.dias;
   
+  const trocaColapso = (a, b) => {
+    const cs = window.__diasColapsados; if (!cs) return;
+    const ta = cs.has(a), tb = cs.has(b);
+    cs.delete(a); cs.delete(b);
+    if (ta) cs.add(b);
+    if (tb) cs.add(a);
+  };
   if (direcao === 'up' && idx > 0) {
     const temp = dias[idx];
     dias[idx] = dias[idx-1];
     dias[idx-1] = temp;
+    trocaColapso(idx, idx-1);
   } else if (direcao === 'down' && idx < dias.length - 1) {
     const temp = dias[idx];
     dias[idx] = dias[idx+1];
     dias[idx+1] = temp;
+    trocaColapso(idx, idx+1);
   }
   
   renderEditDias();
 };
 
 window.delDia = function(idx) {
+  if (window.__diasColapsados) {
+    const novo = new Set();
+    window.__diasColapsados.forEach(i => {
+      if (i < idx) novo.add(i);
+      else if (i > idx) novo.add(i - 1);
+    });
+    window.__diasColapsados = novo;
+  }
   if (confirm("Tem certeza que deseja remover este dia inteiro?")) {
     roteiroEmEdicao.dias.splice(idx, 1);
     renderEditDias();

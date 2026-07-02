@@ -615,6 +615,8 @@ function renderKanban() {
         const card = document.createElement('div');
         card.className = 'kanban-card';
         card.draggable = true;
+        card.dataset.id = c.id;
+        card.dataset.status = c.status || 'Início/call de dúvidas';
 
         let isDraggingAction = false;
 

@@ -210,7 +210,7 @@
     var dayCards = list.querySelectorAll(':scope > .dia-card');
     dayCards.forEach(function (card, d) {
       var dia = r.dias[d]; if (!dia) return;
-      var blocks = card.querySelectorAll(':scope > div[style*="border-left"]');
+      var blocks = card.querySelectorAll(':scope > div[style*="border-left"], :scope > .dia-card-body > div[style*="border-left"]');
       blocks.forEach(function (block, e) {
         if (block.parentElement && block.parentElement.classList.contains('rb-card-body')) return;
         var elx = dia.elementos && dia.elementos[e]; if (!elx) return;

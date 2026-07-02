@@ -309,3 +309,148 @@ voltar o código (git revert), senão o boot migra de novo.
   (só leitura hoje) — melhoria sugerida.
 - Senha do admin (`adminHeian`) fraca e exposta em conversas — trocar na Hostinger.
 - Arquivos de dev antigos ainda presentes na `public_html` do servidor — remover uma vez.
+
+
+---
+---
+
+# PARTE 2 — Sessão de 02/07/2026 (tarde): Mobile, editores e login por sessão
+
+Tudo abaixo foi feito APÓS o commit a263ae0. Nenhuma alteração de banco de dados
+nesta parte — só frontend e o sistema de sessão no servidor.
+
+## 8. Pacote mobile do admin (≤768px; desktop intocado)
+
+### 8.1 Navegação inferior
+- `public/app.html`: novo `<nav class="bottom-nav">` com 5 itens (Hoje=dashboard,
+  Clientes, Agenda=calendario, Caixa=contabilidade, Mais) + sheets `#mobSheetMais`
+  (Roteiros, Cotações, Colaboradores, Base, Lixeira, Configurações) e
+  `#mobSheetEtapa` (mover cliente de etapa). Novo symbol `#icon-menu`.
+- `public/js/mobile-nav.js` (NOVO): liga a barra/sheets à navegação existente
+  (clica no item correspondente da sidebar para reusar toda a lógica), sincroniza
+  o item ativo via hashchange, e implementa `window.abrirSheetMoverEtapa`.
+- CSS em bloco "PACOTE MOBILE" no fim de `public/css/style.css`.
+
+### 8.2 Kanban touch
+- `public/js/dashboard.js` → `renderKanban`: cards ganham `dataset.id` e
+  `dataset.status` na criação (antes só no touchstart).
+- `mobile-nav.js`: MutationObserver no `#kanbanBoard` injeta botão
+  "Mover etapa ›" (classe `.kanban-move-btn`, visível só no mobile) em cada card,
+  abre o sheet de etapas e chama `atualizarStatusClienteKanban(id, status)`.
+  Colunas viram accordion (toque no header alterna `.mob-collapsed`; vazias já
+  começam recolhidas). Drag & drop do desktop intacto.
+
+### 8.3 Correções de vazamento do tema (redesign-light.css)
+O tema é desktop-first com `!important` e carrega POR ÚLTIMO — regras dele
+vazavam pro mobile. Bloco "Correções mobile" no FIM de
+`public/css/redesign-light.css` (precisa ficar por último!):
+- `.main{margin-left:0}` (era 258px fixo → conteúdo deslocado);
+- `.rb-shell{grid-template-columns:1fr}` (editor de roteiro: o grid de 3 colunas
+  reservava 230px+210px de colunas invisíveis → tudo espremido);
+- `#page-orcamento .cot-shell{grid-template-columns:1fr}`.
+
+### 8.4 Editores em tela cheia no celular
+- Todos os sub-formulários com grades inline (`style="grid-template-columns:1fr 1fr"`)
+  colapsam via seletor de atributo `[style*="grid-template-columns"]` escopado aos
+  editores → coluna única. Cobre sequência, transporte, experiência, info, texto.
+- Chips de atração e campos em tamanho de dedo; modais `.modal-box` E
+  `.event-modal-card` viram bottom-sheets; inputs 16px (anti-zoom iOS).
+- Barra de ações do editor de roteiro (`#roteiroEditorAcoes`/`#roteiroEditorBotoes`,
+  ids novos em app.html) vira BARRA FIXA acima da navegação inferior, com rolagem
+  horizontal e Salvar primeiro (order:-3).
+- Margens laterais: `.main` 2px, pane-content 2px, cards 8px lateral,
+  `.item-row .form-grid{padding:0}` (tinha 16px extras do desktop).
+
+### 8.5 Bugs de fluxo corrigidos
+- **Cotações "sumidas"**: o tema adiciona `cot-list-hidden` por padrão
+  (cotacao-enhance.js linha ~130). Entrar pela navegação agora remove a classe
+  (`navToPage` targetPg==='meus'). O toggle "☰ Cotações" continua funcionando.
+- **Editor de roteiro invisível no celular**: nenhum funil de edição chamava
+  `mostrarDetailMobile('page-roteiros')`. Agora `abrirEditorRoteiro` chama sempre;
+  `abrirOrcamento` chama `mostrarDetailMobile('page-meus')` nos dois modos
+  (preview e edição).
+- **Cotação presa a 1000px no desktop**: `#page-meus .pane-content-inner{max-width:none}`.
+  O documento de preview (`.pdf-doc`) permanece centrado com largura de leitura.
+
+## 9. Dias recolhíveis no editor de roteiro (desktop E mobile)
+
+`public/js/roteiros.js`:
+- Estado em `window.__diasColapsados` (Set de índices) — NÃO grava nada no dado
+  do roteiro (autosave não dispara por recolher/expandir).
+- `toggleDiaColapsado(idx)`, `toggleTodosDias()` (botão "Recolher/Expandir todos"
+  renderizado no topo da lista em `renderEditDias`), `resumoDoDia(dia)` (cidades
+  das sequências + contagem de itens).
+- Template do card: botão ▾/▸ no cabeçalho vinho; corpo embrulhado em
+  `<div class="dia-card-body">`; linha `.dia-resumo` clicável quando recolhido.
+- `moverDia` troca o estado junto com o dia; `delDia` reindexa o Set;
+  `abrirEditorRoteiro` limpa o Set (novo roteiro = tudo expandido).
+- **ATENÇÃO**: `public/js/builder-enhance.js` linha ~213 — o seletor de blocos
+  foi atualizado para `:scope > div[...], :scope > .dia-card-body > div[...]`.
+  Se mexer na estrutura do card, manter os dois níveis.
+- CSS `.dia-colapsado`/`.dia-resumo` no fim do style.css.
+
+## 10. Login por sessão + PWA (app instalável sem pedir senha)
+
+### 10.1 Servidor (server.js, antes do middleware de auth)
+- `assinarSessao(exp)` = HMAC-SHA256(`sess|`+exp, **APP_PASS**) — trocar a senha
+  invalida todas as sessões (comportamento desejado).
+- `sessaoValida(req)`: lê cookie `heian_sess` (formato `exp.assinatura`), valida
+  expiração + `timingSafeEqual`.
+- `GET /login` → serve `public/login.html` (NOVO; tela com marca Heian).
+- `POST /api/login {usuario, senha}` → confere com APP_USER/APP_PASS → Set-Cookie
+  `heian_sess` HttpOnly, SameSite=Lax, Max-Age **180 dias**, Secure quando https
+  (detecta `req.secure` ou `x-forwarded-proto`).
+- `GET /logout` → limpa o cookie.
+- Middleware global (ordem): rotas públicas (agora incluem `/login` e
+  `/api/login`) → cookie válido → **GET de página HTML sem sessão redireciona
+  para /login** (em vez do prompt básico) → Basic Auth (compatibilidade mantida
+  para APIs/integrações).
+- `requestAutenticadaAdmin(req)` também aceita a sessão por cookie (admin logado
+  navegando na área do cliente não precisa de token).
+
+### 10.2 PWA
+- `public/manifest-admin.json` (NOVO): name "Heian Tour — Admin",
+  `start_url:/admin#dashboard`, standalone, theme #6B1F2A, ícones logo-192/512.
+- `app.html` agora aponta para `/manifest-admin.json` (o `manifest.json` original
+  continua existindo para o portal/cadastro).
+- Instalação: login no navegador do celular → Adicionar à tela inicial.
+
+## 11. Incidente de arquivos truncados (IMPORTANTE)
+
+Padrão recorrente no ambiente local: arquivos perdendo os últimos bytes.
+- `public/app.html` estava truncado NO GIT (commits 93d1a55 e a263ae0): faltava o
+  fechamento do script do service worker + `</body></html>`. Efeito: SW nunca
+  registrava no /admin. **Reparado nesta sessão** (fim do arquivo reconstruído).
+- Cópias locais de `app.js` e `roteiros.js` estavam truncadas vs HEAD →
+  restauradas de `git show HEAD:` (nenhum trabalho perdido).
+- Se voltar a acontecer: comparar `wc -c` local vs `git show HEAD:arquivo | wc -c`
+  e conferir se o arquivo termina como esperado. Suspeita: sync/antivírus na
+  pasta do projeto.
+
+## 12. Plano de testes da Parte 2
+
+1. `node server.js` local → `localhost:3000/admin` sem sessão → deve redirecionar
+   para `/login`; entrar → cookie criado → F5 não pede mais senha. `/logout` volta
+   ao login. Basic Auth direto na API (curl -u) continua funcionando.
+2. DevTools modo celular (≤768px): barra inferior navega; "Mais" abre sheet;
+   kanban empilhado com "Mover etapa ›" funcionando; modais sobem como sheets.
+3. Editor de roteiro mobile: abrir pela aba Roteiros do cliente E pela lista →
+   painel de detalhe aparece; largura total; barra Salvar fixa embaixo; grades
+   internas em 1 coluna; recolher/expandir dias (e "Recolher todos").
+4. Desktop: recolher dias funciona igual; cotação ocupa a largura toda; lista de
+   cotações aparece ao entrar pelo menu; NADA de regressão visual nas outras telas
+   (o tema carrega por último — conferir Painel, Clientes, Contabilidade).
+5. Celular físico após deploy: instalar PWA (Android e iOS), abrir pelo ícone,
+   conferir que não pede senha e abre no painel.
+
+## 13. Diagnóstico rápido (Parte 2)
+
+| Sintoma | Causa | Onde mexer |
+|---|---|---|
+| Conteúdo deslocado p/ direita no mobile | Regra !important do tema vazando | Bloco "Correções mobile" no FIM do redesign-light.css |
+| Editor espremido no mobile | Grid fantasma (rb-shell/cot-shell) ou grade inline nova | Mesmo bloco; ou o catch-all `[style*="grid-template-columns"]` no style.css |
+| Barra Salvar não aparece no editor mobile | ids `roteiroEditorAcoes`/`roteiroEditorBotoes` removidos do app.html | Restaurar ids |
+| Cartõezinhos "editar" dos elementos sumiram | Seletor do builder-enhance (linha ~213) não cobre `.dia-card-body` | Ver §9 |
+| Login em loop | Cookie não sendo aceito: APP_PASS ausente no ambiente, ou https atrás de proxy sem `x-forwarded-proto` | Ver §10.1; conferir header no proxy da Hostinger |
+| PWA pede senha ao abrir | Sessão expirou (180d) ou APP_PASS trocada | Logar de novo — esperado |
+| "Mover etapa" não aparece nos cards | dataset.id ausente (renderKanban alterado) ou mobile-nav.js não carregou | §8.2; conferir script tag no app.html |

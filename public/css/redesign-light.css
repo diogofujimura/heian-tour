@@ -357,3 +357,29 @@ hr{border-color:var(--l-line) !important}
 .cot-econ b{ color:var(--l-ink); }
 .cot-econ-pend{ color:var(--l-t3); font-style:italic; }
 .cot-econ-note{ font-size:10.5px; color:var(--l-t3); margin-top:6px; font-style:italic; }
+
+
+/* ── Correções mobile (≤768px) ─────────────────────────────────────────────
+   O redesign é desktop-first e usa !important; como este arquivo carrega por
+   último, as regras abaixo garantem que no celular nada desloque o conteúdo. */
+@media (max-width: 768px){
+  .main{margin-left:0 !important;}
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .page-header{padding:18px 0 14px !important;margin-bottom:16px !important;}
+  .page-header h1{font-size:25px !important;}
+  .sidebar-cambio{margin:auto 14px 90px !important;}
+
+  /* Editor de roteiro: uma coluna só, largura total (o grid de 3 colunas
+     do desktop reservava espaço para trilho/resumo invisíveis) */
+  .rb-shell{grid-template-columns:1fr !important;gap:10px !important;}
+  .rb-rail,.rb-summary{display:none !important;}
+  #page-roteiros.rb-editing .pane-content-inner{padding:10px 6px !important;}
+  #roteirosDetailWrapper{padding:6px !important;}
+  .dia-card{margin-left:0 !important;}
+  .roteiro-edit-container{margin-top:8px !important;}
+
+  /* Editor de cotação: coluna única de largura total */
+  #page-orcamento .cot-shell{grid-template-columns:1fr !important;}
+  #page-orcamento .cot-aside{display:none;}
+}

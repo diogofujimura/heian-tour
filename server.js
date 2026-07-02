@@ -1008,6 +1008,56 @@ app.get('/cadastro', (req, res) => {
 
 // (A API POST /api/public/cadastro já está registrada acima, antes deste bloco.)
 
+// -------- SESSÃO POR COOKIE (login uma vez, fica logado ~180 dias) --------
+// Resolve o problema do app instalado no celular (PWA) pedindo senha toda hora:
+// o Basic Auth continua aceito, mas o caminho principal vira o cookie assinado.
+const SESSAO_DIAS = 180;
+
+function assinarSessao(exp) {
+  return require('crypto').createHmac('sha256', process.env.APP_PASS || 'dev')
+    .update('sess|' + exp).digest('hex');
+}
+
+function sessaoValida(req) {
+  if (!process.env.APP_PASS) return false;
+  const raw = req.headers.cookie || '';
+  const m = raw.match(/(?:^|;\s*)heian_sess=([^;]+)/);
+  if (!m) return false;
+  const partes = decodeURIComponent(m[1]).split('.');
+  if (partes.length !== 2) return false;
+  const [exp, sig] = partes;
+  if (!/^\d+$/.test(exp) || Number(exp) < Date.now()) return false;
+  const esperado = assinarSessao(exp);
+  try {
+    return require('crypto').timingSafeEqual(Buffer.from(sig), Buffer.from(esperado));
+  } catch (e) { return false; }
+}
+
+// Página de login (pública)
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/api/login', (req, res) => {
+  const { usuario, senha } = req.body || {};
+  const userOk = (usuario || 'admin') === (process.env.APP_USER || 'admin');
+  const passOk = !!process.env.APP_PASS && senha === process.env.APP_PASS;
+  if (!userOk || !passOk) {
+    return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos.' });
+  }
+  const exp = Date.now() + SESSAO_DIAS * 24 * 60 * 60 * 1000;
+  const token = exp + '.' + assinarSessao(String(exp));
+  const seguro = req.secure || (req.headers['x-forwarded-proto'] === 'https');
+  res.setHeader('Set-Cookie',
+    `heian_sess=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSAO_DIAS * 24 * 60 * 60}${seguro ? '; Secure' : ''}`);
+  res.json({ success: true });
+});
+
+app.get('/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'heian_sess=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  res.redirect('/login');
+});
+
 // -------- AUTENTICAÇÃO GLOBAL --------
 // Protege tudo com senha, exceto as rotas públicas (cadastro e área do cliente)
 if (process.env.APP_PASS) {
@@ -1022,11 +1072,22 @@ if (process.env.APP_PASS) {
       '/api/public/cadastro',
       '/cliente',
       '/cliente.html',
-      '/api/public/client-data'
+      '/api/public/client-data',
+      '/login',
+      '/api/login'
     ];
     if (rotasPublicas.some(r => req.path === r || req.path.startsWith(r + '/'))) {
       return next();
     }
+    // 1º: cookie de sessão válido
+    if (sessaoValida(req)) return next();
+    // 2º: navegação em página HTML sem sessão → tela de login amigável
+    const aceitaHtml = (req.headers.accept || '').includes('text/html');
+    const temBasic = (req.headers.authorization || '').startsWith('Basic ');
+    if (aceitaHtml && req.method === 'GET' && !temBasic) {
+      return res.redirect('/login');
+    }
+    // 3º: Basic Auth continua valendo (APIs, integrações, compatibilidade)
     return basicAuth({ users, challenge: true, realm: 'HeianTour' })(req, res, next);
   });
 }
@@ -5221,6 +5282,7 @@ function tokenPortalValido(clientId, t) {
 // sem precisar do token do portal.
 function requestAutenticadaAdmin(req) {
   if (!process.env.APP_PASS) return true;
+  if (typeof sessaoValida === 'function' && sessaoValida(req)) return true;
   const h = req.headers.authorization || '';
   if (!h.startsWith('Basic ')) return false;
   try {

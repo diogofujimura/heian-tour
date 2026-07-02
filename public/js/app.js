@@ -444,9 +444,8 @@ function abrirOrcamento(id, directEdit = false) {
   if (state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(state.orcamento.notionClienteId);
   }
-  if (!directEdit) {
-    window.mostrarDetailMobile('page-meus');
-  }
+  // Tanto o preview quanto o editor vivem no painel de detalhe no celular
+  window.mostrarDetailMobile('page-meus');
 }
 
 window.voltarParaClientesDeCotacao = function() {
@@ -588,7 +587,15 @@ function navToPage(pg) {
   if (targetPg === 'calendario' && typeof renderCalendario === 'function') renderCalendario();
   if (targetPg === 'colaboradores' && typeof setupColaboradoresTab === 'function') setupColaboradoresTab();
   if (targetPg === 'lixeira' && typeof window.carregarLixeira === 'function') window.carregarLixeira();
-  if (targetPg === 'meus' && typeof renderListaOrcamentos === 'function') renderListaOrcamentos();
+  if (targetPg === 'meus' && typeof renderListaOrcamentos === 'function') {
+    renderListaOrcamentos();
+    // Entrar pelo menu deve sempre MOSTRAR a lista de cotações
+    // (o tema a esconde por padrão via classe cot-list-hidden)
+    const pgMeus = document.getElementById('page-meus');
+    if (pgMeus) pgMeus.classList.remove('cot-list-hidden');
+    const tgl = document.getElementById('cotListToggle');
+    if (tgl) tgl.classList.add('on');
+  }
   if (targetPg === 'roteiros' && typeof renderListaRoteiros === 'function') {
     try { renderListaRoteiros(document.getElementById('pesquisaRoteirosList')?.value || ''); } catch (e) {}
   }
