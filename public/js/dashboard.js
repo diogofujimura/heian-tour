@@ -1335,6 +1335,26 @@ async function carregarSaldosContas() {
     if (!res.ok) throw new Error('Erro ao buscar saldos de contas');
     const contas = await res.json();
     window.notionSaldosContas = contas;
+    
+    // Aplicar ordenação personalizada do localStorage se houver
+    const localOrder = localStorage.getItem('contas_order');
+    if (localOrder) {
+      try {
+        const orderIds = JSON.parse(localOrder);
+        contas.sort((a, b) => {
+          const idxA = orderIds.indexOf(a.id);
+          const idxB = orderIds.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return 0;
+        });
+      } catch (err) {
+        console.error('Erro ao fazer parse da ordem das contas:', err);
+      }
+    } else {
+      contas.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
 
     // 1. Calcular KPIs Consolidados
     let totalCaixaJPY = 0;
@@ -1399,9 +1419,21 @@ async function carregarSaldosContas() {
 
     contas.forEach(c => {
       const card = document.createElement('div');
-      card.className = 'kpi-card';
-      card.style.cursor = 'pointer';
-      card.onclick = () => abrirVisaoGeralConta(c.id);
+      card.className = 'kpi-card account-card';
+      card.setAttribute('draggable', 'true');
+      card.dataset.id = c.id;
+      
+      let dragging = false;
+      card.addEventListener('dragstart', () => {
+        dragging = true;
+      });
+      card.addEventListener('dragend', () => {
+        setTimeout(() => { dragging = false; }, 50);
+      });
+      card.onclick = () => {
+        if (dragging) return;
+        abrirVisaoGeralConta(c.id);
+      };
 
       Object.assign(card.style, {
         background: 'var(--warm-white)',
@@ -1412,7 +1444,8 @@ async function carregarSaldosContas() {
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        transition: 'transform 0.2s, box-shadow 0.2s'
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        cursor: 'grab'
       });
 
       card.onmouseover = () => { 
@@ -1584,6 +1617,53 @@ async function carregarSaldosContas() {
 
       card.appendChild(movSection);
       container.appendChild(card);
+    });
+
+    // Adicionar eventos de drag and drop no container
+    let dragSrcEl = null;
+
+    container.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.account-card');
+      if (!card) return;
+      dragSrcEl = card;
+      e.dataTransfer.effectAllowed = 'move';
+      card.style.opacity = '0.4';
+      card.style.cursor = 'grabbing';
+    });
+
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const targetCard = e.target.closest('.account-card');
+      if (targetCard && dragSrcEl && dragSrcEl !== targetCard) {
+        const cards = Array.from(container.querySelectorAll('.account-card'));
+        const srcIdx = cards.indexOf(dragSrcEl);
+        const targetIdx = cards.indexOf(targetCard);
+        if (srcIdx < targetIdx) {
+          targetCard.after(dragSrcEl);
+        } else {
+          targetCard.before(dragSrcEl);
+        }
+      }
+      return false;
+    });
+
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+
+    container.addEventListener('dragend', (e) => {
+      const card = e.target.closest('.account-card');
+      if (card) {
+        card.style.opacity = '1';
+        card.style.cursor = 'grab';
+      }
+      
+      // Salvar a nova ordem no localStorage
+      const cards = Array.from(container.querySelectorAll('.account-card'));
+      const newOrder = cards.map(el => el.dataset.id);
+      localStorage.setItem('contas_order', JSON.stringify(newOrder));
     });
   } catch (err) {
     console.error(err);
