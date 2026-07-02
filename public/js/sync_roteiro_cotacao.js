@@ -1,6 +1,8 @@
 window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
     if (!isNew) {
-        const existingCotacao = state.orcamentosDB.find(o => o.orcRoteiroVinculado === nomeRoteiro);
+        const existingCotacao = state.orcamentosDB.find(o =>
+            (roteiro && roteiro.id && o.roteiroId === roteiro.id) || o.orcRoteiroVinculado === nomeRoteiro
+        );
         if (existingCotacao && state.orcamento.id !== existingCotacao.id) {
             abrirOrcamento(existingCotacao.id);
         }
@@ -14,6 +16,7 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
     
     state.orcamento.nome = 'Cotação - ' + (nomeRoteiro || 'Roteiro Importado');
     state.orcamento.orcRoteiroVinculado = nomeRoteiro || '';
+    if (roteiro && roteiro.id) state.orcamento.roteiroId = roteiro.id; // vínculo imutável
     if (document.getElementById('orcRoteiroVinculado')) {
         const sel = document.getElementById('orcRoteiroVinculado');
         if (nomeRoteiro && !Array.from(sel.options).some(opt => opt.value === nomeRoteiro)) {
@@ -235,7 +238,12 @@ window.cotacaoParaRoteiro = function(orcamento) {
         return;
     }
     
-    const nome = orcamento.orcRoteiroVinculado || orcamento.nome || 'Roteiro Importado da Cotação';
+    // Prefere o vínculo por ID imutável (sobrevive a renomeações do roteiro)
+    let nome = orcamento.orcRoteiroVinculado || orcamento.nome || 'Roteiro Importado da Cotação';
+    if (orcamento.roteiroId && typeof window.chaveRoteiroPorId === 'function') {
+        const chavePorId = window.chaveRoteiroPorId(orcamento.roteiroId);
+        if (chavePorId) nome = chavePorId;
+    }
     
     if (typeof roteiroEmEdicao !== 'undefined') {
         roteiroOriginalNome = nome;

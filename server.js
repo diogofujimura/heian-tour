@@ -184,11 +184,11 @@ function formatarDataExtenso(dataStr) {
 // Helper para buscar o hotel do cliente com base na data do serviço
 async function buscarHotelPorData(evento) {
   try {
-    // 1. Tentar buscar via roteiroNome (mais preciso)
+    // 1. Tentar buscar via roteiroNome (aceita ID imutável ou nome de exibição)
     if (evento.roteiroNome) {
-      const { data: rotData } = await supabase.from('roteiros').select('data').eq('nome', evento.roteiroNome).single();
-      if (rotData && rotData.data) {
-        const roteiro = rotData.data;
+      const linhaRot = await acharRoteiroPorChaveOuNome(evento.roteiroNome);
+      if (linhaRot && linhaRot.data) {
+        const roteiro = linhaRot.data;
         const estadias = roteiro.estadias || [];
         if (estadias.length > 0 && evento.dataServico) {
           // Encontrar a estadia que cobre a data do serviço
@@ -660,14 +660,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'portal.html'));
-});
-
-app.get('/cadastro', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
-});
-
 app.post('/api/public/cadastro', async (req, res) => {
   try {
     const {
@@ -1005,22 +997,167 @@ app.post('/api/public/cadastro', async (req, res) => {
 // ----------------------------------------
 
 const basicAuth = require('express-basic-auth');
+
+// -------- ROTAS PÚBLICAS (sem senha) --------
+// Deve ser registrado ANTES do middleware de autenticação global
+
+// Página de cadastro do cliente — sempre pública
+app.get('/cadastro', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
+});
+
+// (A API POST /api/public/cadastro já está registrada acima, antes deste bloco.)
+
+// -------- AUTENTICAÇÃO GLOBAL --------
+// Protege tudo com senha, exceto as rotas públicas (cadastro e área do cliente)
 if (process.env.APP_PASS) {
   const users = {};
   users[process.env.APP_USER || 'admin'] = process.env.APP_PASS;
-  app.use(basicAuth({
-    users: users,
-    challenge: true,
-    realm: 'HeianQuoteAuth'
-  }));
+
+  app.use((req, res, next) => {
+    // Libera: página de cadastro, área do cliente, APIs de cadastro e dados públicos do cliente
+    // Usa prefixos com "/" no fim (ou igualdade exata) para não liberar caminhos parecidos por engano
+    const rotasPublicas = [
+      '/cadastro',
+      '/api/public/cadastro',
+      '/cliente',
+      '/cliente.html',
+      '/api/public/client-data'
+    ];
+    if (rotasPublicas.some(r => req.path === r || req.path.startsWith(r + '/'))) {
+      return next();
+    }
+    return basicAuth({ users, challenge: true, realm: 'HeianTour' })(req, res, next);
+  });
 }
 
+// Página principal (portal): protegida globalmente caso APP_PASS esteja configurado
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+});
+
+// Área admin: serve app.html (painel completo)
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+app.post('/api/admin/enviar-roteiro-email', express.json({ limit: '50mb' }), async (req, res) => {
+  try {
+    const { sender, to, subject, body, attachment } = req.body;
+    
+    console.log('Requisicao de Envio de Email recebida:', {
+      to,
+      subject,
+      sender,
+      hasAttachment: !!attachment,
+      attachmentName: attachment ? attachment.filename : null,
+      attachmentLength: attachment && attachment.content ? attachment.content.length : 0
+    });
+
+    if (!to || !subject || !body) {
+      return res.status(400).json({ success: false, error: 'Campos obrigatórios ausentes' });
+    }
+
+    // A conta que faz o login (SMTP Auth) é heiantour@gmail.com
+    const smtpAuthUser = process.env.GMAIL_USER || 'heiantour@gmail.com';
+    const smtpAuthPass = process.env.GMAIL_APP_PASS;
+
+    if (!smtpAuthPass) {
+      return res.status(500).json({ success: false, error: 'Senha de aplicativo do Gmail não configurada no servidor (.env)' });
+    }
+
+    // Definir o alias de e-mail e o nome com base no remetente selecionado
+    const isDiogo = sender === 'diogo';
+    const fromEmail = isDiogo ? 'diogo@heiantour.com' : 'deborah@heiantour.com';
+    const senderName = isDiogo ? 'Diogo' : 'Deborah';
+
+    // Converter quebras de linha em parágrafos do e-mail pessoal
+    let htmlContent = body
+      .split('\n\n')
+      .map(p => `<p style="margin: 0 0 16px 0; line-height: 1.6; color: #333333; font-size: 15px;">${p.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+
+    // Detectar link do roteiro e substituir por link limpo
+    const linkRegex = /(https?:\/\/heiantour[^\s]+|https?:\/\/localhost[^\s]+)/gi;
+    const match = body.match(linkRegex);
+    if (match && match[0]) {
+      const linkUrl = match[0];
+      // Criar um botão discreto de link (estilo transacional pessoal, evita caixa de promoções)
+      const btnHtml = `
+        <div style="margin: 24px 0;">
+          <a href="${linkUrl}" target="_blank" style="display: inline-block; background-color: #8e1c1c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px;">
+            Acessar Roteiro Interativo
+          </a>
+        </div>
+      `;
+      // Remover a URL em texto do HTML e adicionar o botão
+      htmlContent = htmlContent.replace(linkUrl, '').replace('<br>' + linkUrl, '').replace(linkUrl + '<br>', '');
+      htmlContent += btnHtml;
+    }
+
+    // Layout de e-mail pessoal e limpo (evita a aba "Promoções" e vai para a Principal)
+    const mailHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #333333; line-height: 1.6; max-width: 600px; padding: 10px 0;">
+        ${htmlContent}
+        <br>
+        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 24px 0;">
+        <p style="font-size: 12px; color: #888888; line-height: 1.4; margin: 0;">
+          Atenciosamente,<br>
+          <strong>${senderName}</strong><br>
+          Heian Tour &mdash; Curadoria de Viagens ao Japão<br>
+          <a href="mailto:${fromEmail}" style="color: #8e1c1c; text-decoration: none;">${fromEmail}</a>
+        </p>
+      </div>
+    `;
+
+    // Processar o anexo se existir
+    const attachments = [];
+    if (attachment && attachment.content) {
+      // Extração robusta do conteúdo Base64 (remove cabeçalho Data URI se houver)
+      let base64Data = attachment.content;
+      if (base64Data.includes(';base64,')) {
+        base64Data = base64Data.substring(base64Data.indexOf(';base64,') + 8);
+      } else if (base64Data.includes(',')) {
+        base64Data = base64Data.substring(base64Data.indexOf(',') + 1);
+      }
+
+      const buffer = Buffer.from(base64Data, 'base64');
+      attachments.push({
+        filename: attachment.filename || 'roteiro.pdf',
+        content: buffer,
+        contentType: 'application/pdf'
+      });
+
+      console.log('Anexo PDF processado e adicionado:', {
+        filename: attachment.filename,
+        originalLength: attachment.content.length,
+        base64Length: base64Data.length,
+        bufferLength: buffer.length
+      });
+    } else {
+      console.log('Nenhum anexo encontrado ou recebido no body.');
+    }
+
+    // Enviar e-mail usando o transporter global (autenticado com heiantour@gmail.com)
+    // O Google aceita desde que fromEmail esteja configurado como alias em heiantour@gmail.com
+    await transporter.sendMail({
+      from: `"${senderName} | Heian Tour" <${fromEmail}>`,
+      replyTo: fromEmail,
+      to,
+      subject,
+      html: mailHtml,
+      attachments
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao enviar e-mail do roteiro:', error);
+    res.status(500).json({ success: false, error: 'Falha ao enviar e-mail', details: error.message });
+  }
 });
 
 app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, path) => {
+  setHeaders: (res, filePath) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -1171,23 +1308,8 @@ app.post('/api/config', async (req, res) => {
   }
 });
 
-app.get('/api/debug', async (req, res) => {
-  try {
-    const { data: cfg, error: cfgErr } = await supabase.from('config').select('data').eq('id', 'app_config').single();
-    res.json({
-      supabaseUrl: !!process.env.SUPABASE_URL,
-      supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      cfgData: cfg,
-      cfgErr: cfgErr
-    });
-  } catch (e) {
-    res.json({ error: e.message, stack: e.stack });
-  }
-});
-
-app.get('/api/debug-logs', (req, res) => {
-  res.json(globalErrorLogs);
-});
+// Endpoints /api/debug e /api/debug-logs removidos por segurança:
+// expunham a configuração completa (inclusive URLs internas) e logs de erro.
 
 // ── API: Transportes ────────────────────────────────────────────────────────
 app.get('/api/orcamentos', async (req, res) => {
@@ -1204,9 +1326,26 @@ app.get('/api/orcamentos', async (req, res) => {
 });
 app.post('/api/orcamentos', async (req, res) => {
   try {
-    const { error } = await supabase.from('orcamentos').upsert({ id: String(req.body.id), data: req.body });
+    const corpo = { ...req.body };
+    const baseVersao = corpo._baseVersao;
+    delete corpo._baseVersao;
+
+    // Guarda de versão: não deixa uma sessão gravar por cima de outra sem saber
+    const { data: linha } = await supabase.from('orcamentos').select('data').eq('id', String(corpo.id)).maybeSingle();
+    const armazenado = linha ? linha.data : null;
+    if (conflitoDeVersao(baseVersao, armazenado)) {
+      return res.status(409).json({
+        success: false,
+        error: 'conflict_version',
+        message: 'Esta cotação foi alterada em outra sessão (outra aba ou outro usuário). Recarregue-a antes de continuar editando.',
+        atualizadoEm: armazenado.atualizadoEm
+      });
+    }
+
+    const dados = aplicarHistorico(corpo, armazenado);
+    const { error } = await supabase.from('orcamentos').upsert({ id: String(dados.id), data: dados });
     if (error) throw error;
-    res.json({success:true});
+    res.json({ success: true, atualizadoEm: dados.atualizadoEm });
   } catch(e) {
     res.status(500).json({error: e.message});
   }
@@ -1788,6 +1927,119 @@ app.delete('/api/atracoes/:id', async (req, res) => {
   }
 });
 
+// ── Identidade imutável dos roteiros ────────────────────────────────────────
+// A coluna "nome" da tabela roteiros passa a guardar um ID imutável (rot_...).
+// O nome de exibição vive em data.nome. Renomear nunca mais quebra vínculos.
+function gerarIdRoteiro() {
+  return 'rot_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+async function buscarTodosRoteiros() {
+  const { data, error } = await supabase.from('roteiros').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+// Aceita: ID (rot_...), chave legada (nome antigo como chave física) ou nome de exibição
+async function acharRoteiroPorChaveOuNome(param) {
+  if (!param) return null;
+  const { data: porChave } = await supabase.from('roteiros').select('*').eq('nome', param).maybeSingle();
+  if (porChave) return porChave;
+  if (String(param).startsWith('rot_')) return null;
+  const todos = await buscarTodosRoteiros();
+  return todos.find(r => r.data && r.data.nome === param) || null;
+}
+
+// Histórico embutido: guarda as últimas 5 versões dentro do próprio registro
+// (no máximo 1 snapshot a cada 10 minutos, para não inflar com autosaves).
+function aplicarHistorico(dadosNovos, dadosAntigos) {
+  if (!dadosAntigos) return dadosNovos;
+  const historicoAnterior = Array.isArray(dadosAntigos._historico) ? dadosAntigos._historico : [];
+  const ultimo = historicoAnterior[historicoAnterior.length - 1];
+  const agora = Date.now();
+  const ultimoTs = ultimo ? Date.parse(ultimo.em) || 0 : 0;
+  let novoHistorico = historicoAnterior;
+  if (!ultimo || (agora - ultimoTs) > 10 * 60 * 1000) {
+    const snapshot = { ...dadosAntigos };
+    delete snapshot._historico;
+    novoHistorico = [...historicoAnterior, { em: dadosAntigos.atualizadoEm || new Date().toISOString(), dados: snapshot }].slice(-5);
+  }
+  return { ...dadosNovos, _historico: novoHistorico };
+}
+
+// Guarda de versão: se o registro no banco mudou desde que o cliente o carregou,
+// recusa a gravação (evita que duas pessoas se sobrescrevam sem perceber).
+function conflitoDeVersao(baseVersao, dadosArmazenados) {
+  if (baseVersao === undefined || baseVersao === null) return false; // cliente legado: não valida
+  if (!dadosArmazenados || !dadosArmazenados.atualizadoEm) return false;
+  return String(dadosArmazenados.atualizadoEm) !== String(baseVersao);
+}
+
+// Migração única e idempotente: converte chaves legadas (nome de exibição)
+// para IDs imutáveis (rot_...), preservando o nome em data.nome e gravando
+// data.roteiroId nas cotações vinculadas. Segura de rodar quantas vezes for.
+async function migrarRoteirosParaId() {
+  const resultado = { migrados: [], jaOk: 0, erros: [] };
+  const todos = await buscarTodosRoteiros();
+
+  for (const linha of todos) {
+    try {
+      if (String(linha.nome).startsWith('rot_')) {
+        // Já migrado: só garante id/nome dentro do data
+        const d = linha.data || {};
+        if (d.id !== linha.nome || !d.nome) {
+          d.id = linha.nome;
+          if (!d.nome) d.nome = linha.nome;
+          await supabase.from('roteiros').update({ data: d }).eq('nome', linha.nome);
+        }
+        resultado.jaOk++;
+        continue;
+      }
+
+      const nomeExibicao = linha.nome;
+      const novoId = gerarIdRoteiro();
+      const dados = { ...(linha.data || {}), id: novoId, nome: nomeExibicao, _chaveLegada: nomeExibicao };
+
+      // 1. Insere a nova linha com a chave imutável (só apaga a antiga se der certo)
+      const { error: insErr } = await supabase.from('roteiros').insert({ nome: novoId, data: dados });
+      if (insErr) throw insErr;
+
+      // 2. Atualiza cotações vinculadas pelo nome → grava roteiroId
+      const { data: orcs } = await supabase.from('orcamentos').select('*');
+      for (const orc of (orcs || [])) {
+        const d = orc.data || {};
+        if (d.orcRoteiroVinculado === nomeExibicao || d.roteiroVinculado === nomeExibicao) {
+          d.roteiroId = novoId;
+          await supabase.from('orcamentos').update({ data: d }).eq('id', orc.id);
+        }
+      }
+
+      // 3. Remove a linha antiga
+      const { error: delErr } = await supabase.from('roteiros').delete().eq('nome', nomeExibicao);
+      if (delErr) throw delErr;
+
+      resultado.migrados.push({ de: nomeExibicao, para: novoId });
+    } catch (e) {
+      resultado.erros.push({ roteiro: linha.nome, erro: e.message });
+    }
+  }
+
+  if (resultado.migrados.length || resultado.erros.length) {
+    console.log('[Migração Roteiros→ID]', JSON.stringify(resultado));
+  }
+  return resultado;
+}
+
+// Endpoint manual (admin) para conferir/reexecutar a migração
+app.get('/api/admin/migrar-roteiros', async (req, res) => {
+  try {
+    const resultado = await migrarRoteirosParaId();
+    res.json({ success: true, ...resultado });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/roteiros', async (req, res) => {
   try {
     const [rotsRes, baseRes] = await Promise.all([
@@ -1800,7 +2052,13 @@ app.get('/api/roteiros', async (req, res) => {
     for (const r of rotsRes.data || []) {
       // Filtra os roteiros ativos (não deletados)
       if (r.data && !r.data.deletado) {
-        rotasMap[r.nome] = r.data;
+        const dados = { ...r.data, id: r.nome, nome: r.data.nome || r.nome };
+        // Chave do mapa = nome de exibição (compatível com o frontend);
+        // em caso de nomes duplicados, acrescenta sufixo apenas na exibição.
+        let chave = dados.nome;
+        let n = 2;
+        while (rotasMap[chave]) { chave = `${dados.nome} (${n++})`; }
+        rotasMap[chave] = dados;
       }
     }
     if (baseRes.data && baseRes.data.data) {
@@ -1816,36 +2074,64 @@ app.get('/api/roteiros', async (req, res) => {
 app.post('/api/roteiros/:name', async (req, res) => {
   try {
     const name = req.params.name;
-    const dias = req.body; // Expects an array of days
+    const corpo = req.body; // objeto completo do roteiro
     
     if (name === '[PLANILHA] Base de Rotas') {
       const { error } = await supabase.from('rotas_base').upsert({
         id: 'base',
-        data: dias.dias || dias
+        data: corpo.dias || corpo
       });
       if (error) throw error;
-    } else {
-      // Prevenção de colisão de nomes entre clientes diferentes
-      const { data: existente } = await supabase.from('roteiros').select('*').eq('nome', name).maybeSingle();
-      if (existente && existente.data) {
-        const oldClientId = existente.data.cliente?.notionClienteId;
-        const newClientId = dias.cliente?.notionClienteId;
-        if (oldClientId && newClientId && oldClientId !== newClientId) {
-          return res.status(409).json({
-            error: 'conflict_client',
-            message: `O nome "${name}" já está sendo usado por outro cliente. Por favor, escolha um nome diferente.`
-          });
-        }
-      }
-
-      const { error } = await supabase.from('roteiros').upsert({
-        nome: name,
-        data: dias
-      }, { onConflict: 'nome' });
-      if (error) throw error;
+      return res.json({ ok: true, name, roteiro: corpo });
     }
+
+    // Resolve o registro existente por ID ou nome (legado)
+    const linha = await acharRoteiroPorChaveOuNome(name);
+
+    // Proteção: salvar por NOME em cima de roteiro de OUTRO cliente é colisão,
+    // não atualização (ex.: criar "Roteiro Tokyo" quando já existe um de outro cliente).
+    if (linha && !String(name).startsWith('rot_')) {
+      const clienteExistente = linha.data?.notionClienteId || linha.data?.cliente?.notionClienteId;
+      const clienteNovo = corpo?.notionClienteId || corpo?.cliente?.notionClienteId;
+      const corpoSemId = !corpo.id;
+      if (corpoSemId && clienteExistente && clienteNovo && clienteExistente !== clienteNovo) {
+        return res.status(409).json({
+          error: 'conflict_client',
+          message: `O nome "${name}" já está sendo usado por outro cliente. Por favor, escolha um nome diferente.`
+        });
+      }
+    }
+
+    const chave = linha ? linha.nome : (String(name).startsWith('rot_') ? name : gerarIdRoteiro());
+    const armazenado = linha ? linha.data : null;
+
+    // Guarda de versão: recusa gravar por cima de uma versão mais nova
+    const baseVersao = corpo._baseVersao;
+    delete corpo._baseVersao;
+    if (conflitoDeVersao(baseVersao, armazenado)) {
+      return res.status(409).json({
+        error: 'conflict_version',
+        message: 'Este roteiro foi alterado em outra sessão (outra aba ou outro usuário). Recarregue-o antes de continuar editando.',
+        atualizadoEm: armazenado.atualizadoEm
+      });
+    }
+
+    let dados = {
+      ...corpo,
+      id: chave,
+      nome: corpo.nome || (armazenado && armazenado.nome) || (String(name).startsWith('rot_') ? (armazenado?.nome || 'Roteiro') : name),
+      atualizadoEm: new Date().toISOString(),
+      criadoEm: (armazenado && armazenado.criadoEm) || corpo.criadoEm || new Date().toISOString()
+    };
+    dados = aplicarHistorico(dados, armazenado);
+
+    const { error } = await supabase.from('roteiros').upsert({
+      nome: chave,
+      data: dados
+    }, { onConflict: 'nome' });
+    if (error) throw error;
     
-    res.json({ ok: true, name, roteiro: dias });
+    res.json({ ok: true, name, id: chave, nome: dados.nome, atualizadoEm: dados.atualizadoEm, roteiro: dados });
   } catch(e) {
     console.error('Error saving roteiro:', e);
     res.status(500).json({error: e.message});
@@ -1860,51 +2146,49 @@ app.post('/api/roteiros/:name/renomear', async (req, res) => {
     if (!novoNome) {
       return res.status(400).json({ error: 'invalid_name', message: 'O novo nome do roteiro é obrigatório.' });
     }
-    
-    // 1. Verificar colisão com outro cliente no novoNome
-    if (nomeAntigo !== novoNome) {
-      const { data: existente } = await supabase.from('roteiros').select('*').eq('nome', novoNome).maybeSingle();
-      if (existente && existente.data) {
-        const oldClientId = existente.data.cliente?.notionClienteId;
-        const newClientId = roteiroObj.cliente?.notionClienteId;
-        if (oldClientId && newClientId && oldClientId !== newClientId) {
-          return res.status(409).json({
-            error: 'conflict_client',
-            message: `O nome "${novoNome}" já está sendo usado por outro cliente. Por favor, escolha um nome diferente.`
-          });
-        }
-      }
+
+    // Com IDs imutáveis, renomear é só trocar o rótulo (data.nome) sob a mesma chave.
+    const linha = await acharRoteiroPorChaveOuNome(nomeAntigo);
+    if (!linha) {
+      return res.status(404).json({ error: 'not_found', message: `Roteiro "${nomeAntigo}" não encontrado.` });
     }
-    
-    // 2. Executar o UPDATE do nome e dados de forma atômica no Supabase
+    const chave = linha.nome;
+
+    let dados = {
+      ...(roteiroObj || linha.data || {}),
+      id: chave,
+      nome: novoNome,
+      atualizadoEm: new Date().toISOString(),
+      criadoEm: (linha.data && linha.data.criadoEm) || new Date().toISOString()
+    };
+    delete dados._baseVersao;
+    dados = aplicarHistorico(dados, linha.data);
+
     const { error: updateErr } = await supabase
       .from('roteiros')
-      .update({
-        nome: novoNome,
-        data: roteiroObj
-      })
-      .eq('nome', nomeAntigo);
-      
+      .update({ data: dados })
+      .eq('nome', chave);
     if (updateErr) throw updateErr;
     
-    // 3. Cascade Update: Buscar todas as cotações para atualizar o vínculo
-    if (nomeAntigo !== novoNome) {
-      const { data: orcamentos, error: fetchOrcErr } = await supabase.from('orcamentos').select('*');
-      if (!fetchOrcErr && orcamentos) {
-        for (const orc of orcamentos) {
-          const dados = orc.data || {};
-          if (dados.orcRoteiroVinculado === nomeAntigo || dados.roteiroVinculado === nomeAntigo) {
-            if (dados.orcRoteiroVinculado) dados.orcRoteiroVinculado = novoNome;
-            if (dados.roteiroVinculado) dados.roteiroVinculado = novoNome;
-            
-            // Grava a cotação atualizada de volta
-            await supabase.from('orcamentos').update({ data: dados }).eq('id', orc.id);
-          }
+    // Atualiza o rótulo nas cotações vinculadas (por ID ou por nome legado)
+    const nomeExibicaoAntigo = (linha.data && linha.data.nome) || nomeAntigo;
+    const { data: orcamentos, error: fetchOrcErr } = await supabase.from('orcamentos').select('*');
+    if (!fetchOrcErr && orcamentos) {
+      for (const orc of orcamentos) {
+        const d = orc.data || {};
+        const vinculadoPorId = d.roteiroId === chave;
+        const vinculadoPorNome = d.orcRoteiroVinculado === nomeExibicaoAntigo || d.roteiroVinculado === nomeExibicaoAntigo
+          || d.orcRoteiroVinculado === nomeAntigo || d.roteiroVinculado === nomeAntigo;
+        if (vinculadoPorId || vinculadoPorNome) {
+          if (d.orcRoteiroVinculado) d.orcRoteiroVinculado = novoNome;
+          if (d.roteiroVinculado) d.roteiroVinculado = novoNome;
+          d.roteiroId = chave; // aproveita para consolidar o vínculo por ID
+          await supabase.from('orcamentos').update({ data: d }).eq('id', orc.id);
         }
       }
     }
     
-    res.json({ ok: true, novoNome });
+    res.json({ ok: true, novoNome, id: chave, atualizadoEm: dados.atualizadoEm });
   } catch(e) {
     console.error('Error renaming roteiro:', e);
     res.status(500).json({ error: e.message });
@@ -1918,16 +2202,16 @@ app.delete('/api/roteiros/:name', async (req, res) => {
       const { error } = await supabase.from('rotas_base').delete().eq('id', 'base');
       if (error) throw error;
     } else {
-      // Soft Delete: carrega o roteiro atual, marca como deletado no JSON e atualiza
-      const { data, error: fetchErr } = await supabase.from('roteiros').select('data').eq('nome', name).single();
-      if (fetchErr) throw fetchErr;
+      // Soft Delete: resolve por ID ou nome, marca como deletado no JSON e atualiza
+      const linha = await acharRoteiroPorChaveOuNome(name);
+      if (!linha) throw new Error(`Roteiro "${name}" não encontrado.`);
       
-      const rot = data.data || {};
+      const rot = linha.data || {};
       rot.deletado = true;
       rot.deletadoEm = new Date().toISOString();
       
       const { error } = await supabase.from('roteiros').upsert({
-        nome: name,
+        nome: linha.nome,
         data: rot
       }, { onConflict: 'nome' });
       if (error) throw error;
@@ -2001,14 +2285,14 @@ app.delete('/api/orcamentos/:id/definitivo', async (req, res) => {
 app.post('/api/roteiros/:name/restaurar', async (req, res) => {
   try {
     const name = req.params.name;
-    const { data, error: fetchErr } = await supabase.from('roteiros').select('data').eq('nome', name).single();
-    if (fetchErr) throw fetchErr;
+    const linha = await acharRoteiroPorChaveOuNome(name);
+    if (!linha) throw new Error(`Roteiro "${name}" não encontrado.`);
     
-    const rot = data.data || {};
+    const rot = linha.data || {};
     delete rot.deletado;
     delete rot.deletadoEm;
     
-    const { error } = await supabase.from('roteiros').upsert({ nome: name, data: rot }, { onConflict: 'nome' });
+    const { error } = await supabase.from('roteiros').upsert({ nome: linha.nome, data: rot }, { onConflict: 'nome' });
     if (error) throw error;
     res.json({ success: true });
   } catch(e) {
@@ -2020,7 +2304,9 @@ app.post('/api/roteiros/:name/restaurar', async (req, res) => {
 app.delete('/api/roteiros/:name/definitivo', async (req, res) => {
   try {
     const name = req.params.name;
-    const { error } = await supabase.from('roteiros').delete().eq('nome', name);
+    const linha = await acharRoteiroPorChaveOuNome(name);
+    const chave = linha ? linha.nome : name;
+    const { error } = await supabase.from('roteiros').delete().eq('nome', chave);
     if (error) throw error;
     res.json({ success: true });
   } catch(e) {
@@ -2647,6 +2933,8 @@ function parsePreco(v) {
 
 // ── Integração Notion ───────────────────────────────────────────────────────
 app.get('/api/notion/clientes', async (req, res) => {
+  let clientesMapeados = [];
+  
   try {
     const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CLIENTS_DB_ID}/query`, {
       method: 'POST',
@@ -2662,81 +2950,137 @@ app.get('/api/notion/clientes', async (req, res) => {
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Notion API Error:', errorData);
-      return res.status(response.status).json(errorData);
-    }
-
-    const data = await response.json();
-    
-    // Mapeamento das propriedades do Notion para o nosso objeto Cliente
-    const clientes = data.results.map(page => {
-      const p = page.properties;
+    if (response.ok) {
+      const data = await response.json();
       
-      const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
-      const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
-      const getNumber = (prop) => prop?.number || 0;
-      const getSelect = (prop) => prop?.select?.name || '';
-      const getDateStart = (prop) => prop?.date?.start || '';
-      const getDateEnd = (prop) => prop?.date?.end || '';
-      const getFormulaNumber = (prop) => prop?.formula?.number || 0;
-      const getFormulaString = (prop) => prop?.formula?.string || '';
-      const getRollupNumber = (prop) => prop?.rollup?.number || 0;
+      clientesMapeados = (data.results || []).map(page => {
+        const p = page.properties;
+        
+        const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
+        const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
+        const getNumber = (prop) => prop?.number || 0;
+        const getSelect = (prop) => prop?.select?.name || '';
+        const getDateStart = (prop) => prop?.date?.start || '';
+        const getDateEnd = (prop) => prop?.date?.end || '';
+        const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+        const getFormulaString = (prop) => prop?.formula?.string || '';
+        const getRollupNumber = (prop) => prop?.rollup?.number || 0;
 
-      return {
-        id: page.id,
-        nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
-        status: getSelect(p['Status do Cliente'] || p['Status']),
-        adultos: getNumber(p['Qtd Adultos']),
-        criancas: getNumber(p['Qtd Crianças']),
-        vooChegada: getRichText(p['Voo de Chegada']),
-        vooPartida: getRichText(p['Voo de Partida']),
-        vooChegadaNum: '',
-        vooChegadaHora: '',
-        vooPartidaNum: '',
-        vooPartidaHora: '',
-        dataInicio: getDateStart(p['Período da Viagem']),
-        dataFim: getDateEnd(p['Período da Viagem']),
-        hotel: getRichText(p['Hotel']),
-        email: p['Email']?.email || '',
-        viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
-        valorTotal: getNumber(p['Valor Total']),
-        totalPago: getRollupNumber(p['Total Pago']),
-        saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
-        statusPagamento: getFormulaString(p['Status de pagamento'])
-      };
-    });
+        return {
+          id: page.id,
+          nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
+          status: getSelect(p['Status do Cliente'] || p['Status']),
+          adultos: getNumber(p['Qtd Adultos']),
+          criancas: getNumber(p['Qtd Crianças']),
+          vooChegada: getRichText(p['Voo de Chegada']),
+          vooPartida: getRichText(p['Voo de Partida']),
+          vooChegadaNum: '',
+          vooChegadaHora: '',
+          vooPartidaNum: '',
+          vooPartidaHora: '',
+          dataInicio: getDateStart(p['Período da Viagem']),
+          dataFim: getDateEnd(p['Período da Viagem']),
+          hotel: getRichText(p['Hotel']),
+          email: p['Email']?.email || '',
+          viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+          valorTotal: getNumber(p['Valor Total']),
+          totalPago: getRollupNumber(p['Total Pago']),
+          saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+          statusPagamento: getFormulaString(p['Status de pagamento'])
+        };
+      });
 
-    // Parse voo fields into components
-    clientes.forEach(c => {
-      if (c.vooChegada && c.vooChegada.includes('|')) {
-        const parts = c.vooChegada.split('|').map(s => s.trim());
-        c.vooChegadaNum = parts[0] || '';
-        c.vooChegadaHora = parts[1] || '';
-      } else {
-        c.vooChegadaNum = c.vooChegada || '';
-        c.vooChegadaHora = '';
-      }
-      if (c.vooPartida && c.vooPartida.includes('|')) {
-        const parts = c.vooPartida.split('|').map(s => s.trim());
-        c.vooPartidaNum = parts[0] || '';
-        c.vooPartidaHora = parts[1] || '';
-      } else {
-        c.vooPartidaNum = c.vooPartida || '';
-        c.vooPartidaHora = '';
-      }
-    });
-
-    const clientesValidos = clientes.filter(c => c.nome && c.nome.trim() !== '');
-    res.json(clientesValidos);
+      // Parse voo fields into components
+      clientesMapeados.forEach(c => {
+        if (c.vooChegada && c.vooChegada.includes('|')) {
+          const parts = c.vooChegada.split('|').map(s => s.trim());
+          c.vooChegadaNum = parts[0] || '';
+          c.vooChegadaHora = parts[1] || '';
+        } else {
+          c.vooChegadaNum = c.vooChegada || '';
+          c.vooChegadaHora = '';
+        }
+        if (c.vooPartida && c.vooPartida.includes('|')) {
+          const parts = c.vooPartida.split('|').map(s => s.trim());
+          c.vooPartidaNum = parts[0] || '';
+          c.vooPartidaHora = parts[1] || '';
+        } else {
+          c.vooPartidaNum = c.vooPartida || '';
+          c.vooPartidaHora = '';
+        }
+      });
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Notion API response error (Handled gracefully):', errorData);
+    }
   } catch (error) {
-    console.error('Erro ao buscar clientes no Notion:', error);
-      return res.status(500).json({ error: 'Erro ao buscar clientes no Notion', details: error.message });
+    console.error('Erro na conexão do Notion API (Mantendo clientes locais):', error.message);
   }
+
+  // Filtrar apenas registros válidos
+  const clientesValidos = clientesMapeados.filter(c => c.nome && c.nome.trim() !== '');
+
+  // Sempre injetar o cliente de teste Lucas e Sofia localmente
+  clientesValidos.push({
+    id: 'mock-uuid-lucas-sofia',
+    nome: 'Lucas e Sofia (Lua de Mel - 15 Dias)',
+    status: 'Roteiro em Edição',
+    adultos: 2,
+    criancas: 0,
+    vooChegada: 'JL048 | 15:30',
+    vooPartida: 'JL047 | 19:00',
+    vooChegadaNum: 'JL048',
+    vooChegadaHora: '15:30',
+    vooPartidaNum: 'JL047',
+    vooPartidaHora: '19:00',
+    dataInicio: '2026-10-10',
+    dataFim: '2026-10-25',
+    hotel: 'Hotel Gracery Shinjuku',
+    email: 'lucas_sofia_test@gmail.com',
+    viajantes: 'Lucas, Sofia',
+    valorTotal: 450000,
+    totalPago: 0,
+    saldoPagar: 450000,
+    statusPagamento: 'Pendente'
+  });
+
+  res.json(clientesValidos);
 });
 
 // ── ENDPOINTS UNIFICADOS DE CLIENTES (NOTION + SUPABASE LOCAL) ────────────────
+// --- Sincronia do Perfil & Preferencias com o Notion (camada nova) ---
+const cadastroEngine = require('./public/js/cadastro-engine.js');
+async function _notionApi(method, pathUrl, body) {
+  return fetch('https://api.notion.com/v1' + pathUrl, {
+    method,
+    headers: { 'Authorization': `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+function _blocoTexto(b) {
+  const t = b && b[b.type];
+  if (t && Array.isArray(t.rich_text)) return t.rich_text.map(x => (x.plain_text || (x.text && x.text.content) || '')).join('');
+  return '';
+}
+function planejarSyncPerfil(blocks, preferencias) {
+  const built = cadastroEngine.construirPayloadNotion(null, preferencias || {});
+  const TITULO = '⛩️ Perfil de Viagem & Preferências';
+  const idx = (blocks || []).findIndex(b => b.type === 'heading_2' && _blocoTexto(b) === TITULO);
+  const aDeletar = idx >= 0 ? blocks.slice(idx) : [];
+  return { aDeletar, children: built.children };
+}
+async function sincronizarPerfilNotion(pageId, preferencias) {
+  try {
+    if (!pageId || !preferencias) return;
+    const r = await _notionApi('GET', `/blocks/${pageId}/children?page_size=100`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const plano = planejarSyncPerfil(data.results || [], preferencias);
+    for (const b of plano.aDeletar) { try { await _notionApi('DELETE', `/blocks/${b.id}`); } catch (e) {} }
+    if (plano.children && plano.children.length) await _notionApi('PATCH', `/blocks/${pageId}/children`, { children: plano.children });
+  } catch (e) { console.error('Falha ao sincronizar perfil no Notion:', e.message); }
+}
+
 app.post('/api/clientes', async (req, res) => {
   try {
     const { notionPayload, localPayload } = req.body;
@@ -2761,6 +3105,10 @@ app.post('/api/clientes', async (req, res) => {
     if (notionPayload.dataInicio) {
       properties['Período da Viagem'] = { date: { start: notionPayload.dataInicio, end: notionPayload.dataFim || null } };
     }
+    if (notionPayload.profissoes) properties['Profissão dos Viajantes'] = { rich_text: [{ text: { content: notionPayload.profissoes } }] };
+    if (notionPayload.ocasiaoEspecial) properties['Ocasião Especial'] = { rich_text: [{ text: { content: notionPayload.ocasiaoEspecial } }] };
+    if (notionPayload.necessidadesEspeciais) properties['Necessidades Especiais'] = { rich_text: [{ text: { content: notionPayload.necessidadesEspeciais } }] };
+    if (notionPayload.observacoes) properties['Observações'] = { rich_text: [{ text: { content: notionPayload.observacoes } }] };
 
     const response = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
@@ -2788,6 +3136,8 @@ app.post('/api/clientes', async (req, res) => {
       const { error: localErr } = await supabase.from('clientes_locais').upsert({ id: cliId, data: localPayload });
       if (localErr) throw localErr;
     }
+
+    if (localPayload && localPayload.preferencias) { await sincronizarPerfilNotion(cliId, localPayload.preferencias); }
 
     res.json({ success: true, id: cliId });
   } catch (error) {
@@ -2826,6 +3176,10 @@ app.patch('/api/clientes/:id', async (req, res) => {
     if (notionPayload.vooPartida !== undefined || vooPartidaCombined) properties['Voo de Partida'] = { rich_text: finalVooPartida ? [{ text: { content: finalVooPartida } }] : [] };
     
     if (notionPayload.hotel !== undefined) properties['Hotel'] = { rich_text: notionPayload.hotel ? [{ text: { content: notionPayload.hotel } }] : [] };
+    if (notionPayload.profissoes !== undefined) properties['Profissão dos Viajantes'] = { rich_text: notionPayload.profissoes ? [{ text: { content: notionPayload.profissoes } }] : [] };
+    if (notionPayload.ocasiaoEspecial !== undefined) properties['Ocasião Especial'] = { rich_text: notionPayload.ocasiaoEspecial ? [{ text: { content: notionPayload.ocasiaoEspecial } }] : [] };
+    if (notionPayload.necessidadesEspeciais !== undefined) properties['Necessidades Especiais'] = { rich_text: notionPayload.necessidadesEspeciais ? [{ text: { content: notionPayload.necessidadesEspeciais } }] : [] };
+    if (notionPayload.observacoes !== undefined) properties['Observações'] = { rich_text: notionPayload.observacoes ? [{ text: { content: notionPayload.observacoes } }] : [] };
     
     if (notionPayload.dataInicio !== undefined) {
       if (notionPayload.dataInicio) {
@@ -2856,6 +3210,8 @@ app.patch('/api/clientes/:id', async (req, res) => {
       const { error: localErr } = await supabase.from('clientes_locais').upsert({ id, data: localPayload });
       if (localErr) throw localErr;
     }
+
+    if (localPayload && localPayload.preferencias) { await sincronizarPerfilNotion(id, localPayload.preferencias); }
 
     res.json({ success: true, id });
   } catch (error) {
@@ -3838,13 +4194,13 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
     const { roteiroNome } = req.body;
     if (!roteiroNome) return res.status(400).json({ error: 'Parâmetro roteiroNome é obrigatório' });
 
-    // Buscar roteiro no Supabase
-    const { data: rotData, error: rotErr } = await supabase.from('roteiros').select('data').eq('nome', roteiroNome).single();
-    if (rotErr || !rotData) {
+    // Buscar roteiro no Supabase (aceita ID imutável ou nome)
+    const linhaRot = await acharRoteiroPorChaveOuNome(roteiroNome);
+    if (!linhaRot || !linhaRot.data) {
       return res.status(404).json({ error: `Roteiro "${roteiroNome}" não encontrado no banco local.` });
     }
 
-    const roteiro = rotData.data;
+    const roteiro = linhaRot.data;
     
     // Obter clienteId (relaxado: sem obrigação de estar no Notion)
     const clienteId = roteiro.notionClienteId || roteiro.cliente?.notionClienteId || roteiro.cliente?.nome || roteiro.nome || 'cliente_desconhecido';
@@ -4821,7 +5177,7 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
 // Cache e funções auxiliares para URLs amigáveis de Clientes
 let slugToIdCache = {};
 let lastCacheUpdate = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas (o cache também é reconstruído sob demanda em caso de miss)
 
 function gerarSlug(text) {
   if (!text) return '';
@@ -4833,6 +5189,95 @@ function gerarSlug(text) {
     .trim();
 }
 
+// ── Segurança da Área do Cliente ────────────────────────────────────────────
+// O link público passa a exigir um token derivado do ID do cliente (HMAC),
+// para que o nome do cliente sozinho não dê acesso a voos, hotel e valores.
+const crypto = require('crypto');
+
+function portalSecret() {
+  return process.env.PORTAL_LINK_SECRET || process.env.APP_PASS || '';
+}
+
+function gerarTokenPortal(clientId) {
+  const secret = portalSecret();
+  if (!secret) return '';
+  const norm = String(clientId || '').replace(/-/g, '').toLowerCase();
+  return crypto.createHmac('sha256', secret).update(norm).digest('hex').slice(0, 12);
+}
+
+function tokenPortalValido(clientId, t) {
+  const secret = portalSecret();
+  if (!secret) return true; // sem secret configurado (ex.: dev local sem APP_PASS), não exige token
+  if (!t) return false;
+  const esperado = gerarTokenPortal(clientId);
+  try {
+    return crypto.timingSafeEqual(Buffer.from(String(t)), Buffer.from(esperado));
+  } catch (e) {
+    return false;
+  }
+}
+
+// Permite que o painel admin (autenticado via Basic Auth) continue usando as APIs
+// sem precisar do token do portal.
+function requestAutenticadaAdmin(req) {
+  if (!process.env.APP_PASS) return true;
+  const h = req.headers.authorization || '';
+  if (!h.startsWith('Basic ')) return false;
+  try {
+    const decoded = Buffer.from(h.slice(6), 'base64').toString();
+    const idx = decoded.indexOf(':');
+    const u = decoded.slice(0, idx);
+    const p = decoded.slice(idx + 1);
+    return u === (process.env.APP_USER || 'admin') && p === process.env.APP_PASS;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Reconstrói o mapa slug → id consultando a base de Clientes do Notion
+async function reconstruirCacheSlugs() {
+  const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
+  if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID) {
+    throw new Error('Configuração do Notion incompleta no arquivo .env.');
+  }
+  let results = [];
+  let hasMore = true;
+  let startCursor = undefined;
+  while (hasMore) {
+    const body = {};
+    if (startCursor) body.start_cursor = startCursor;
+    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CLIENTS_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Erro ao consultar base ${NOTION_CLIENTS_DB_ID} do Notion: ${errText}`);
+    }
+    const data = await response.json();
+    results = results.concat(data.results || []);
+    hasMore = data.has_more;
+    startCursor = data.next_cursor;
+  }
+  const newCache = {};
+  results.forEach(item => {
+    const p = item.properties;
+    const nomeProp = p['Nome do Cliente'] || p['Name'] || p['Nome'];
+    const nome = nomeProp?.title?.map(t => t.plain_text).join('') || '';
+    if (nome) {
+      newCache[gerarSlug(nome)] = item.id;
+    }
+  });
+  slugToIdCache = newCache;
+  lastCacheUpdate = Date.now();
+  return newCache;
+}
+
 async function getClientDataHelper(clientId) {
   const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
   const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
@@ -4841,50 +5286,88 @@ async function getClientDataHelper(clientId) {
     throw new Error('Configuração do Notion incompleta no arquivo .env.');
   }
 
-  // 1. Buscar dados do cliente no Notion
-  const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${NOTION_TOKEN}`,
-      'Notion-Version': '2022-06-28'
-    }
-  });
+  let clientInfo = null;
 
-  if (!notionClientRes.ok) {
-    throw new Error('Cliente não encontrado no Notion.');
+  // 1. Tentar buscar dados do cliente no Notion
+  try {
+    const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+
+    if (notionClientRes.ok) {
+      const clientPage = await notionClientRes.json();
+      const p = clientPage.properties;
+
+      const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
+      const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
+      const getNumber = (prop) => prop?.number || 0;
+      const getSelect = (prop) => prop?.select?.name || '';
+      const getDateStart = (prop) => prop?.date?.start || '';
+      const getDateEnd = (prop) => prop?.date?.end || '';
+      const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+      const getFormulaString = (prop) => prop?.formula?.string || '';
+      const getRollupNumber = (prop) => prop?.rollup?.number || 0;
+
+      clientInfo = {
+        id: clientPage.id,
+        nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
+        status: getSelect(p['Status do Cliente'] || p['Status']),
+        adultos: getNumber(p['Qtd Adultos']),
+        criancas: getNumber(p['Qtd Crianças']),
+        vooChegada: getRichText(p['Voo de Chegada']),
+        vooPartida: getRichText(p['Voo de Partida']),
+        dataInicio: getDateStart(p['Período da Viagem']),
+        dataFim: getDateEnd(p['Período da Viagem']),
+        hotel: getRichText(p['Hotel']),
+        viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+        briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
+        valorTotal: getNumber(p['Valor Total']),
+        totalPago: getRollupNumber(p['Total Pago']),
+        saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+        statusPagamento: getFormulaString(p['Status de pagamento'])
+      };
+    }
+  } catch (err) {
+    console.error('Erro ao buscar cliente no Notion (getClientDataHelper):', err.message);
   }
 
-  const clientPage = await notionClientRes.json();
-  const p = clientPage.properties;
+  // Fallback para o banco local se o Notion falhar ou não encontrar o cliente
+  if (!clientInfo) {
+    try {
+      const { data: localClientRow } = await supabase.from('clientes_locais').select('data').eq('id', clientId).maybeSingle();
+      if (localClientRow && localClientRow.data) {
+        const lc = localClientRow.data;
+        clientInfo = {
+          id: lc.id,
+          nome: lc.nome || lc.clienteNome || 'Cliente Local',
+          status: lc.status || 'Roteiro em Edição',
+          adultos: Number(lc.adultos) || 2,
+          criancas: Number(lc.criancas) || 0,
+          vooChegada: lc.vooChegada || '',
+          vooPartida: lc.vooPartida || '',
+          dataInicio: lc.dataInicio || '',
+          dataFim: lc.dataFim || '',
+          hotel: lc.hotel || '',
+          viajantes: lc.viajantes || '',
+          briefing: lc.briefing || '',
+          valorTotal: Number(lc.valorTotal) || 0,
+          totalPago: Number(lc.totalPago) || 0,
+          saldoPagar: Number(lc.saldoPagar) || 0,
+          statusPagamento: lc.statusPagamento || 'Pendente'
+        };
+      }
+    } catch (localErr) {
+      console.error('Erro ao buscar cliente local no Supabase (getClientDataHelper):', localErr.message);
+    }
+  }
 
-  const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
-  const getRichText = (prop) => prop?.rich_text?.map(t => t.plain_text).join('') || '';
-  const getNumber = (prop) => prop?.number || 0;
-  const getSelect = (prop) => prop?.select?.name || '';
-  const getDateStart = (prop) => prop?.date?.start || '';
-  const getDateEnd = (prop) => prop?.date?.end || '';
-  const getFormulaNumber = (prop) => prop?.formula?.number || 0;
-  const getFormulaString = (prop) => prop?.formula?.string || '';
-  const getRollupNumber = (prop) => prop?.rollup?.number || 0;
-
-  const clientInfo = {
-    id: clientPage.id,
-    nome: getTitle(p['Nome do Cliente'] || p['Name'] || p['Nome']),
-    status: getSelect(p['Status do Cliente'] || p['Status']),
-    adultos: getNumber(p['Qtd Adultos']),
-    criancas: getNumber(p['Qtd Crianças']),
-    vooChegada: getRichText(p['Voo de Chegada']),
-    vooPartida: getRichText(p['Voo de Partida']),
-    dataInicio: getDateStart(p['Período da Viagem']),
-    dataFim: getDateEnd(p['Período da Viagem']),
-    hotel: getRichText(p['Hotel']),
-    viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
-    briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
-    valorTotal: getNumber(p['Valor Total']),
-    totalPago: getRollupNumber(p['Total Pago']),
-    saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
-    statusPagamento: getFormulaString(p['Status de pagamento'])
-  };
+  if (!clientInfo) {
+    throw new Error('Cliente não encontrado no Notion ou no banco de dados local.');
+  }
 
   // 2. Buscar Entradas (pagamentos confirmados) do cliente no Notion
   const entradasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_ENTRADAS_DB_ID}/query`, {
@@ -4943,6 +5426,8 @@ async function getClientDataHelper(clientId) {
         id: t.id,
         data: t.data,
         valor: Number(t.valor) || 0,
+        descontoAtivo: !!t.descontoAtivo,
+        desconto: Number(t.desconto) || 0,
         duracao: t.duracao || '',
         descricao: t.descricao || '',
         pontos: t.pontos || '',
@@ -4968,6 +5453,7 @@ async function getClientDataHelper(clientId) {
         nome: e.nome || '',
         pessoas: Number(e.pessoas) || 1,
         preco: Number(e.preco) || 0,
+        precoTipo: e.precoTipo || 'pessoa',
         taxaAtiva: !!e.taxaAtiva,
         taxaTipo: e.taxaTipo || 'pessoa',
         taxaValor: Number(e.taxaValor) || 0,
@@ -5010,8 +5496,10 @@ async function getClientDataHelper(clientId) {
             return true;
           }
         }
-        if (r.nome) {
-          const rotNameClean = r.nome.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
+        // Usa o nome de exibição (data.nome); a chave física agora é um ID imutável
+        const nomeExibicao = r.data.nome || (String(r.nome).startsWith('rot_') ? '' : r.nome);
+        if (nomeExibicao) {
+          const rotNameClean = nomeExibicao.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
           if (clientNameNormalized === rotNameClean || clientNameNormalized.includes(rotNameClean) || rotNameClean.includes(clientNameNormalized)) {
             return true;
           }
@@ -5072,6 +5560,9 @@ app.get('/cliente/:slug', (req, res) => {
 app.get('/api/public/client-data/:clientId', async (req, res) => {
   try {
     const { clientId } = req.params;
+    if (!requestAutenticadaAdmin(req) && !tokenPortalValido(clientId, req.query.t)) {
+      return res.status(403).json({ success: false, error: 'Link inválido ou expirado. Solicite um novo link à Heian Tour.' });
+    }
     const data = await getClientDataHelper(clientId);
     res.json({
       success: true,
@@ -5083,66 +5574,77 @@ app.get('/api/public/client-data/:clientId', async (req, res) => {
   }
 });
 
+// Endpoint autenticado (admin) com os mesmos dados — usado pelo montador de roteiros,
+// que antes dependia da rota pública.
+app.get('/api/clientes/:id/dados', async (req, res) => {
+  try {
+    const data = await getClientDataHelper(req.params.id);
+    res.json({ success: true, ...data });
+  } catch (error) {
+    console.error('Erro na API interna de dados do cliente:', error);
+    res.status(500).json({ success: false, error: 'Erro ao buscar dados do cliente', details: error.message });
+  }
+});
+
+// Endpoint autenticado (admin): gera o link do portal do cliente com token
+app.get('/api/clientes/:id/portal-link', async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    const token = gerarTokenPortal(clientId);
+    let slug = '';
+    // Tenta descobrir o slug pelo cache (reconstrói se necessário)
+    const idNorm = String(clientId).replace(/-/g, '').toLowerCase();
+    const achar = () => Object.keys(slugToIdCache).find(s => String(slugToIdCache[s]).replace(/-/g, '').toLowerCase() === idNorm);
+    slug = achar();
+    if (!slug) {
+      try { await reconstruirCacheSlugs(); slug = achar(); } catch (e) { /* segue com fallback */ }
+    }
+    const pathPart = slug ? `/cliente/${slug}` : `/cliente/${clientId}`;
+    const url = `${req.protocol}://${req.get('host')}${pathPart}${token ? `?t=${token}` : ''}`;
+    res.json({ success: true, url, token, slug: slug || null });
+  } catch (error) {
+    console.error('Erro ao gerar link do portal:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/public/client-data/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const now = Date.now();
 
     let clientId = slugToIdCache[slug];
-    
+
     if (!clientId || (now - lastCacheUpdate) > CACHE_TTL) {
-      const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
-      if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID) {
-        return res.status(400).json({ success: false, error: 'Configuração do Notion incompleta no arquivo .env.' });
+      try {
+        await reconstruirCacheSlugs();
+      } catch (e) {
+        return res.status(400).json({ success: false, error: e.message });
       }
-
-      const queryAllNotion = async (dbId) => {
-        let results = [];
-        let hasMore = true;
-        let startCursor = undefined;
-        while (hasMore) {
-          const body = {};
-          if (startCursor) body.start_cursor = startCursor;
-          const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${NOTION_TOKEN}`,
-              'Notion-Version': '2022-06-28',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-          });
-          if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
-          }
-          const data = await response.json();
-          results = results.concat(data.results || []);
-          hasMore = data.has_more;
-          startCursor = data.next_cursor;
-        }
-        return { results };
-      };
-
-      const clientesData = await queryAllNotion(NOTION_CLIENTS_DB_ID);
-      const newCache = {};
-      (clientesData.results || []).forEach(item => {
-        const p = item.properties;
-        const nomeProp = p['Nome do Cliente'] || p['Name'] || p['Nome'];
-        const nome = nomeProp?.title?.map(t => t.plain_text).join('') || '';
-        if (nome) {
-          const clientSlug = gerarSlug(nome);
-          newCache[clientSlug] = item.id;
-        }
-      });
-
-      slugToIdCache = newCache;
-      lastCacheUpdate = now;
       clientId = slugToIdCache[slug];
     }
 
     if (!clientId) {
+      // Se não for encontrado na tabela de slugs, tenta carregar diretamente como ID (uuid)
+      if (!requestAutenticadaAdmin(req) && !tokenPortalValido(slug, req.query.t)) {
+        return res.status(403).json({ success: false, error: 'Link inválido ou expirado. Solicite um novo link à Heian Tour.' });
+      }
+      try {
+        const data = await getClientDataHelper(slug);
+        if (data && data.clientInfo) {
+          return res.json({
+            success: true,
+            ...data
+          });
+        }
+      } catch (err) {
+        // Fallback falhou, segue para o 404
+      }
       return res.status(404).json({ success: false, error: 'Cliente não encontrado com o slug fornecido.' });
+    }
+
+    if (!requestAutenticadaAdmin(req) && !tokenPortalValido(clientId, req.query.t)) {
+      return res.status(403).json({ success: false, error: 'Link inválido ou expirado. Solicite um novo link à Heian Tour.' });
     }
 
     const data = await getClientDataHelper(clientId);
@@ -5349,4 +5851,16 @@ app.listen(PORT, () => {
   setInterval(() => {
     processarNotificacoesEmail().catch(err => console.error('[Email Job] Erro no job recorrente de e-mails:', err));
   }, 10 * 60 * 1000);
+
+  // Aquecimento do cache slug → id da Área do Cliente (evita ~10s de espera no primeiro acesso)
+  setTimeout(() => {
+    reconstruirCacheSlugs().then(() => {
+      console.log('[Portal] Cache de slugs da Área do Cliente aquecido.');
+    }).catch(err => console.error('[Portal] Falha ao aquecer cache de slugs:', err.message));
+  }, 3000);
+
+  // Migração única roteiros → ID imutável (idempotente; roda em segundo plano)
+  setTimeout(() => {
+    migrarRoteirosParaId().catch(err => console.error('[Migração Roteiros→ID] Falha:', err.message));
+  }, 1500);
 });

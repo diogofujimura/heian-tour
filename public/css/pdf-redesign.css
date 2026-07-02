@@ -1,0 +1,124 @@
+/* ============================================================================
+   HEIAN TOUR — REDESIGN DO PDF DO ROTEIRO (documento do cliente)
+   Carregar DEPOIS de style.css. Só estilo; imprime em A4.
+   Capa vinho com logo dourada real + traços dourados; páginas editoriais.
+   ============================================================================ */
+:root{ --pdf-wine:#842836; --pdf-wine-2:#5C1820; --pdf-gold:#B0883E; --pdf-gold-lt:#D9BE84;
+  --pdf-ink:#2B2326; --pdf-t2:#5F5457; --pdf-t3:#928689; --pdf-cream:#F6F0E6; --pdf-line:rgba(60,40,38,.12); }
+
+/* ── CAPA ──────────────────────────────────────────────────────────────── */
+.pdf-cover{
+  background:linear-gradient(158deg,#842836 0%,#5C1820 100%) !important;
+  position:relative; overflow:hidden; padding:64px 40px 56px !important;
+}
+/* moldura dourada fina */
+.pdf-cover::before{
+  content:""; position:absolute; inset:18px; border:1px solid rgba(217,190,132,.45);
+  border-radius:2px; pointer-events:none; background:none !important;
+}
+/* brilho dourado + traços diagonais sutis pra quebrar o chapado */
+.pdf-cover::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:1 !important;
+  background:
+    radial-gradient(360px 360px at 86% -8%, rgba(217,190,132,.20), transparent 70%),
+    radial-gradient(300px 300px at -6% 108%, rgba(217,190,132,.12), transparent 70%),
+    repeating-linear-gradient(125deg, rgba(217,190,132,.05) 0 2px, transparent 2px 26px) !important;
+}
+.pdf-cover-logo{ width:200px !important; margin:0 auto 18px !important; position:relative; z-index:2;
+  filter:drop-shadow(0 2px 10px rgba(0,0,0,.25)); }
+.pdf-cover-divider{ width:46px !important; height:1px !important; background:var(--pdf-gold-lt) !important;
+  opacity:.85 !important; margin:6px auto 16px !important; position:relative; z-index:2; }
+.pdf-cover-label{ font-size:10px !important; letter-spacing:.34em !important; color:rgba(217,190,132,.85) !important;
+  position:relative; z-index:2; }
+.pdf-cover-title{ font-family:'Georgia',serif !important; font-size:30px !important; font-weight:400 !important;
+  color:#fff !important; margin:14px 0 6px !important; line-height:1.2 !important; position:relative; z-index:2;
+  letter-spacing:.01em; }
+.pdf-cover-subtitle{ color:var(--pdf-gold-lt) !important; font-style:italic !important; position:relative; z-index:2; }
+.pdf-cover-meta{ gap:0 !important; margin-top:38px !important; position:relative; z-index:2;
+  border-top:1px solid rgba(217,190,132,.25); padding-top:22px; }
+.pdf-cover-meta-item{ padding:0 26px !important; position:relative; }
+.pdf-cover-meta-item + .pdf-cover-meta-item::before{ content:""; position:absolute; left:0; top:6px; bottom:6px;
+  width:1px; background:rgba(217,190,132,.3); }
+.pdf-cover-meta-label{ color:rgba(217,190,132,.6) !important; letter-spacing:.2em !important; }
+.pdf-cover-meta-value{ color:rgba(255,255,255,.95) !important; font-size:14px !important; }
+
+/* ── CORPO ─────────────────────────────────────────────────────────────── */
+.pdf-body{ padding:46px 60px 54px !important; background:#FBF7F0; }
+.pdf-body > div{ background:#fff !important; border:1px solid var(--pdf-line) !important;
+  box-shadow:0 10px 34px -16px rgba(60,30,30,.18) !important; border-radius:12px !important; }
+
+.pdf-section-title{ font-family:'Georgia',serif !important; color:var(--pdf-wine) !important;
+  font-size:15px !important; letter-spacing:.06em !important; }
+.pdf-section-dot{ background:linear-gradient(135deg,var(--pdf-gold),var(--pdf-wine)) !important; }
+
+.pdf-estadia-item{ background:var(--pdf-cream) !important; border:1px solid var(--pdf-line) !important;
+  border-radius:9px !important; padding:12px 14px !important; }
+.pdf-estadia-cidade{ color:var(--pdf-ink) !important; font-weight:700 !important; }
+.pdf-estadia-datas{ color:var(--pdf-t3) !important; }
+.pdf-estadia-hotel{ color:var(--pdf-gold) !important; font-weight:600 !important; }
+
+/* linha do tempo dos dias */
+.pdf-body .roteiro-timeline{ border-left:2px solid rgba(176,136,62,.35) !important; padding-left:24px !important; }
+.pdf-body .dia-card{ margin-bottom:26px !important; }
+.pdf-body .dia-header{ background:linear-gradient(to right, rgba(132,40,54,.07), transparent) !important;
+  border-left:3px solid var(--pdf-wine) !important; border-radius:0 8px 8px 0 !important;
+  padding:10px 14px !important; }
+.pdf-body .dia-numero{ font-family:'Georgia',serif !important; color:var(--pdf-wine) !important;
+  font-size:18px !important; font-weight:600 !important; letter-spacing:.01em; }
+.pdf-body .badge{ border-radius:99px !important; font-weight:700 !important; letter-spacing:.04em; }
+
+/* rodapé de marca em cada página */
+.pdf-doc{ position:relative; }
+@media print{
+  .pdf-cover{ background:linear-gradient(158deg,#842836,#5C1820) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .pdf-cover-title{ color:#fff !important; }
+  .pdf-cover::after{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .pdf-section-title{ color:#842836 !important; }
+  .pdf-body{ background:#fff !important; }
+}
+
+/* ============================================================================
+   LEITURA: fonte maior + aproveitar a folha (tela e impressão)
+   Os elementos do documento têm font-size embutido (11–14px); aqui eles
+   são ampliados de forma proporcional, mantendo a hierarquia.
+   ============================================================================ */
+.pdf-body [style*="font-size:11px"],.pdf-body [style*="font-size: 11px"]{font-size:13.5px !important}
+.pdf-body [style*="font-size:12px"],.pdf-body [style*="font-size: 12px"]{font-size:14.5px !important}
+.pdf-body [style*="font-size:13px"],.pdf-body [style*="font-size: 13px"]{font-size:15.5px !important}
+.pdf-body [style*="font-size:14px"],.pdf-body [style*="font-size: 14px"]{font-size:17px !important}
+.pdf-body [style*="line-height:1.4"],.pdf-body [style*="line-height: 1.4"]{line-height:1.6 !important}
+.pdf-body .dia-numero{ font-size:22px !important; }
+.pdf-body .pdf-section-title{ font-size:17px !important; }
+/* aproveitar a largura (menos gutter lateral) */
+.pdf-body{ padding:40px 40px 48px !important; }
+.pdf-body > div{ padding:30px 34px !important; }
+
+@media print{
+  @page{ size:A4; margin:11mm 12mm; }
+  /* zera margens duplicadas e usa quase toda a largura útil */
+  .pdf-body{ padding:0 !important; background:#fff !important; }
+  .pdf-body > div{ padding:6px 4px !important; box-shadow:none !important; border:0 !important; border-radius:0 !important; }
+  .pdf-doc{ width:100% !important; max-width:none !important; }
+  .pdf-body .roteiro-timeline{ padding-left:20px !important; }
+  /* um tiquinho maior ainda no papel */
+  .pdf-body [style*="font-size:11px"],.pdf-body [style*="font-size: 11px"]{font-size:12pt !important}
+  .pdf-body [style*="font-size:12px"],.pdf-body [style*="font-size: 12px"]{font-size:12.5pt !important}
+  .pdf-body [style*="font-size:13px"],.pdf-body [style*="font-size: 13px"]{font-size:13pt !important}
+  .pdf-body [style*="font-size:14px"],.pdf-body [style*="font-size: 14px"]{font-size:14pt !important}
+  .pdf-body .dia-numero{ font-size:17pt !important; }
+}
+
+/* ── Capa limpa: remover formas geométricas (círculo, moldura, traços) ──── */
+.pdf-cover::before{ content:none !important; }
+.pdf-cover::after{ content:none !important; }
+.pdf-cover{ padding:70px 40px 60px !important; }
+
+/* ── Caixa de pagamento antecipado (bem destacada) ───────────────────────── */
+.pdf-pagamento-box{ margin:16px 0 4px; border:1.5px solid var(--pdf-gold); background:#FBF4E2;
+  border-radius:10px; padding:14px 16px; }
+.pdf-pagamento-title{ font-family:'Georgia',serif; color:var(--pdf-wine); font-size:14px; font-weight:700; margin-bottom:10px; }
+.pdf-pagamento-box .pdf-resumo-row{ padding:5px 0; border:0; }
+.pdf-resumo-row.total-antecipado{ border-top:1px solid rgba(176,136,62,.45) !important; margin-top:8px; padding-top:9px !important;
+  font-weight:800; color:var(--pdf-wine); font-size:15px; }
+.pdf-resumo-row.pagamento-saldo{ margin-top:12px; color:var(--pdf-t2); font-style:italic; }
+@media print{ .pdf-pagamento-box{ -webkit-print-color-adjust:exact; print-color-adjust:exact; background:#FBF4E2 !important; } }

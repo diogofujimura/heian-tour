@@ -423,10 +423,12 @@
       <a href="#inspiração">Roteiros</a>
       <a href="#memorias">Memórias</a>
       <a href="#solicitar">Planejar</a>
-      <a href="/admin" target="_blank">Acesso Admin</a>
     </div>
     <div class="footer-copy">
       <p>&copy; 2026 Heian Tour. Todos os direitos reservados. Experiências exclusivas e roteiros sob medida.</p>
+      <div style="margin-top: 10px;">
+        <a href="/admin" target="_blank" style="opacity: 0.15; font-size: 10.5px; color: inherit; text-decoration: none; transition: opacity 0.25s; letter-spacing: 0.05em;" onmouseover="this.style.opacity='0.65'" onmouseout="this.style.opacity='0.15'">ÁREA RESTRITA</a>
+      </div>
     </div>
   </footer>
 
@@ -484,31 +486,50 @@
 
       if (!query) return;
 
-      // Sanitiza a string digitada para gerar um slug correspondente
-      // Exemplo: "Carlos Alberto" -> "carlos-alberto"
-      const slug = query.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/--+/g, '-')
-        .trim();
+      let slug = '';
+      let token = '';
+
+      // Tenta extrair o slug e token caso o cliente cole a URL completa
+      const urlMatch = query.match(/\/cliente\/([^\/\?#]+)/);
+      if (urlMatch) {
+        slug = urlMatch[1];
+        const tokenMatch = query.match(/[\?&]t=([^&]+)/);
+        if (tokenMatch) {
+          token = tokenMatch[1];
+        }
+      } else {
+        // Se digitou apenas o nome/slug comum
+        slug = query.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/--+/g, '-')
+          .trim();
+      }
 
       try {
-        // Consulta o endpoint público do servidor para ver se a viagem existe
-        const res = await fetch(`/api/public/client-data/slug/${slug}`);
+        const fetchUrl = `/api/public/client-data/slug/${slug}${token ? '?t=' + token : ''}`;
+        const res = await fetch(fetchUrl);
+        
+        if (res.status === 403) {
+          errorEl.textContent = 'Este roteiro exige um token de segurança. Cole o link completo enviado no seu WhatsApp ou E-mail.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
         if (!res.ok) throw new Error('Não encontrado');
         
         const data = await res.json();
         if (data.success && data.clientInfo) {
-          // Se encontrou com sucesso, redireciona o cliente para a Área do Cliente
-          window.location.href = `/cliente/${slug}`;
+          // Redireciona mantendo o token se existir
+          window.location.href = `/cliente/${slug}${token ? '?t=' + token : ''}`;
         } else {
-          errorEl.textContent = 'Nenhuma viagem ativa encontrada para este nome.';
+          errorEl.textContent = 'Nenhuma viagem ativa encontrada para este código ou nome.';
           errorEl.style.display = 'block';
         }
       } catch (err) {
         console.error(err);
-        errorEl.textContent = 'Erro ao buscar viagem. Verifique a grafia do seu nome.';
+        errorEl.textContent = 'Erro ao buscar viagem. Verifique a grafia do seu nome ou código.';
         errorEl.style.display = 'block';
       }
     }

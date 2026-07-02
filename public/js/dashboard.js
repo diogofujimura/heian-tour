@@ -8,12 +8,41 @@ const KANBAN_STATUSES = [
   { name: 'Em Negociação', color: '#64748b', bgColor: 'rgba(100, 116, 139, 0.08)', borderColor: '#cbd5e1' },
   { name: 'Negociação Aprovada', color: '#0284c7', bgColor: 'rgba(2, 132, 199, 0.08)', borderColor: '#bae6fd' },
   { name: 'Roteiro Rascunho', color: '#db2777', bgColor: 'rgba(219, 39, 119, 0.08)', borderColor: '#fbcfe8' },
+  { name: 'Compras', color: '#0891b2', bgColor: 'rgba(8, 145, 178, 0.08)', borderColor: '#a5f3fc' },
   { name: 'Roteiro versão final', color: '#ea580c', bgColor: 'rgba(234, 88, 12, 0.08)', borderColor: '#ffedd5' },
   { name: 'Em Viagem', color: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.08)', borderColor: '#e9d5ff' },
   { name: 'Cancelado', color: '#dc2626', bgColor: 'rgba(220, 38, 38, 0.08)', borderColor: '#fee2e2' },
   { name: 'Finalizados', color: '#16a34a', bgColor: 'rgba(22, 163, 74, 0.08)', borderColor: '#dcfce7' },
-  { name: 'Atendimento Pós', color: '#b45309', bgColor: 'rgba(180, 83, 9, 0.08)', borderColor: '#fef3c7' }
+  { name: 'Atendimento Pós', color: '#b45309', bgColor: 'rgba(180, 83, 9, 0.08)', borderColor: '#fef3c7' },
+  // Etapas que existem no Notion mas ficam OCULTAS por padrão (podem ser resgatadas em "⚙ Etapas")
+  { name: 'Lead', color: '#ca8a04', bgColor: 'rgba(202, 138, 4, 0.08)', borderColor: '#fef08a' },
+  { name: 'Novo', color: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.08)', borderColor: '#bfdbfe' },
+  { name: 'Em andamento', color: '#0d9488', bgColor: 'rgba(13, 148, 136, 0.08)', borderColor: '#99f6e4' },
+  { name: 'Pendente', color: '#d97706', bgColor: 'rgba(217, 119, 6, 0.08)', borderColor: '#fed7aa' }
 ];
+
+// Revalida a lista de clientes em segundo plano e re-renderiza Kanban/Provisões se algo mudou
+// (faz a edição aparecer sem precisar de F5, sem deixar a tela travada esperando o Notion).
+async function refrescarClientesEmBackground() {
+  if (window.__dashClientesInflight) return;
+  window.__dashClientesInflight = true;
+  try {
+    const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) {
+      const novos = await res.json();
+      const mudou = JSON.stringify(novos) !== JSON.stringify(window.notionClients);
+      window.notionClients = novos;
+      if (mudou) {
+        if (typeof renderKanban === 'function') renderKanban();
+        if (typeof window.renderPainelProvisoes === 'function') window.renderPainelProvisoes();
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao revalidar clientes em segundo plano:', e);
+  } finally {
+    window.__dashClientesInflight = false;
+  }
+}
 
 async function renderDashboard() {
   const titleEl = document.getElementById('dashboardPageTitle');
@@ -43,10 +72,27 @@ async function renderDashboard() {
     }
   }
 
+  // Busca a ordem personalizada das COLUNAS (etapas) do Kanban
+  if (window.kanbanColunasOrdem === undefined) {
+    try {
+      const colRes = await fetch('/api/config/kanban_colunas_ordem');
+      if (colRes.ok) {
+        const j = await colRes.json();
+        window.kanbanColunasOrdem = Array.isArray(j) ? j : (j && Array.isArray(j.ordem) ? j.ordem : []);
+      } else {
+        window.kanbanColunasOrdem = [];
+      }
+    } catch(e) {
+      console.error('Erro ao carregar ordem das colunas do Kanban:', e);
+      window.kanbanColunasOrdem = [];
+    }
+  }
+
   // Popula o select de clientes para o Dashboard
   let clientes = window.notionClients || [];
 
   if (clientes.length === 0) {
+    // Sem cache: busca agora (primeira carga).
     try {
       const res = await fetch('/api/notion/clientes?t=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
@@ -56,6 +102,9 @@ async function renderDashboard() {
     } catch (e) {
       console.error('Erro ao buscar clientes no dashboard:', e);
     }
+  } else {
+    // Já tem cache: renderiza rápido com o que tem e revalida em segundo plano (sem F5).
+    refrescarClientesEmBackground();
   }
 
   if (select && (select.options.length <= 1 || select.dataset.loadedCount != clientes.length)) {
@@ -107,6 +156,240 @@ async function salvarOrdemKanbanDOM() {
   }
 }
 
+// ---- Ordem personalizada das COLUNAS (etapas) ----
+function getOrderedStatuses() {
+  const saved = Array.isArray(window.kanbanColunasOrdem) ? window.kanbanColunasOrdem : [];
+  const byName = {};
+  KANBAN_STATUSES.forEach(s => { byName[s.name] = s; });
+  const out = [];
+  const used = new Set();
+  // 1) respeita a ordem salva (só nomes que ainda existem)
+  saved.forEach(name => {
+    if (byName[name] && !used.has(name)) { out.push(byName[name]); used.add(name); }
+  });
+  // 2) acrescenta etapas novas que ainda não estavam na ordem salva (ex.: Compras)
+  KANBAN_STATUSES.forEach(s => {
+    if (!used.has(s.name)) { out.push(s); used.add(s.name); }
+  });
+  return out;
+}
+
+async function salvarOrdemColunasKanban() {
+  const board = document.getElementById('kanbanBoard');
+  if (!board) return;
+  const ordem = Array.from(board.querySelectorAll('.kanban-column'))
+    .map(col => col.dataset.status)
+    .filter(Boolean);
+  // Preserva etapas ocultas (fora do DOM) na ordem atual, para não perdê-las ao salvar
+  getOrderedStatuses().forEach(s => { if (!ordem.includes(s.name)) ordem.push(s.name); });
+  window.kanbanColunasOrdem = ordem;
+  try {
+    await fetch('/api/config/kanban_colunas_ordem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ordem)
+    });
+  } catch(e) {
+    console.error('Erro ao salvar ordem das colunas do Kanban:', e);
+  }
+}
+
+// ---- Ordenação dos CARDS por Data da viagem ----
+function getKanbanSort() {
+  try { return JSON.parse(localStorage.getItem('kanbanCardSort') || '{}') || {}; }
+  catch(e) { return {}; }
+}
+function setKanbanSort(map) {
+  try { localStorage.setItem('kanbanCardSort', JSON.stringify(map || {})); } catch(e) {}
+}
+function cycleKanbanSort(status) {
+  const map = getKanbanSort();
+  const atual = map[status] || 'manual';
+  const prox = atual === 'manual' ? 'asc' : (atual === 'asc' ? 'desc' : 'manual');
+  if (prox === 'manual') delete map[status]; else map[status] = prox;
+  setKanbanSort(map);
+  renderKanban();
+}
+function tsDataViagem(c) {
+  const d = c && c.dataInicio ? c.dataInicio : '';
+  if (!d) return null;
+  const t = new Date(d).getTime();
+  return isNaN(t) ? null : t;
+}
+
+// ---- Etapas ocultas (mostrar/ocultar colunas) ----
+// Por padrão deixa ocultas as etapas órfãs do Notion para manter o quadro igual ao de hoje.
+function getHiddenStatuses() {
+  try {
+    const raw = localStorage.getItem('kanbanHiddenCols');
+    if (raw === null) {
+      const seed = ['Lead', 'Novo', 'Em andamento', 'Pendente'];
+      localStorage.setItem('kanbanHiddenCols', JSON.stringify(seed));
+      return seed.slice();
+    }
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch(e) { return []; }
+}
+function setHiddenStatuses(arr) {
+  try { localStorage.setItem('kanbanHiddenCols', JSON.stringify(arr || [])); } catch(e) {}
+}
+function toggleColHidden(status) {
+  const arr = getHiddenStatuses();
+  const i = arr.indexOf(status);
+  if (i >= 0) arr.splice(i, 1); else arr.push(status);
+  setHiddenStatuses(arr);
+  renderKanban();
+}
+
+function renderKanbanToolbar(orderedStatuses, hiddenSet) {
+  const board = document.getElementById('kanbanBoard');
+  if (!board || !board.parentNode) return;
+  let bar = document.getElementById('kanbanToolbar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'kanbanToolbar';
+    bar.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px 2px;';
+    board.parentNode.insertBefore(bar, board);
+  }
+  const clientes = window.notionClients || [];
+  const countOf = (name) => clientes.filter(c => (c.status || 'Início/call de dúvidas').toLowerCase() === name.toLowerCase()).length;
+  const hiddenList = orderedStatuses.filter(s => hiddenSet.has(s.name));
+
+  bar.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.style.position = 'relative';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '⚙ Etapas' + (hiddenList.length ? ' · ' + hiddenList.length + ' oculta' + (hiddenList.length > 1 ? 's' : '') : '');
+  btn.style.cssText = 'cursor:pointer;border:1px solid var(--border,#e5e0d8);background:#fff;color:var(--ink-mid,#555);border-radius:8px;font-size:12px;font-weight:600;padding:6px 12px;';
+
+  const panel = document.createElement('div');
+  panel.id = 'kanbanColPanel';
+  panel.style.cssText = 'position:absolute;z-index:60;margin-top:6px;background:#fff;border:1px solid var(--border,#e5e0d8);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;min-width:250px;max-height:340px;overflow:auto;display:' + (window.__kanbanPanelOpen ? 'block' : 'none') + ';';
+
+  const hint = document.createElement('div');
+  hint.textContent = 'Marque para mostrar a etapa, desmarque para ocultar.';
+  hint.style.cssText = 'font-size:11px;color:var(--ink-lt,#999);padding:2px 8px 8px;';
+  panel.appendChild(hint);
+
+  orderedStatuses.forEach(s => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;';
+    row.onmouseenter = () => row.style.background = 'rgba(0,0,0,0.04)';
+    row.onmouseleave = () => row.style.background = 'transparent';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !hiddenSet.has(s.name);
+    cb.style.cursor = 'pointer';
+    cb.addEventListener('change', (e) => { e.stopPropagation(); window.__kanbanPanelOpen = true; toggleColHidden(s.name); });
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:9px;height:9px;border-radius:50%;flex-shrink:0;background:' + s.color + ';';
+    const nm = document.createElement('span');
+    nm.textContent = s.name;
+    nm.style.flex = '1';
+    const ct = document.createElement('span');
+    ct.textContent = countOf(s.name);
+    ct.style.cssText = 'color:var(--ink-lt,#999);font-size:11px;';
+    row.appendChild(cb); row.appendChild(dot); row.appendChild(nm); row.appendChild(ct);
+    panel.appendChild(row);
+  });
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.__kanbanPanelOpen = !window.__kanbanPanelOpen;
+    panel.style.display = window.__kanbanPanelOpen ? 'block' : 'none';
+  });
+  panel.addEventListener('click', (e) => e.stopPropagation());
+
+  wrap.appendChild(btn);
+  wrap.appendChild(panel);
+  bar.appendChild(wrap);
+
+  // Chips de restauração rápida das etapas ocultas
+  hiddenList.forEach(s => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.textContent = '↩ ' + s.name + (countOf(s.name) ? ' (' + countOf(s.name) + ')' : '');
+    chip.title = 'Restaurar a etapa ' + s.name;
+    chip.style.cssText = 'cursor:pointer;border:1px dashed ' + s.color + ';background:transparent;color:' + s.color + ';border-radius:999px;font-size:11px;font-weight:600;padding:4px 10px;opacity:0.9;';
+    chip.addEventListener('click', () => toggleColHidden(s.name));
+    bar.appendChild(chip);
+  });
+
+  // Fecha o painel ao clicar fora (registrado uma única vez)
+  if (!window.__kanbanPanelDocWired) {
+    window.__kanbanPanelDocWired = true;
+    document.addEventListener('click', () => {
+      window.__kanbanPanelOpen = false;
+      const p = document.getElementById('kanbanColPanel');
+      if (p) p.style.display = 'none';
+    });
+  }
+}
+
+// ---- Auto-scroll nas bordas durante o arraste (cards e colunas) ----
+// Faz o quadro rolar sozinho ao chegar perto da borda, sem precisar soltar.
+function wireKanbanAutoScroll(board) {
+  if (!board || board.dataset.autoScrollWired) return;
+  board.dataset.autoScrollWired = '1';
+
+  const ZONE = 75;   // distância da borda (px) que ativa o scroll
+  const MAXV = 24;   // velocidade máxima por frame
+  let hEl = null, vEl = null, vx = 0, vy = 0, raf = 0, active = false;
+
+  function speed(dist) {
+    const f = Math.min(1, Math.max(0, (ZONE - dist) / ZONE));
+    return Math.ceil(f * MAXV);
+  }
+  function loop() {
+    if (!active || (!vx && !vy)) { raf = 0; return; }
+    if (hEl && vx) hEl.scrollLeft += vx;
+    if (vEl && vy) vEl.scrollTop += vy;
+    raf = requestAnimationFrame(loop);
+  }
+  function ensureLoop() { if (!raf) raf = requestAnimationFrame(loop); }
+  function stop() { active = false; hEl = vEl = null; vx = vy = 0; if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  document.addEventListener('dragover', function (e) {
+    const dragging = window.__kanbanDragCol || document.querySelector('.kanban-card.dragging');
+    if (!dragging) return;
+    active = true;
+
+    // Horizontal: rola o próprio quadro
+    vx = 0; hEl = null;
+    const br = board.getBoundingClientRect();
+    if (e.clientX < br.left + ZONE && board.scrollLeft > 0) {
+      hEl = board; vx = -speed(e.clientX - br.left);
+    } else if (e.clientX > br.right - ZONE && board.scrollLeft + board.clientWidth < board.scrollWidth - 1) {
+      hEl = board; vx = speed(br.right - e.clientX);
+    }
+
+    // Vertical: rola a coluna sob o ponteiro (apenas em arraste de card)
+    vy = 0; vEl = null;
+    if (!window.__kanbanDragCol && typeof document.elementFromPoint === 'function') {
+      try {
+        const under = document.elementFromPoint(e.clientX, e.clientY);
+        const cont = under && under.closest ? under.closest('.kanban-cards-container') : null;
+        if (cont) {
+          const cr = cont.getBoundingClientRect();
+          if (e.clientY < cr.top + ZONE && cont.scrollTop > 0) {
+            vEl = cont; vy = -speed(e.clientY - cr.top);
+          } else if (e.clientY > cr.bottom - ZONE && cont.scrollTop + cont.clientHeight < cont.scrollHeight - 1) {
+            vEl = cont; vy = speed(cr.bottom - e.clientY);
+          }
+        }
+      } catch (err) { /* elementFromPoint indisponível: mantém só o scroll horizontal */ }
+    }
+
+    if (vx || vy) ensureLoop();
+  }, true);
+
+  ['dragend', 'drop'].forEach(function (ev) { document.addEventListener(ev, stop, true); });
+}
+
 function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
@@ -114,43 +397,177 @@ function renderKanban() {
   const clientes = window.notionClients || [];
   board.innerHTML = '';
 
-  KANBAN_STATUSES.forEach(statusConfig => {
+  // Wiring (uma vez) do drag-reorder das COLUNAS no nível do board
+  if (!board.dataset.colDndWired) {
+    board.dataset.colDndWired = '1';
+    board.addEventListener('dragover', (e) => {
+      if (!window.__kanbanDragCol) return; // só age durante drag de coluna
+      e.preventDefault();
+      const dragging = board.querySelector('.kanban-col-dragging');
+      if (!dragging) return;
+      const cols = Array.from(board.querySelectorAll('.kanban-column:not(.kanban-col-dragging)'));
+      let alvo = null;
+      for (const col of cols) {
+        const r = col.getBoundingClientRect();
+        if (e.clientX < r.left + r.width / 2) { alvo = col; break; }
+      }
+      if (alvo) board.insertBefore(dragging, alvo);
+      else board.appendChild(dragging);
+    });
+    board.addEventListener('drop', (e) => {
+      if (window.__kanbanDragCol) e.preventDefault();
+    });
+  }
+  wireKanbanAutoScroll(board);
+
+  const sortMap = getKanbanSort();
+  const orderedStatuses = getOrderedStatuses();
+  const hiddenSet = new Set(getHiddenStatuses());
+  renderKanbanToolbar(orderedStatuses, hiddenSet);
+
+  orderedStatuses.forEach(statusConfig => {
     const colStatus = statusConfig.name;
+    if (hiddenSet.has(colStatus)) return; // coluna oculta: não renderiza
     const colClients = clientes.filter(c => (c.status || 'Início/call de dúvidas').toLowerCase() === colStatus.toLowerCase());
 
-    // Ordenação personalizada vinda do Supabase
-    const ordemIds = window.kanbanOrdem && window.kanbanOrdem[colStatus] ? window.kanbanOrdem[colStatus] : [];
-    if (ordemIds.length > 0) {
+    const sortMode = sortMap[colStatus] || 'manual';
+    if (sortMode === 'asc' || sortMode === 'desc') {
+      // Ordena por Data da viagem; cards sem data vão sempre para o fim
       colClients.sort((a, b) => {
-        const idxA = ordemIds.indexOf(a.id);
-        const idxB = ordemIds.indexOf(b.id);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return 0;
+        const ta = tsDataViagem(a), tb = tsDataViagem(b);
+        if (ta === null && tb === null) return 0;
+        if (ta === null) return 1;
+        if (tb === null) return -1;
+        return sortMode === 'asc' ? ta - tb : tb - ta;
       });
+    } else {
+      // Ordenação manual (arrastar) persistida no Supabase
+      const ordemIds = window.kanbanOrdem && window.kanbanOrdem[colStatus] ? window.kanbanOrdem[colStatus] : [];
+      if (ordemIds.length > 0) {
+        colClients.sort((a, b) => {
+          const idxA = ordemIds.indexOf(a.id);
+          const idxB = ordemIds.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return 0;
+        });
+      }
     }
 
     const column = document.createElement('div');
     column.className = 'kanban-column';
+    column.dataset.status = colStatus;
     column.style.borderColor = statusConfig.borderColor;
     
-    // Header
+    // Header (arrastável para reordenar colunas)
     const header = document.createElement('div');
     header.className = 'kanban-column-header';
     header.style.backgroundColor = statusConfig.bgColor;
     header.style.borderTop = `3px solid ${statusConfig.color}`;
-    
+    header.draggable = true;
+    header.style.cursor = 'grab';
+    header.title = 'Arraste para reordenar a etapa';
+
+    const titleWrap = document.createElement('span');
+    titleWrap.style.display = 'flex';
+    titleWrap.style.alignItems = 'center';
+    titleWrap.style.gap = '5px';
+    titleWrap.style.minWidth = '0';
+
+    const handleSpan = document.createElement('span');
+    handleSpan.textContent = '⠿';
+    handleSpan.style.color = statusConfig.color;
+    handleSpan.style.opacity = '0.5';
+    handleSpan.style.fontSize = '12px';
+    handleSpan.style.flexShrink = '0';
+
     const titleSpan = document.createElement('span');
     titleSpan.textContent = colStatus;
     titleSpan.style.color = statusConfig.color;
-    
+    titleSpan.style.overflow = 'hidden';
+    titleSpan.style.textOverflow = 'ellipsis';
+    titleSpan.style.whiteSpace = 'nowrap';
+
+    titleWrap.appendChild(handleSpan);
+    titleWrap.appendChild(titleSpan);
+
+    const rightWrap = document.createElement('span');
+    rightWrap.style.display = 'flex';
+    rightWrap.style.alignItems = 'center';
+    rightWrap.style.gap = '6px';
+    rightWrap.style.flexShrink = '0';
+
+    // Botão de ordenação por Data da viagem (manual -> asc -> desc)
+    const sortBtn = document.createElement('button');
+    sortBtn.type = 'button';
+    sortBtn.draggable = false;
+    sortBtn.textContent = sortMode === 'asc' ? '📅 ↑' : (sortMode === 'desc' ? '📅 ↓' : '📅');
+    sortBtn.title = sortMode === 'asc'
+      ? 'Ordenado por data (mais próxima primeiro). Clique para inverter.'
+      : (sortMode === 'desc'
+        ? 'Ordenado por data (mais distante primeiro). Clique para voltar ao manual.'
+        : 'Ordenar por Data da viagem');
+    sortBtn.style.cssText = 'cursor:pointer;border:1px solid ' + statusConfig.borderColor +
+      ';background:' + (sortMode === 'manual' ? 'transparent' : '#fff') +
+      ';color:' + statusConfig.color + ';border-radius:6px;font-size:10px;line-height:1;padding:3px 5px;font-weight:700;opacity:' +
+      (sortMode === 'manual' ? '0.55' : '1') + ';';
+    sortBtn.addEventListener('mousedown', e => e.stopPropagation());
+    sortBtn.addEventListener('dragstart', e => { e.preventDefault(); e.stopPropagation(); });
+    sortBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cycleKanbanSort(colStatus);
+    });
+
     const countSpan = document.createElement('span');
     countSpan.className = 'kanban-column-count';
     countSpan.textContent = colClients.length;
 
-    header.appendChild(titleSpan);
-    header.appendChild(countSpan);
+    // Botão de ocultar esta etapa
+    const hideBtn = document.createElement('button');
+    hideBtn.type = 'button';
+    hideBtn.draggable = false;
+    hideBtn.textContent = '✕';
+    hideBtn.title = 'Ocultar esta etapa (restaure em "⚙ Etapas")';
+    hideBtn.style.cssText = 'cursor:pointer;border:none;background:transparent;color:' + statusConfig.color +
+      ';opacity:0.45;font-size:12px;line-height:1;padding:2px 3px;font-weight:700;';
+    hideBtn.addEventListener('mouseenter', () => hideBtn.style.opacity = '0.9');
+    hideBtn.addEventListener('mouseleave', () => hideBtn.style.opacity = '0.45');
+    hideBtn.addEventListener('mousedown', e => e.stopPropagation());
+    hideBtn.addEventListener('dragstart', e => { e.preventDefault(); e.stopPropagation(); });
+    hideBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleColHidden(colStatus);
+    });
+
+    rightWrap.appendChild(sortBtn);
+    rightWrap.appendChild(countSpan);
+    rightWrap.appendChild(hideBtn);
+
+    header.appendChild(titleWrap);
+    header.appendChild(rightWrap);
+
+    // Drag das colunas (reordenar etapas)
+    header.addEventListener('dragstart', (e) => {
+      window.__kanbanDragCol = colStatus;
+      column.classList.add('kanban-col-dragging');
+      header.style.cursor = 'grabbing';
+      try {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('application/x-kanban-col', colStatus);
+      } catch(err) {}
+    });
+    header.addEventListener('dragend', async () => {
+      header.style.cursor = 'grab';
+      column.classList.remove('kanban-col-dragging');
+      if (window.__kanbanDragCol) {
+        window.__kanbanDragCol = null;
+        await salvarOrdemColunasKanban();
+      }
+    });
+
     column.appendChild(header);
 
     // Cards Container
@@ -160,6 +577,7 @@ function renderKanban() {
 
     // Listeners do Drag and Drop
     cardsContainer.addEventListener('dragover', (e) => {
+      if (window.__kanbanDragCol) return; // ignora durante reordenação de colunas
       e.preventDefault();
       cardsContainer.classList.add('drag-over');
     });
@@ -1548,26 +1966,40 @@ function onFiltroMesVisaoGeralConta() {
 
 // --- Modal de Registrar Entrada / Recebimento de Cliente ---
 
-window.copiarLinkClienteFromId = function(clientId) {
+window.copiarLinkClienteFromId = async function(clientId) {
   if (!clientId || clientId === 'Geral') {
     alert('Selecione um cliente no menu superior para copiar o link correspondente.');
     return;
   }
 
-  const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+  // O link agora vem do servidor, já com o token de acesso (?t=...) do portal
   let link = '';
-  if (clientInfo && clientInfo.nome) {
-    const slug = clientInfo.nome.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/--+/g, '-')
-      .trim();
-    link = `${window.location.origin}/cliente/${slug}`;
-  } else {
-    link = `${window.location.origin}/cliente.html?id=${clientId}`;
+  try {
+    const res = await fetch('/api/clientes/' + encodeURIComponent(clientId) + '/portal-link');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.url) link = data.url;
+    }
+  } catch (e) {
+    console.error('Erro ao gerar link do portal no servidor:', e);
   }
-  
+
+  // Fallback local (sem token) caso o servidor não responda
+  if (!link) {
+    const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+    if (clientInfo && clientInfo.nome) {
+      const slug = clientInfo.nome.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
+        .trim();
+      link = `${window.location.origin}/cliente/${slug}`;
+    } else {
+      link = `${window.location.origin}/cliente.html?id=${clientId}`;
+    }
+  }
+
   navigator.clipboard.writeText(link).then(() => {
     alert('Link da Área do Cliente copiado com sucesso para a área de transferência!');
   }).catch(err => {

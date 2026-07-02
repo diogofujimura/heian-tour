@@ -1627,6 +1627,7 @@
             <span class="meta-badge" id="meta-dates"><svg class="v-icon"><use href="#icon-calendar"></use></svg>-- / -- a -- / --</span>
             <span class="meta-badge" id="meta-passengers"><svg class="v-icon"><use href="#icon-users"></use></svg>- Viajantes</span>
             <span class="meta-badge" id="meta-cities" style="display: none;"><svg class="v-icon"><use href="#icon-map-pin"></use></svg><span></span></span>
+            <span class="meta-badge" id="hero-countdown" style="display:none; background:var(--accent); color:var(--primary-dark); font-weight:700; border:none;"></span>
           </div>
         </div>
       </div>
@@ -1641,11 +1642,13 @@
         <button class="tab-btn" onclick="switchTab(event, 'tab-info')"><svg class="v-icon"><use href="#icon-plane"></use></svg>Voos & Hotéis</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-payments')"><svg class="v-icon"><use href="#icon-credit-card"></use></svg>Extrato Financeiro</button>
         <button class="tab-btn" onclick="switchTab(event, 'tab-vouchers')"><svg class="v-icon"><use href="#icon-ticket"></use></svg>Ingressos & Vouchers</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-guia')"><svg class="v-icon"><use href="#icon-lightbulb"></use></svg>Guia do Japão</button>
         <button class="tab-btn" id="tab-btn-preferencias" onclick="switchTab(event, 'tab-preferencias')" style="display:none;"><svg class="v-icon"><use href="#icon-user"></use></svg>Perfil de Viagem</button>
       </nav>
 
       <!-- TAB 1: ITINERARY -->
       <section id="tab-itinerary" class="tab-content active">
+        <div id="trip-status-banner" style="display:none;"></div>
         <div class="timeline" id="itinerary-timeline">
           <!-- Timeline items rendered dynamically -->
         </div>
@@ -1681,7 +1684,6 @@
                   <th>Data</th>
                   <th>Atração</th>
                   <th>Quantidade</th>
-                  <th>Comprado por</th>
                   <th style="text-align: right">Valor</th>
                 </tr>
               </thead>
@@ -1698,9 +1700,8 @@
               <thead>
                 <tr>
                   <th>Data</th>
-                  <th>Serviço</th>
                   <th>Origem ➔ Destino</th>
-                  <th>Comprado por</th>
+                  <th>Quantidade</th>
                   <th style="text-align: right">Valor</th>
                 </tr>
               </thead>
@@ -1820,6 +1821,110 @@
           <!-- Renderizado dinamicamente pelo JS -->
         </div>
       </section>
+      <!-- TAB: GUIA DO JAPAO -->
+      <section id="tab-guia" class="tab-content">
+        <style>
+          .guia-head{font-family:var(--ff-display);font-size:24px;color:var(--ink);margin:4px 0 2px}
+          .guia-sub{font-size:13px;color:var(--ink-mid);margin-bottom:20px}
+          .guia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+          .guia-card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow-sm);backdrop-filter:blur(6px)}
+          .guia-card h4{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--primary);margin:0 0 12px;font-weight:700}
+          .guia-card ul{list-style:none;padding:0;margin:0}
+          .guia-card li{font-size:13.5px;color:var(--ink-mid);line-height:1.5;padding:6px 0;border-bottom:1px solid rgba(142,28,28,.05)}
+          .guia-card li:last-child{border-bottom:none}
+          .guia-card li b{color:var(--ink)}
+          .guia-emerg{grid-column:1/-1;background:linear-gradient(135deg,#fdf3f3,#fbeaea);border:1.5px solid rgba(142,28,28,.22)}
+          .guia-emerg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+          .guia-emerg-item .lbl{font-size:10px;letter-spacing:.08em;color:var(--ink-light);text-transform:uppercase}
+          .guia-emerg-item .val{font-size:14px;font-weight:700;color:var(--ink);margin-top:2px}
+          .guia-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+          .guia-links a{font-size:12px;color:var(--accent-dark);text-decoration:none;border:1px solid var(--border);border-radius:99px;padding:5px 12px;background:#fff}
+          .guia-links a:hover{border-color:var(--accent)}
+          .guia-cta{grid-column:1/-1;background:var(--primary-gradient);border-radius:16px;padding:18px 22px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+          .guia-cta .t{font-weight:700;font-size:15px}
+          .guia-cta .s{font-size:12.5px;color:#f0dcae;margin-top:2px}
+          .guia-cta a{background:var(--accent);color:var(--primary-dark);font-weight:700;font-size:13px;padding:10px 18px;border-radius:99px;text-decoration:none}
+          .guia-fill{color:var(--accent-dark);font-style:italic}
+          .guia-banner{border-radius:16px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+          .guia-banner.antes{background:linear-gradient(135deg,#fdf8ee,#f7edd8);border:1px solid rgba(197,160,89,.35)}
+          .guia-banner.durante{background:var(--primary-gradient);color:#fff}
+          .guia-banner.depois{background:#f3efe9;border:1px solid var(--border)}
+          .gb-eyebrow{font-size:10px;letter-spacing:.14em;font-weight:700;opacity:.8}
+          .guia-banner.durante .gb-eyebrow{color:#f0dcae}
+          .gb-title{font-family:var(--ff-display);font-size:18px;margin-top:3px}
+          .gb-emoji{font-size:30px}
+          .gb-btn{background:var(--accent);color:var(--primary-dark);border:none;font-weight:700;font-size:12.5px;padding:9px 16px;border-radius:99px;cursor:pointer;white-space:nowrap}
+        </style>
+        <div class="guia-head">Guia do Japao</div>
+        <div class="guia-sub">Tudo que voce precisa saber para aproveitar sua viagem com tranquilidade.</div>
+        <div class="guia-grid">
+          <div class="guia-card guia-emerg">
+            <h4>&#128367;&#65039; Seguranca &amp; Emergencia</h4>
+            <div class="guia-emerg-grid">
+              <div class="guia-emerg-item"><div class="lbl">Suporte Heian 24h</div><div class="val guia-fill">[seu WhatsApp]</div></div>
+              <div class="guia-emerg-item"><div class="lbl">Policia</div><div class="val">110</div></div>
+              <div class="guia-emerg-item"><div class="lbl">Ambulancia / Bombeiro</div><div class="val">119</div></div>
+              <div class="guia-emerg-item"><div class="lbl">Embaixada do Brasil (Toquio)</div><div class="val">+81 3-3404-5211</div></div>
+              <div class="guia-emerg-item"><div class="lbl">Seguro viagem</div><div class="val guia-fill">[apolice / contato]</div></div>
+              <div class="guia-emerg-item"><div class="lbl">Emergencia (turista)</div><div class="val">050-3816-2787</div></div>
+            </div>
+          </div>
+          <div class="guia-card">
+            <h4>&#128268; Essenciais</h4>
+            <ul>
+              <li>Tomada: <b>100V</b>, plugue tipo A &mdash; leve adaptador</li>
+              <li>Internet: <b>pocket Wi-Fi</b> ou <b>eSIM</b> (recomendado)</li>
+              <li>Transporte: cartao <b>IC</b> (Suica/Pasmo/Welcome Suica)</li>
+              <li>Dinheiro: <b>Iene (&yen;)</b> &mdash; leve em especie, nem tudo aceita cartao</li>
+              <li>Idioma: ingles limitado &mdash; use tradutor por camera</li>
+            </ul>
+          </div>
+          <div class="guia-card">
+            <h4>&#127880; Etiqueta &amp; Cultura</h4>
+            <ul>
+              <li>Tire os <b>sapatos</b> onde indicado (templos, ryokan, casas)</li>
+              <li><b>Silencio</b> nos trens &mdash; nao fale ao telefone</li>
+              <li><b>Gorjeta</b> nao e costume (pode ate constranger)</li>
+              <li>Onsen: lave-se <b>antes</b> de entrar; sem roupa de banho</li>
+              <li>Guarde seu <b>lixo</b> ate achar uma lixeira</li>
+            </ul>
+          </div>
+          <div class="guia-card">
+            <h4>&#128241; Apps &amp; Transporte</h4>
+            <ul>
+              <li><b>Google Maps</b> &mdash; rotas, trens e horarios</li>
+              <li><b>Japan Travel by NAVITIME</b> &mdash; transporte</li>
+              <li><b>Google Tradutor</b> &mdash; modo camera para placas/cardapios</li>
+            </ul>
+            <div class="guia-links">
+              <a href="https://www.japan.travel/pt/br/" target="_blank" rel="noopener">Turismo oficial</a>
+              <a href="https://www.tokyometro.jp/en/subwaymap/" target="_blank" rel="noopener">Mapa do metro (Toquio)</a>
+              <a href="https://www.jma.go.jp/bosai/forecast/" target="_blank" rel="noopener">Previsao do tempo</a>
+            </div>
+          </div>
+          <div class="guia-card">
+            <h4>&#127782;&#65039; Clima &amp; Bagagem</h4>
+            <ul>
+              <li>Confira a <b>previsao</b> dias antes &mdash; o tempo muda rapido</li>
+              <li><b>Calcado confortavel</b>: caminha-se muito por dia</li>
+              <li>Guarda-chuva compacto e casaco leve</li>
+              <li>Sacola para carregar sapatos (templos e ryokan)</li>
+            </ul>
+          </div>
+          <div class="guia-card">
+            <h4>&#128180; Dinheiro &amp; Compras</h4>
+            <ul>
+              <li>Saques: <b>7-Eleven</b> e <b>Japan Post</b> aceitam cartao internacional</li>
+              <li><b>Tax-free</b> para turistas em muitas lojas (leve o passaporte)</li>
+              <li>Moedas de &yen; se acumulam &mdash; uma carteira de moedas ajuda</li>
+            </ul>
+          </div>
+          <div class="guia-cta">
+            <div><div class="t">Precisa de algo? A Heian esta com voce.</div><div class="s">Suporte em portugues, a qualquer hora da viagem.</div></div>
+            <a href="https://wa.me/" target="_blank" rel="noopener">Falar no WhatsApp</a>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1852,6 +1957,30 @@
   </div>
 
   <!-- BOTÃO FLUTUANTE DE DIAS (FAB) -->
+  <style id="cliente-extra-roteiro">
+    .timeline-item.day-past .timeline-card{ opacity:.6; filter:grayscale(.45); }
+    .timeline-item.day-past .timeline-dot{ background:#cfc7bd !important; border-color:#cfc7bd !important; }
+    .timeline-item.day-today .timeline-card{ box-shadow:0 0 0 2px var(--accent), var(--shadow-md); }
+    .timeline-item.day-today .timeline-dot{ box-shadow:0 0 0 4px rgba(223,183,108,.35); }
+    .days-fab-panel{ max-height:72vh !important; padding:12px !important; width:210px !important; }
+    .days-fab-title{ margin-bottom:8px !important; }
+    #days-fab-grid.days-grid{ display:flex !important; flex-direction:column; gap:2px !important; }
+    .day-select-btn{ aspect-ratio:auto !important; display:flex !important; align-items:center; justify-content:flex-start !important;
+      width:100% !important; height:auto !important; min-height:0 !important; box-shadow:none !important;
+      text-align:left; padding:7px 12px !important; border-radius:8px !important; border:1px solid transparent !important; background:#fff !important;
+      font-weight:600; font-size:13px; color:var(--ink); cursor:pointer; transition:background .15s,border-color .15s; }
+    .day-select-btn:hover{ border-color:var(--accent) !important; background:var(--accent-light) !important; transform:none !important; }
+    .day-select-btn .dsb-date{ font-size:11.5px; color:var(--ink-light); font-weight:500; margin-left:6px; }
+    .day-select-btn.active-day{ border-color:var(--primary) !important; background:var(--accent-light) !important; color:var(--primary) !important; }
+    .day-select-btn.day-past{ opacity:.5; }
+    .day-select-btn.day-today{ border-color:var(--accent) !important; background:var(--accent-light) !important; }
+    .day-select-btn.active-day{ border-color:var(--primary) !important; background:var(--accent-light) !important; }
+    .day-select-btn.active-day .dsb-num{ box-shadow:0 0 0 2px var(--accent); }
+    .day-select-btn.day-past{ opacity:.55; }
+    .day-select-btn.day-past .dsb-num{ background:#cfc7bd; }
+    .day-select-btn.day-today{ border-color:var(--accent) !important; }
+    .day-select-btn.day-today .dsb-num{ background:var(--accent-gradient); color:var(--primary-dark); }
+  </style>
   <div id="days-fab-container" class="days-fab-container" style="display: flex;">
     <div id="days-fab-panel" class="days-fab-panel">
       <div class="days-fab-title">
@@ -1958,6 +2087,8 @@
     async function loadClientArea() {
       const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get('id');
+      const _pt = urlParams.get('t') || '';
+      window.__portalTokenQS = _pt ? ('?t=' + encodeURIComponent(_pt)) : (window.__portalTokenQS || '');
       
       if (!clientId) {
         document.getElementById('loader').style.display = 'none';
@@ -1966,7 +2097,7 @@
       }
 
       try {
-        const response = await fetch(`/api/public/client-data/${clientId}`);
+        const response = await fetch(`/api/public/client-data/${clientId}${window.__portalTokenQS || ''}`);
         if (!response.ok) {
           throw new Error('Falha ao obter dados do cliente');
         }
@@ -2000,6 +2131,35 @@
       document.getElementById('meta-dates').innerHTML = dataInicioFormatted && dataFimFormatted 
         ? `<svg class="v-icon"><use href="#icon-calendar"></use></svg>${dataInicioFormatted} a ${dataFimFormatted}` 
         : `<svg class="v-icon"><use href="#icon-calendar"></use></svg>Período da Viagem`;
+
+      // --- Bonus: contagem regressiva + banner Hoje/Proximo ---
+      try {
+        var _di = clientInfo.dataInicio, _df = clientInfo.dataFim;
+        if (_di) {
+          var _DIA = 86400000;
+          var _h = new Date(); _h.setHours(0,0,0,0);
+          var _pi = _di.split('-').map(Number); var _ini = new Date(_pi[0], _pi[1]-1, _pi[2]);
+          var _fim = _ini; if (_df) { var _pf = _df.split('-').map(Number); _fim = new Date(_pf[0], _pf[1]-1, _pf[2]); }
+          var _ate = Math.round((_ini - _h)/_DIA);
+          var _diaAtual = Math.floor((_h - _ini)/_DIA) + 1;
+          var _nf = _df ? (Math.floor((_fim - _ini)/_DIA) + 1) : null;
+          var _hc = document.getElementById('hero-countdown');
+          if (_hc && _ate > 0) { _hc.style.display=''; _hc.textContent = 'Faltam ' + _ate + (_ate>1?' dias':' dia'); }
+          var _bn = document.getElementById('trip-status-banner');
+          if (_bn) {
+            var _html='';
+            if (_ate > 0) {
+              _html = '<div class="guia-banner antes"><div><div class="gb-eyebrow">CONTAGEM REGRESSIVA</div><div class="gb-title">Faltam ' + _ate + (_ate>1?' dias':' dia') + ' para sua viagem ao Japao</div></div><span class="gb-emoji">&#127800;</span></div>';
+            } else if (_df && _h > _fim) {
+              _html = '<div class="guia-banner depois"><div><div class="gb-eyebrow">VIAGEM CONCLUIDA</div><div class="gb-title">Esperamos que tenha sido inesquecivel. Obrigado por viajar com a Heian.</div></div><span class="gb-emoji">&#128591;</span></div>';
+            } else {
+              var _label = 'Dia ' + _diaAtual + (_nf ? ' de ' + _nf : '');
+              _html = '<div class="guia-banner durante"><div><div class="gb-eyebrow">HOJE</div><div class="gb-title">Voce esta no ' + _label + ' da sua viagem</div></div><button class="gb-btn" onclick="if(window.scrollToDay)scrollToDay(' + _diaAtual + ')">Ver o dia de hoje</button></div>';
+            }
+            _bn.innerHTML = _html; _bn.style.display='';
+          }
+        }
+      } catch(e) { console.warn('[guia] banner', e); }
         
       const passageiros = (clientInfo.adultos || 0) + (clientInfo.criancas || 0);
       let paxText = `${passageiros} Passageiro${passageiros > 1 ? 's' : ''}`;
@@ -2028,9 +2188,9 @@
       }
 
       // 2. Financial Info
-      document.getElementById('financial-total').textContent = `¥ ${(clientInfo.valorTotal || 0).toLocaleString('en-US')}`;
-      document.getElementById('financial-paid').textContent = `¥ ${(clientInfo.totalPago || 0).toLocaleString('en-US')}`;
-      document.getElementById('financial-balance').textContent = `¥ ${(clientInfo.saldoPagar || 0).toLocaleString('en-US')}`;
+      document.getElementById('financial-total').textContent = `¥ ${(clientInfo.valorTotal || 0).toLocaleString('pt-BR')}`;
+      document.getElementById('financial-paid').textContent = `¥ ${(clientInfo.totalPago || 0).toLocaleString('pt-BR')}`;
+      document.getElementById('financial-balance').textContent = `¥ ${(clientInfo.saldoPagar || 0).toLocaleString('pt-BR')}`;
 
       // 3. Tab 1: Itinerary
       const timeline = document.getElementById('itinerary-timeline');
@@ -2052,20 +2212,29 @@
           return `${d}/${m}/${y}`;
         };
 
+        var _hojeMid = new Date(); _hojeMid.setHours(0,0,0,0);
         itinerary.dias.forEach((dia, index) => {
           const item = document.createElement('div');
-          item.className = `timeline-item ${dia.tourGuiado ? '' : 'no-tour'}`;
+          const diaData = somarDias(dataInicioStr, index);
+          let _cidadeDia = dia.cidade || '';
+          if (!_cidadeDia && dia.elementos) {
+            for (var _ci = 0; _ci < dia.elementos.length; _ci++) { if (dia.elementos[_ci].tipo === 'sequencia' && dia.elementos[_ci].cidade) { _cidadeDia = dia.elementos[_ci].cidade; break; } }
+            if (!_cidadeDia) for (var _ti = 0; _ti < dia.elementos.length; _ti++) { var _te = dia.elementos[_ti]; if (_te.tipo === 'transporte' && (_te.cidadeDestino || _te.cidadeOrigem)) { _cidadeDia = _te.cidadeDestino || _te.cidadeOrigem; break; } }
+          }
+          const _diaDataCurta = (diaData && diaData.length >= 5) ? diaData.slice(0,5) : diaData;
+          var _dd = null; if (dataInicioStr) { var _p0 = dataInicioStr.split('-').map(Number); _dd = new Date(_p0[0], _p0[1]-1, _p0[2]); _dd.setDate(_dd.getDate()+index); _dd.setHours(0,0,0,0); }
+          var _isPast = _dd ? (_dd < _hojeMid) : false;
+          var _isToday = _dd ? (_dd.getTime() === _hojeMid.getTime()) : false;
+          item.className = `timeline-item ${dia.tourGuiado ? '' : 'no-tour'}${_isPast ? ' day-past' : ''}${_isToday ? ' day-today' : ''}`;
           item.id = `itinerary-day-${index + 1}`;
-          
+
           if (daysGrid) {
             const dayBtn = document.createElement('button');
-            dayBtn.className = 'day-select-btn';
-            dayBtn.textContent = index + 1;
+            dayBtn.className = 'day-select-btn' + (_isPast ? ' day-past' : '') + (_isToday ? ' day-today' : '');
+            dayBtn.innerHTML = 'Dia ' + (index + 1) + '<span class="dsb-date">&middot; ' + _diaDataCurta + '</span>';
             dayBtn.onclick = () => scrollToDay(index + 1);
             daysGrid.appendChild(dayBtn);
           }
-          
-          const diaData = somarDias(dataInicioStr, index);
           const headerTag = dia.tourGuiado 
             ? '<span class="timeline-day-tag"><svg class="v-icon" style="color:var(--accent); stroke-width:2.5;"><use href="#icon-map"></use></svg>Tour Guiado</span>' 
             : '<span class="timeline-day-tag guide-no"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-compass"></use></svg>Roteiro Livre</span>';
@@ -2212,7 +2381,11 @@
             elementsHTML = `<p class="timeline-desc">Aproveite o dia para explorar a cidade livremente.</p>`;
           }
           
-          let dayCityText = dia.cidade ? ` • ${dia.cidade}` : '';
+          const _temTransp = (dia.elementos || []).some(function(el){ return el.tipo === 'transporte'; });
+          const _temExp = (dia.elementos || []).some(function(el){ return el.tipo === 'experiencia'; });
+          let _badges = headerTag;
+          if (_temTransp) _badges += '<span class="timeline-day-tag" style="background:linear-gradient(135deg,#2f6fed,#1e40af)"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-train"></use></svg>Transporte</span>';
+          if (_temExp) _badges += '<span class="timeline-day-tag" style="background:linear-gradient(135deg,#dfb76c,#c5a059); color:#560b0b"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-ticket"></use></svg>Experiencia</span>';
 
           const diaVoucher = (clientLocalInfo.vouchers || []).find(v => v.atracaoNome === `dia:${index + 1}`);
           let diaVchHtml = '';
@@ -2227,8 +2400,8 @@
             <div class="timeline-dot"></div>
             <div class="timeline-card">
               <div class="timeline-header">
-                <h3 class="timeline-day-title">Dia ${index + 1} (${diaData})${dayCityText} ${diaVchHtml}</h3>
-                ${headerTag}
+                <h3 class="timeline-day-title">Dia ${index + 1}${_cidadeDia ? ' — ' + _cidadeDia : ''} — ${_diaDataCurta} ${diaVchHtml}</h3>
+                <div class="timeline-day-tags" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center">${_badges}</div>
               </div>
               <div class="timeline-events-list">
                 ${elementsHTML}
@@ -2249,7 +2422,7 @@
       // 4. Tab 2: Services
       // Funções locais de cálculo de totais sanitizados
       function calcTotalExperiencia(e) {
-        let base = (e.preco || 0) * (e.pessoas || 1);
+        let base = (e.preco || 0) * (e.precoTipo === 'grupo' ? 1 : (e.pessoas || 1));
         if (e.taxaAtiva) {
           base += e.taxaTipo === 'grupo' ? (e.taxaValor || 3000) : (e.taxaValor || 3000) * (e.pessoas || 1);
         }
@@ -2285,11 +2458,17 @@
           document.getElementById('card-tours-wrapper').style.display = 'block';
           quote.tours.forEach(t => {
             const tr = document.createElement('tr');
+            const _tBase = t.valor || 0;
+            const _tDesc = (t.descontoAtivo && t.desconto > 0);
+            const _tFinal = _tDesc ? (_tBase - _tBase * (t.desconto / 100)) : _tBase;
+            const _tValHtml = _tDesc
+              ? `<span style="text-decoration:line-through; color:#999; font-size:11px; margin-right:6px;">¥ ${_tBase.toLocaleString('pt-BR')}</span>¥ ${Math.round(_tFinal).toLocaleString('pt-BR')}`
+              : `¥ ${_tBase.toLocaleString('pt-BR')}`;
             tr.innerHTML = `
               <td>${t.data ? fmtDateBR(t.data) : '-'}</td>
-              <td><strong>Tour Guiado: ${t.descricao || t.cidade || 'Passeio'}</strong>${t.pontos ? `<br><span style="font-size:11.5px; color:var(--ink-mid);">${t.pontos}</span>` : ''}</td>
+              <td><strong>Tour Guiado: ${t.descricao || t.cidade || 'Passeio'}</strong></td>
               <td>${t.duracao || '-'}</td>
-              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(t.valor || 0).toLocaleString('en-US')}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">${_tValHtml}</td>
             `;
             toursBody.appendChild(tr);
           });
@@ -2309,8 +2488,7 @@
               <td>${e.data ? fmtDateBR(e.data) : '-'}</td>
               <td><strong>${e.nome || 'Experiência'}</strong>${extraDesc}</td>
               <td>${e.pessoas || 1}x</td>
-              <td>${compradoPor}</td>
-              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('en-US')}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('pt-BR')}</td>
             `;
             expBody.appendChild(tr);
           });
@@ -2326,14 +2504,12 @@
             const total = calcTotalTransporte(t);
             const compradoPor = t.compradoHeian !== false ? 'Heian Tour (Incluído)' : 'Pelo Cliente';
             const extraDesc = t.observacao ? `<br><span style="font-size:11px; color:var(--ink-mid);">${t.observacao}</span>` : '';
-            const paxDetails = ` (Adultos: ${t.adultos || 0}${t.criancas ? `, Crianças: ${t.criancas}` : ''})`;
-            
+            const _qtdLabel = `${t.adultos || 0} ad${t.criancas ? `, ${t.criancas} cri` : ''}`;
             tr.innerHTML = `
               <td>${t.data ? fmtDateBR(t.data) : '-'}</td>
-              <td><strong>Transporte / Deslocamento</strong>${paxDetails}</td>
               <td><strong>${t.descricao || 'Transporte'}</strong>${extraDesc}</td>
-              <td>${compradoPor}</td>
-              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('en-US')}</td>
+              <td>${_qtdLabel}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${total.toLocaleString('pt-BR')}</td>
             `;
             transBody.appendChild(tr);
           });
@@ -2349,7 +2525,7 @@
           tr.innerHTML = `
              <td>-</td>
              <td><strong>Taxa de Consultoria e Planejamento</strong><br><span style="color:var(--ink-light); font-size:11px;">${quote.consultoria.descricao || 'Planejamento de Roteiro Personalizado'}</span></td>
-             <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(quote.consultoria.valor || 0).toLocaleString('en-US')}</td>
+             <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(quote.consultoria.valor || 0).toLocaleString('pt-BR')}</td>
           `;
           addonBody.appendChild(tr);
         }
@@ -2361,7 +2537,7 @@
             tr.innerHTML = `
               <td>${i.data ? fmtDateBR(i.data) : '-'}</td>
               <td><strong>${i.nome || 'Serviço Adicional'}</strong></td>
-              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(i.valor || 0).toLocaleString('en-US')}</td>
+              <td style="text-align: right; font-weight:600; font-family:var(--ff-num);">¥ ${(i.valor || 0).toLocaleString('pt-BR')}</td>
             `;
             addonBody.appendChild(tr);
           });
@@ -2499,14 +2675,14 @@
           } else if (p.moeda === 'USD') {
             origValStr = `$ ${(p.valor || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           } else {
-            origValStr = `¥ ${(p.valor || 0).toLocaleString('en-US')}`;
+            origValStr = `¥ ${(p.valor || 0).toLocaleString('pt-BR')}`;
           }
 
           tr.innerHTML = `
             <td>${p.data ? fmtDateBR(p.data) : '-'}</td>
             <td><strong>${p.descricao}</strong></td>
             <td style="text-align: right; font-weight: 500; font-family:var(--ff-num);">${origValStr} (${p.moeda})</td>
-            <td style="text-align: right; font-weight: 600; font-family:var(--ff-num);">¥ ${(p.valor || 0).toLocaleString('en-US')} JPY</td>
+            <td style="text-align: right; font-weight: 600; font-family:var(--ff-num);">¥ ${(p.valor || 0).toLocaleString('pt-BR')} JPY</td>
             <td style="text-align: center;"><span class="badge-paid">Confirmado</span></td>
           `;
           paymentsBody.appendChild(tr);
@@ -3010,15 +3186,19 @@
 
       const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get('id');
-      
+
+      // Token de acesso do portal (?t=...): repassado em todas as chamadas de dados
+      const portalToken = urlParams.get('t') || '';
+      window.__portalTokenQS = portalToken ? ('?t=' + encodeURIComponent(portalToken)) : '';
+
       let fetchUrl = '';
       if (clientId) {
-        fetchUrl = `/api/public/client-data/${clientId}`;
+        fetchUrl = `/api/public/client-data/${clientId}${window.__portalTokenQS}`;
       } else {
         const pathParts = window.location.pathname.split('/');
         if (pathParts.length >= 3 && pathParts[1] === 'cliente') {
           const clientSlug = pathParts[2];
-          fetchUrl = `/api/public/client-data/slug/${clientSlug}`;
+          fetchUrl = `/api/public/client-data/slug/${clientSlug}${window.__portalTokenQS}`;
         }
       }
       

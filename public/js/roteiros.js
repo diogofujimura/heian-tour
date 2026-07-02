@@ -124,10 +124,28 @@ window.verificarFuncionamentoAtracao = function(nome, dataStr) {
 
 
 let _autoSaveRoteiroTimer = null;
+
+// Snapshot da última versão salva do roteiro: abrir um roteiro não deve gravá-lo;
+// o autosave só envia ao servidor quando algo mudou de verdade.
+window._lastSavedRoteiroSig = null;
+window.roteiroSignature = function() {
+  try {
+    const nomeAtual = document.getElementById('editRoteiroNome')?.value.trim() || '';
+    return (window.roteiroOriginalNome || nomeAtual) + '|' + JSON.stringify(roteiroEmEdicao);
+  } catch (e) { return null; }
+};
+window.marcarBaselineRoteiro = function() {
+  window._lastSavedRoteiroSig = window.roteiroSignature();
+};
+
 window.autoSaveRoteiro = function() {
   if (!roteiroEmEdicao || !roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) return;
   clearTimeout(_autoSaveRoteiroTimer);
-  
+
+  // Nada mudou desde a última gravação/abertura? Não grava.
+  const sigAgora = window.roteiroSignature();
+  if (sigAgora && sigAgora === window._lastSavedRoteiroSig) return;
+
   const indicator = document.getElementById('roteiroAutoSaveIndicator');
   if (indicator) {
     indicator.textContent = 'Salvando...';
@@ -138,15 +156,39 @@ window.autoSaveRoteiro = function() {
     const nomeAtual = document.getElementById('editRoteiroNome')?.value.trim();
     const nameToSave = window.roteiroOriginalNome || nomeAtual;
     if (!nameToSave) return;
+
+    // Reconfere no momento do disparo (o estado pode ter voltado ao original)
+    const sigDisparo = window.roteiroSignature();
+    if (sigDisparo && sigDisparo === window._lastSavedRoteiroSig) {
+      if (indicator) { indicator.textContent = 'Salvo automaticamente'; indicator.style.opacity = '0.4'; }
+      return;
+    }
     
     try {
-      const res = await fetch(`/api/roteiros/${encodeURIComponent(nameToSave)}`, {
+      // Chave imutável (rot_...) quando disponível; nome legado como fallback
+      const chaveSave = roteiroEmEdicao.id || nameToSave;
+      if (nomeAtual) roteiroEmEdicao.nome = nomeAtual;
+      const res = await fetch(`/api/roteiros/${encodeURIComponent(chaveSave)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roteiroEmEdicao)
+        body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm })
       });
+      if (res.status === 409) {
+        if (indicator) { indicator.textContent = 'Conflito de edição!'; indicator.style.opacity = '1'; }
+        if (!window.__conflitoRoteiroAvisado) {
+          window.__conflitoRoteiroAvisado = true;
+          alert('Este roteiro foi alterado em outra sessão (outra aba ou outro usuário).\nSuas últimas alterações NÃO foram salvas.\nRecarregue a página para pegar a versão mais recente antes de continuar.');
+        }
+        return;
+      }
       if (res.ok) {
+        try {
+          const j = await res.json();
+          if (j && j.id) roteiroEmEdicao.id = j.id;
+          if (j && j.atualizadoEm) roteiroEmEdicao.atualizadoEm = j.atualizadoEm;
+        } catch (e) { /* resposta sem json não impede o fluxo */ }
         dbRotas[nameToSave] = roteiroEmEdicao;
+        window._lastSavedRoteiroSig = window.roteiroSignature();
         if (indicator) { 
            indicator.textContent = 'Salvo automaticamente'; 
            setTimeout(() => { if(indicator && indicator.textContent==='Salvo automaticamente') indicator.style.opacity = '0.4'; }, 2000);
@@ -975,12 +1017,18 @@ window.novoRoteiro = function() {
           nomeParaExibir = nome;
       }
 
+      const MESES_PDF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
       const formatPeriodo = (d1, d2) => {
         if (!d1 && !d2) return '';
-        const f1 = d1 ? d1.split('-').reverse().slice(0, 2).join('/') : '';
-        const f2 = d2 ? d2.split('-').reverse().slice(0, 2).join('/') : '';
-        if (f1 && f2) return `${f1} a ${f2}`;
-        return f1 || f2;
+        const parse = s => { const p = String(s).split('-'); return { y: +p[0], m: +p[1], d: +p[2] }; };
+        if (d1 && d2) {
+          const a = parse(d1), b = parse(d2);
+          if (a.m === b.m && a.y === b.y) return `${a.d} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+          if (a.y === b.y) return `${a.d} de ${MESES_PDF[a.m - 1]} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+          return `${a.d} de ${MESES_PDF[a.m - 1]} de ${a.y} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+        }
+        const s = d1 || d2, p = parse(s);
+        return `${p.d} de ${MESES_PDF[p.m - 1]} de ${p.y}`;
       };
 
       const txtPessoas = (cliente.adultos ? `${cliente.adultos} Adultos` : '') + (cliente.criancas > 0 ? `, ${cliente.criancas} Crianças` : '');
@@ -1093,16 +1141,30 @@ window.novoRoteiro = function() {
         let dataText = '';
         if (dia.data) {
           const [yy, mm, dd] = dia.data.split('-');
-          const dateObj = new Date(yy, mm - 1, dd);
-          const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-          dataText = ` - ${dd}/${mm}/${yy} (${diasSemana[dateObj.getDay()]})`;
+          dataText = `${dd}/${mm}`;
+        }
+        // Rota de cidades do dia (com setas quando ha deslocamento)
+        let rotaCidades = '';
+        {
+          const chainCidades = [];
+          (dia.elementos || []).forEach(el => {
+            if (el.tipo === 'transporte') {
+              if (el.cidadeOrigem) chainCidades.push(String(el.cidadeOrigem).trim());
+              if (el.cidadeDestino) chainCidades.push(String(el.cidadeDestino).trim());
+            } else if (el.tipo === 'sequencia' && el.cidade) {
+              chainCidades.push(String(el.cidade).trim());
+            }
+          });
+          const limpa = [];
+          chainCidades.forEach(c => { if (c && (!limpa.length || limpa[limpa.length - 1].toLowerCase() !== c.toLowerCase())) limpa.push(c); });
+          rotaCidades = limpa.join(' \u2192 ');
         }
   
         return `
           <div class="dia-card">
             <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
               <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center; flex-wrap:wrap;">
-                <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${dia.numeroDia || (index + 1)}${dataText}</span>
+                <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${dia.numeroDia || (index + 1)}${rotaCidades ? ' \u2014 ' + rotaCidades : ''}${dataText ? ' \u2014 ' + dataText : ''}</span>
                 ${badgeGuiado}
                 ${badgeDeslocamento}
                 ${badgeExperiencia}
@@ -1238,9 +1300,12 @@ window.novoRoteiro = function() {
     btn.textContent = 'Salvando...'; btn.disabled = true;
 
     let res;
+    roteiroEmEdicao.nome = novoNome;
     if (roteiroOriginalNome && roteiroOriginalNome !== novoNome) {
-      // Renomeação atômica e cascade update no backend
-      res = await fetch(`/api/roteiros/${encodeURIComponent(roteiroOriginalNome)}/renomear`, {
+      // Renomear = trocar o rótulo sob a mesma chave imutável.
+      // O servidor também atualiza o rótulo nas cotações vinculadas.
+      const chaveRen = roteiroEmEdicao.id || roteiroOriginalNome;
+      res = await fetch(`/api/roteiros/${encodeURIComponent(chaveRen)}/renomear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ novoNome, roteiroObj: roteiroEmEdicao })
@@ -1249,23 +1314,31 @@ window.novoRoteiro = function() {
         delete dbRotas[roteiroOriginalNome];
       }
     } else {
-      // Salvamento comum
-      res = await fetch(`/api/roteiros/${encodeURIComponent(novoNome)}`, {
+      // Salvamento comum (pela chave imutável quando existir)
+      const chaveSave = roteiroEmEdicao.id || novoNome;
+      res = await fetch(`/api/roteiros/${encodeURIComponent(chaveSave)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roteiroEmEdicao)
+        body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm })
       });
     }
 
     if (res.status === 409) {
       const errData = await res.json();
-      alert(errData.message || 'Já existe um roteiro com este nome associado a outro cliente. Por favor, escolha um nome diferente.');
+      alert(errData.message || 'Este roteiro foi alterado em outra sessão. Recarregue a página antes de salvar.');
       btn.textContent = 'Salvar Roteiro'; btn.disabled = false;
       return;
     }
 
     if (res.ok) {
+      try {
+        const j = await res.json();
+        if (j && j.id) roteiroEmEdicao.id = j.id;
+        if (j && j.atualizadoEm) roteiroEmEdicao.atualizadoEm = j.atualizadoEm;
+      } catch (e) { /* segue */ }
       dbRotas[novoNome] = roteiroEmEdicao;
+      roteiroOriginalNome = novoNome;
+      if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
       preencherSelectRoteiros(novoNome);
       fecharEditorRoteiro();
       renderizarRoteiro(novoNome);
@@ -1284,6 +1357,9 @@ window.novoRoteiro = function() {
 
 function abrirEditorRoteiro(nome) {
   document.getElementById('editRoteiroNome').value = nome === 'Novo Roteiro' ? '' : nome;
+
+  // Abrir o editor não deve gravar: estado atual vira o baseline do autosave
+  if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
   
   window.roteiroUndoStack = [];
   if (typeof window.registrarEstadoRoteiro === 'function') {
@@ -1302,16 +1378,25 @@ function abrirEditorRoteiro(nome) {
   
   const notionCli = notionId && typeof notionClients !== 'undefined' ? notionClients.find(c => c.id === notionId) : null;
 
+  // Normaliza o vinculo: o id pode estar aninhado (cliente.notionClienteId), no topo, ou so na cotacao.
+  // Garante que TOPO e ANINHADO fiquem iguais, pra o vinculo ser reconhecido em todo lugar (e cura o dado salvo).
+  const _vinc = roteiroEmEdicao.notionClienteId || (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId) || notionId || null;
+  if (_vinc) {
+    roteiroEmEdicao.notionClienteId = _vinc;
+    if (!roteiroEmEdicao.cliente) roteiroEmEdicao.cliente = {};
+    if (!roteiroEmEdicao.cliente.notionClienteId) roteiroEmEdicao.cliente.notionClienteId = _vinc;
+  }
+
   // Preenche dados do cliente (prioriza Notion)
   document.getElementById('rotClienteNome').value = notionCli ? notionCli.nome : (roteiroEmEdicao.cliente?.nome || '');
   document.getElementById('rotClienteAdultos').value = notionCli ? notionCli.adultos : (roteiroEmEdicao.cliente?.adultos || '2');
   document.getElementById('rotClienteCriancas').value = notionCli ? notionCli.criancas : (roteiroEmEdicao.cliente?.criancas || '0');
   
-  const rotTemCliente = !!roteiroEmEdicao.notionClienteId;
+  const rotTemCliente = !!_vinc;
   const rotLockedStyle = rotTemCliente ? 'background:#f1f5f9; cursor:not-allowed' : '';
   ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) { el.readOnly = rotTemCliente; el.style.cssText = rotLockedStyle; }
+    if(el) { el.readOnly = false; el.style.cssText = ''; }
   });
   const btnEditarRot = document.getElementById('btnEditarClienteRoteiro');
   if(btnEditarRot) btnEditarRot.innerHTML = rotTemCliente ? '<svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg> Editar Cliente' : '<svg class="v-icon"><use href="#icon-save"></use></svg> Salvar Cliente no Notion';
@@ -1487,6 +1572,9 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
                 <label style="font-size:10px;color:var(--ink-mid)">Crianças</label>
                 <input type="number" value="${el.criancas !== undefined ? el.criancas : (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0}" onchange="updElementoEdit(${idx}, ${eIdx}, 'criancas', parseInt(this.value)||0)" style="width:50px">
               </div>
+              <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+                <button type="button" title="Fazer este item seguir o numero de pessoas do cliente" onclick="itemSeguirCliente(${idx}, ${eIdx})" style="height:34px;border:1px solid var(--border,#ddd);background:#fff;border-radius:4px;font-size:11px;cursor:pointer;padding:0 8px;color:var(--ink-mid,#666);white-space:nowrap;">&#8635; seguir cliente</button>
+              </div>
               <div class="field" style="margin:0; display:flex; flex-wrap:wrap; align-items:flex-end">
                 <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
                   <input type="checkbox" ${el.compradoHeian !== false ? 'checked' : ''} onchange="updElementoEdit(${idx}, ${eIdx}, 'compradoHeian', this.checked)" style="margin-right:6px"> EMITIDO P/ HEIAN
@@ -1538,6 +1626,9 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
               <div class="field" style="margin:0">
                 <label style="font-size:10px;color:var(--ink-mid)">Crianças</label>
                 <input type="number" value="${el.criancas !== undefined ? el.criancas : (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0}" onchange="updElementoEdit(${idx}, ${eIdx}, 'criancas', parseInt(this.value)||0)" style="width:50px">
+              </div>
+              <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+                <button type="button" title="Fazer este item seguir o numero de pessoas do cliente" onclick="itemSeguirCliente(${idx}, ${eIdx})" style="height:34px;border:1px solid var(--border,#ddd);background:#fff;border-radius:4px;font-size:11px;cursor:pointer;padding:0 8px;color:var(--ink-mid,#666);white-space:nowrap;">&#8635; seguir cliente</button>
               </div>
               <div class="field" style="margin:0; display:flex; flex-wrap:wrap; align-items:flex-end">
                 <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
@@ -1910,9 +2001,12 @@ window.atualizarOpcoesTransporte = function(idx, eIdx) {
 
 window.formatarPessoas = function(el) {
   let text = [];
-  if (el.adultos) text.push(el.adultos + (el.adultos > 1 ? ' Adultos' : ' Adulto'));
-  if (el.criancas) text.push(el.criancas + (el.criancas > 1 ? ' Crianças' : ' Criança'));
-  // fallback for legacy
+  // pax efetivo: usa o do item se foi customizado; senao SEGUE o cliente
+  var _cli = (window.roteiroEmEdicao && window.roteiroEmEdicao.cliente) || {};
+  var _ad = (el.adultos !== undefined && el.adultos !== null && el.adultos !== '') ? parseInt(el.adultos) : (parseInt(_cli.adultos) || 0);
+  var _cr = (el.criancas !== undefined && el.criancas !== null && el.criancas !== '') ? parseInt(el.criancas) : (parseInt(_cli.criancas) || 0);
+  if (_ad) text.push(_ad + (_ad > 1 ? ' Adultos' : ' Adulto'));
+  if (_cr) text.push(_cr + (_cr > 1 ? ' Crianças' : ' Criança'));
   if (text.length === 0 && el.passageiros) return el.passageiros + (el.passageiros > 1 ? ' Passageiros' : ' Passageiro');
   return text.join(', ');
 };
@@ -1930,8 +2024,8 @@ window.selecionarTransporte = function(idx, eIdx, idTransp) {
         el.categoria = '-';
         el.tempo = '';
         el.precoManual = parseFloat(precoStr) || 0;
-        if (el.adultos === undefined) el.adultos = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.adultos) || 2);
-        if (el.criancas === undefined) el.criancas = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0);
+        /* pax herda do cliente por padrao */
+        /* pax herda do cliente por padrao */
         renderEditDias();
      } else {
         renderEditDias(); // Reseta o select caso ele cancele
@@ -1949,8 +2043,8 @@ window.selecionarTransporte = function(idx, eIdx, idTransp) {
       el.tempo = t.tempo;
       el.instrucoesPreCompra = t.compra || '';
       el.instrucoesPosCompra = t.uso || '';
-      if (el.adultos === undefined) el.adultos = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.adultos) || 2);
-      if (el.criancas === undefined) el.criancas = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0);
+      /* pax herda do cliente por padrao */
+      /* pax herda do cliente por padrao */
       renderEditDias();
     }
   };
@@ -2020,8 +2114,8 @@ window.selecionarExperiencia = function(idx, eIdx, idExp) {
       el.nomeExp = ex.nome;
       el.tipoExp = ex.tipo;
       el.observacao = ex.observacao;
-      if (el.adultos === undefined) el.adultos = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.adultos) || 2);
-      if (el.criancas === undefined) el.criancas = parseInt((roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.criancas) || 0);
+      /* pax herda do cliente por padrao */
+      /* pax herda do cliente por padrao */
       renderEditDias();
     }
   };
@@ -2092,6 +2186,13 @@ window.adicionarElemento = function(idx, tipo) {
 
 window.updElementoEdit = function(idx, eIdx, campo, valor) {
   roteiroEmEdicao.dias[idx].elementos[eIdx][campo] = valor;
+};
+
+window.itemSeguirCliente = function(idx, eIdx) {
+  var el = roteiroEmEdicao.dias[idx].elementos[eIdx];
+  delete el.adultos; delete el.criancas;
+  if (typeof renderEditDias === 'function') renderEditDias();
+  if (typeof window.autoSaveRoteiro === 'function') window.autoSaveRoteiro();
 };
 
 window.addAtracaoBloco = function(idx, eIdx, nome) {
@@ -2279,13 +2380,30 @@ window.triggerRoteiroAutoSave = function() {
     
     try {
       dbRotas[roteiroOriginalNome] = roteiroEmEdicao;
-      await fetch('/api/roteiros/' + encodeURIComponent(roteiroOriginalNome), {
+      const chaveSave = roteiroEmEdicao.id || roteiroOriginalNome;
+      const res = await fetch('/api/roteiros/' + encodeURIComponent(chaveSave), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roteiroEmEdicao)
+        body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm })
       });
+      if (res.status === 409) {
+        if (indicator) { indicator.textContent = 'Conflito de edição!'; indicator.style.opacity = '1'; }
+        if (!window.__conflitoRoteiroAvisado) {
+          window.__conflitoRoteiroAvisado = true;
+          alert('Este roteiro foi alterado em outra sessão (outra aba ou outro usuário).\nSuas últimas alterações NÃO foram salvas.\nRecarregue a página para pegar a versão mais recente antes de continuar.');
+        }
+        return;
+      }
+      if (res.ok) {
+        try {
+          const j = await res.json();
+          if (j && j.id) roteiroEmEdicao.id = j.id;
+          if (j && j.atualizadoEm) roteiroEmEdicao.atualizadoEm = j.atualizadoEm;
+        } catch (e) { /* segue */ }
+        if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
+      }
       if (indicator) {
-        indicator.textContent = 'Salvo automaticamente';
+        indicator.textContent = res.ok ? 'Salvo automaticamente' : 'Erro ao salvar';
         setTimeout(() => { if(indicator) indicator.style.opacity = '0'; }, 1500);
       }
     } catch(e) {
@@ -2380,7 +2498,7 @@ window.vincularClienteRoteiroFromSelect = function() {
     // Trava os campos imediatamente após o vínculo
     ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
       const el = document.getElementById(id);
-      if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+      if(el) { el.readOnly = false; el.style = ''; }
     });
     
     document.getElementById('rotNotionSelectWrapper').style.display = 'none';
@@ -2449,7 +2567,7 @@ window.handleAcaoClienteRoteiro = async function() {
       // Trava os campos
       ['rotClienteNome', 'rotClienteAdultos', 'rotClienteCriancas'].forEach(id => {
         const el = document.getElementById(id);
-        if(el) { el.readOnly = true; el.style = 'background:#f1f5f9; cursor:not-allowed'; }
+        if(el) { el.readOnly = false; el.style = ''; }
       });
       
       document.getElementById('rotNotionSelectWrapper').style.display = 'none';
@@ -2637,7 +2755,7 @@ window.abrirModalGeradorIA = async function() {
   if (roteiroEmEdicao && roteiroEmEdicao.notionClienteId) {
     document.getElementById('iaBriefingCliente').value = 'Buscando briefing no Notion...';
     try {
-      const res = await fetch('/api/public/client-data/' + roteiroEmEdicao.notionClienteId);
+      const res = await fetch('/api/clientes/' + roteiroEmEdicao.notionClienteId + '/dados');
       if (res.ok) {
         const data = await res.json();
         const briefing = data.clientLocalInfo?.briefing || data.clientInfo?.briefing || '';
@@ -2907,13 +3025,26 @@ window.salvarEditarElementoRoteiroRapido = async function(e, roteiroNome, diaIdx
       el.expInfo.horaPartida = horaPartida;
     }
 
-    const saveRes = await fetch(`/api/roteiros/${encodeURIComponent(roteiroNome)}`, {
+    const chaveSaveRapido = (roteiro && roteiro.id) || roteiroNome;
+    const saveRes = await fetch(`/api/roteiros/${encodeURIComponent(chaveSaveRapido)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(roteiro)
+      body: JSON.stringify({ ...roteiro, _baseVersao: roteiro.atualizadoEm })
     });
 
+    if (saveRes.status === 409) {
+      const eData = await saveRes.json().catch(() => ({}));
+      alert(eData.message || 'Este roteiro foi alterado em outra sessão. Recarregue a página antes de salvar.');
+      return;
+    }
     if (!saveRes.ok) throw new Error('Erro ao salvar no banco');
+    try {
+      const j = await saveRes.json();
+      if (j && roteiro) {
+        if (j.id) roteiro.id = j.id;
+        if (j.atualizadoEm) roteiro.atualizadoEm = j.atualizadoEm;
+      }
+    } catch (e) { /* segue */ }
 
     alert('Roteiro atualizado com sucesso!');
     window.fecharModalEditarElementoRoteiroRapido();
@@ -2961,7 +3092,7 @@ window.abrirDrawerPerfilCliente = async function() {
 
   try {
     // 1. Carregar dados completos (Notion + Supabase)
-    const resNotion = await fetch('/api/public/client-data/' + clienteId);
+    const resNotion = await fetch('/api/clientes/' + clienteId + '/dados');
     if (!resNotion.ok) throw new Error("Erro ao carregar dados");
     const resData = await resNotion.json();
 
@@ -2982,7 +3113,7 @@ window.abrirDrawerPerfilCliente = async function() {
 
     // Lista de Passageiros/Viajantes
     let viajantesHTML = '';
-    if (clientLocal.viajantes && clientLocal.viajantes.length > 0) {
+    if (Array.isArray(clientLocal.viajantes) && clientLocal.viajantes.length > 0) {
       viajantesHTML = clientLocal.viajantes.map(v => {
         const nomeCompleto = [v.nome, v.sobrenome].filter(Boolean).join(' ') || 'Sem nome';
         const tipo = (parseInt(v.idade) < 12 && !isNaN(parseInt(v.idade))) ? '👶 Criança' : '🧑 Adulto';
@@ -3000,7 +3131,7 @@ window.abrirDrawerPerfilCliente = async function() {
 
     // Lista de Estadias/Hotéis
     let estadiasHTML = '';
-    if (clientLocal.estadias && clientLocal.estadias.length > 0) {
+    if (Array.isArray(clientLocal.estadias) && clientLocal.estadias.length > 0) {
       estadiasHTML = clientLocal.estadias.map(est => `
         <div style="padding: 10px 12px; background: rgba(196,163,90,0.03); border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; margin-bottom: 6px;">
           <div style="display:flex; justify-content:space-between; font-weight:600; color:var(--crimson); margin-bottom: 2px;">
@@ -3140,6 +3271,237 @@ window.fecharDrawerPerfilCliente = function() {
   const drawer = document.getElementById('drawerPerfilCliente');
   if (drawer) {
     drawer.style.left = '-450px';
+  }
+};
+
+window.abrirModalEnviarEmail = async function() {
+  const modal = document.getElementById('modalEnviarEmailRoteiro');
+  if (!modal) return;
+
+  // Garantir que temos o roteiro em edição e o ID do cliente
+  let clienteId = '';
+  let roteiroId = '';
+  let clientName = 'Cliente';
+
+  if (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao) {
+    clienteId = roteiroEmEdicao.notionClienteId || (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId);
+    roteiroId = roteiroEmEdicao.id;
+    if (roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.nome) {
+      clientName = roteiroEmEdicao.cliente.nome;
+    }
+  }
+
+  if (!clienteId) {
+    alert("Nenhum cliente vinculado a este roteiro. Vincule um cliente antes de enviar!");
+    return;
+  }
+
+  // Limpar e preencher destinatário (e-mail) e anexo
+  const emailInput = document.getElementById('emailDestinatarioInput');
+  const assuntoInput = document.getElementById('emailAssuntoInput');
+  const mensagemInput = document.getElementById('emailMensagemInput');
+  const fileInput = document.getElementById('emailAnexoPdfInput');
+  const senderSelect = document.getElementById('emailRemetenteSelect');
+  
+  if (fileInput) fileInput.value = '';
+  if (emailInput) emailInput.value = 'Carregando...';
+  if (assuntoInput) assuntoInput.value = `Roteiro de Viagem — ${clientName}`;
+  
+  modal.style.display = 'flex';
+
+  // Buscar e-mail real e slug do banco local
+  let emailReal = '';
+  let slug = '';
+  try {
+    const res = await fetch('/api/clientes/' + clienteId + '/dados');
+    if (res.ok) {
+      const data = await res.json();
+      const clientLocal = data.clientLocalInfo || {};
+      emailReal = clientLocal.email || (clientLocal.emails && clientLocal.emails[0]?.email) || '';
+      slug = clientLocal.slug || '';
+      
+      // Se não houver slug local, gera dinamicamente a partir do nome do cliente
+      if (!slug && data.clientInfo && data.clientInfo.nome) {
+        slug = data.clientInfo.nome.toString().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/--+/g, '-')
+          .trim();
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao buscar e-mail/slug do cliente:", err);
+  }
+
+  if (emailInput) {
+    emailInput.value = emailReal || '';
+  }
+
+  // Montar template
+  // O link do roteiro será gerado com base no host atual (funciona no localhost para testes ou na produção automaticamente)
+  const linkRoteiro = slug 
+    ? `${window.location.protocol}//${window.location.host}/cliente/${slug}`
+    : `${window.location.protocol}//${window.location.host}/cliente/${clienteId}`; // fallback
+  
+  const getSenderName = () => senderSelect && senderSelect.value === 'diogo' ? 'Diogo' : 'Deborah';
+  
+  const preencherMensagem = () => {
+    if (mensagemInput) {
+      mensagemInput.value = `Oi ${clientName},\n\nEspero que esteja bem!\n\nSegue o link do seu roteiro de viagem personalizado para darmos uma olhada:\n${linkRoteiro}\n\nTambém adicionei o arquivo PDF em anexo caso prefira visualizar offline.\n\nSe tiver qualquer dúvida ou quiser ajustar algo, é só me responder por aqui!\n\nAbraços,\n${getSenderName()}`;
+    }
+  };
+
+  preencherMensagem();
+
+  // Atualizar a assinatura caso o remetente seja alterado no select
+  if (senderSelect) {
+    // Remover listener anterior se existir para não acumular
+    senderSelect.onchange = null;
+    senderSelect.onchange = () => {
+      const currentSender = getSenderName();
+      const oppositeSender = currentSender === 'Diogo' ? 'Deborah' : 'Diogo';
+      if (mensagemInput) {
+        mensagemInput.value = mensagemInput.value.replace(`Abraços,\n${oppositeSender}`, `Abraços,\n${currentSender}`);
+      }
+    };
+  }
+};
+
+window.fecharModalEnviarEmail = function() {
+  const modal = document.getElementById('modalEnviarEmailRoteiro');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  const fileInput = document.getElementById('emailAnexoPdfInput');
+  if (fileInput) {
+    fileInput.value = '';
+  }
+  const statusDiv = document.getElementById('emailSendingStatus');
+  if (statusDiv) statusDiv.style.display = 'none';
+};
+
+window.enviarEmailRoteiroExec = async function() {
+  console.log('--- ENVIAR E-MAIL INICIADO ---');
+  const senderSelect = document.getElementById('emailRemetenteSelect');
+  const emailInput = document.getElementById('emailDestinatarioInput');
+  const assuntoInput = document.getElementById('emailAssuntoInput');
+  const mensagemInput = document.getElementById('emailMensagemInput');
+  const fileInput = document.getElementById('emailAnexoPdfInput');
+  const btnConfirmar = document.getElementById('btnConfirmarEnviarEmail');
+  const statusDiv = document.getElementById('emailSendingStatus');
+  const statusText = document.getElementById('emailSendingStatusText');
+
+  console.log('Elementos capturados:', {
+    senderSelect: !!senderSelect,
+    emailInput: !!emailInput,
+    assuntoInput: !!assuntoInput,
+    mensagemInput: !!mensagemInput,
+    fileInput: !!fileInput
+  });
+
+  if (!emailInput || !assuntoInput || !mensagemInput) {
+    console.error('Um ou mais elementos de entrada não foram encontrados no DOM.');
+    return;
+  }
+
+  const to = emailInput.value.trim();
+  const subject = assuntoInput.value.trim();
+  const body = mensagemInput.value.trim();
+  const sender = senderSelect ? senderSelect.value : 'deborah';
+
+  console.log('Valores do formulário:', { to, subject, sender, bodyLength: body.length });
+
+  if (!to) {
+    alert("Por favor, preencha o e-mail do destinatário.");
+    return;
+  }
+  if (!subject) {
+    alert("Por favor, preencha o assunto do e-mail.");
+    return;
+  }
+  if (!body) {
+    alert("Por favor, preencha a mensagem do e-mail.");
+    return;
+  }
+
+  // Mostrar loading
+  if (statusDiv && statusText) {
+    statusDiv.style.display = 'flex';
+    statusText.textContent = "Processando e-mail... (Convertendo anexos se houver)";
+    statusText.style.color = "var(--gold-dk)";
+  }
+  if (btnConfirmar) btnConfirmar.disabled = true;
+
+  let attachment = null;
+  if (fileInput && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    console.log('Arquivo selecionado para anexo:', { name: file.name, size: file.size, type: file.type });
+    
+    // Converter arquivo para Base64 usando FileReader
+    const toBase64 = f => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.readAsDataURL(f);
+      r.onload = () => resolve(r.result);
+      r.onerror = err => reject(err);
+    });
+
+    try {
+      if (statusText) statusText.textContent = "📎 Carregando arquivo PDF...";
+      console.log('Iniciando conversão para Base64...');
+      const base64Content = await toBase64(file);
+      console.log('Conversão Base64 concluída. Comprimento da string:', base64Content.length);
+      attachment = {
+        filename: file.name,
+        content: base64Content
+      };
+    } catch (err) {
+      console.error("Erro ao ler anexo PDF:", err);
+      alert("Falha ao ler o arquivo PDF anexo.");
+      if (btnConfirmar) btnConfirmar.disabled = false;
+      if (statusDiv) statusDiv.style.display = 'none';
+      return;
+    }
+  } else {
+    console.log('Nenhum arquivo de anexo selecionado no input.');
+  }
+
+  try {
+    if (statusText) statusText.textContent = "✈️ Enviando e-mail para o cliente...";
+    console.log('Disparando requisição fetch POST para /api/admin/enviar-roteiro-email...');
+    const res = await fetch('/api/admin/enviar-roteiro-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ sender, to, subject, body, attachment })
+    });
+
+    console.log('Resposta do servidor recebida com status:', res.status);
+
+    if (res.ok) {
+      console.log('Envio de e-mail bem sucedido!');
+      if (statusText) {
+        statusText.textContent = "✉️ E-mail enviado com sucesso!";
+        statusText.style.color = "#2ecc71";
+      }
+      setTimeout(() => {
+        window.fecharModalEnviarEmail();
+      }, 1500);
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      console.error('Resposta de erro do servidor:', errData);
+      throw new Error(errData.error || "Erro desconhecido ao enviar");
+    }
+  } catch (err) {
+    console.error("Erro no envio:", err);
+    if (statusText) {
+      statusText.textContent = `❌ Falha: ${err.message}`;
+      statusText.style.color = "var(--crimson)";
+    }
+  } finally {
+    if (btnConfirmar) btnConfirmar.disabled = false;
+    console.log('--- ENVIAR E-MAIL FINALIZADO ---');
   }
 };
 

@@ -1,0 +1,359 @@
+/* ============================================================================
+   HEIAN TOUR — REDESIGN CLARO (papel quente, suave, premium)
+   Carregar DEPOIS de style.css. Só estilo: não altera DOM/JS.
+   Pensado para uso prolongado: baixo contraste agressivo, tons quentes.
+   ========================================================================== */
+:root{
+  --l-bg:#F7F2EA; --l-bg2:#F1E9DC;
+  --l-panel:#FFFFFF; --l-surf:#FBF7F0; --l-surf2:#FBF6EE;
+  --l-line:rgba(60,40,38,.10); --l-line-2:rgba(60,40,38,.16); --l-soft:rgba(60,40,38,.05);
+  --l-ink:#2C2427; --l-t2:#6E6164; --l-t3:#9A8E90;
+  --l-wine:#9A3340; --l-wine-deep:#6E2028; --l-wine-soft:#FBEFEF;
+  --l-gold:#B0883E; --l-gold-soft:#F6EFDF;
+  --l-green:#3E7A53; --l-amber:#B0883E;
+  --l-radius:16px; --l-radius-sm:11px; --l-pill:999px;
+  --l-shadow:0 1px 2px rgba(60,30,30,.04), 0 6px 18px -10px rgba(60,30,30,.14);
+  --l-shadow-lg:0 12px 40px -16px rgba(60,30,30,.22);
+  --l-ease:cubic-bezier(.22,.61,.36,1);
+  /* remapeia tokens originais p/ um claro mais quente e suave */
+  --crimson:#9A3340; --crimson-dk:#6E2028; --gold:#B0883E; --gold-dk:#8C6A2E;
+  --ink:#2C2427; --ink-mid:#574B4D; --ink-lt:#8C8082;
+  --border:rgba(60,40,38,.10); --warm-white:#FFFDFA; --cream:#F7F2EA;
+}
+
+/* ── BASE ────────────────────────────────────────────────────────────────── */
+html,body{
+  background:
+    radial-gradient(1100px 700px at 88% -12%, rgba(176,136,62,.10), transparent 55%),
+    radial-gradient(900px 650px at -8% 108%, rgba(154,51,64,.06), transparent 52%),
+    linear-gradient(165deg,#F8F3EB 0%,#F4ECE0 100%) !important;
+  background-attachment:fixed !important; color:var(--l-ink) !important;
+  -webkit-font-smoothing:antialiased;
+}
+*{scrollbar-width:thin;scrollbar-color:rgba(110,90,80,.25) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:rgba(110,90,80,.22);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(110,90,80,.4);background-clip:content-box}
+::selection{background:rgba(154,51,64,.18)}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
+.sidebar{
+  width:258px !important;background:rgba(255,253,250,.92) !important;
+  border-right:1px solid var(--l-line) !important;
+  box-shadow:1px 0 0 rgba(255,255,255,.6), 18px 0 50px -34px rgba(60,30,30,.25) !important;
+  backdrop-filter:blur(16px) !important;
+}
+:root{--sidebar-w:258px}
+.sidebar-logo{background:linear-gradient(135deg,#9A3340,#6E2028) !important;padding:24px !important;
+  border-bottom:1px solid rgba(176,136,62,.25) !important}
+.sidebar-logo img{width:138px !important}
+.sidebar-nav{padding:16px 12px !important;gap:2px !important}
+.sidebar-nav>div{color:var(--l-t3) !important;font-size:10px !important;letter-spacing:.16em !important;
+  font-weight:700 !important;margin:16px 0 7px 12px !important}
+.nav-item{border-radius:var(--l-radius-sm) !important;border-left:0 !important;padding:11px 13px !important;
+  font-size:11px !important;letter-spacing:.05em !important;color:var(--l-t2) !important;gap:11px !important;
+  transition:all .2s var(--l-ease) !important;position:relative}
+.nav-item:hover{background:var(--l-wine-soft) !important;color:var(--l-wine) !important;transform:translateX(2px)}
+.nav-item.active{background:var(--l-wine-soft) !important;color:var(--l-wine) !important;font-weight:700 !important;
+  box-shadow:inset 0 0 0 1px rgba(154,51,64,.16)}
+.nav-item.active::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);
+  width:4px;height:20px;border-radius:0 4px 4px 0;background:linear-gradient(var(--l-gold),var(--l-wine))}
+.sidebar-cambio{background:var(--l-surf) !important;border:1px solid var(--l-line) !important;
+  border-radius:var(--l-radius) !important;box-shadow:var(--l-shadow) !important;margin:auto 14px 12px !important;padding:15px !important}
+.sidebar-cambio input{background:#fff !important;border:1px solid var(--l-line-2) !important;border-radius:9px !important;color:var(--l-ink) !important}
+.sidebar-cambio input:focus{border-color:var(--l-gold) !important;box-shadow:0 0 0 3px rgba(176,136,62,.14) !important}
+.btn-sync{border-radius:var(--l-pill) !important;background:var(--l-gold-soft) !important;
+  border:1px solid rgba(176,136,62,.3) !important;color:var(--l-gold) !important;font-weight:700 !important;
+  letter-spacing:.06em !important;transition:.2s var(--l-ease) !important}
+.btn-sync:hover{background:#F0E4C8 !important;transform:translateY(-1px);box-shadow:var(--l-shadow) !important}
+
+/* ── ÁREA PRINCIPAL ──────────────────────────────────────────────────────── */
+.main{margin-left:258px !important}
+.page:not(.pane-layout){padding:0 48px 56px !important}
+.page-header{padding:42px 0 22px !important;margin-bottom:30px !important;border-bottom:1px solid var(--l-line) !important;position:relative}
+.page-header::after{content:"";position:absolute;left:0;bottom:-1px;width:60px;height:2px;background:linear-gradient(90deg,var(--l-gold),transparent)}
+.page-header h1{font-size:38px !important;font-weight:300 !important;color:var(--l-ink) !important;letter-spacing:.01em !important}
+.page-header h1 b,.page-header h1 strong{color:var(--l-wine) !important;font-weight:500 !important}
+
+/* ── BOTÕES ──────────────────────────────────────────────────────────────── */
+.btn-primary,.btn-secondary,.btn-add{border-radius:var(--l-pill) !important;font-weight:600 !important;
+  letter-spacing:.01em !important;padding:11px 20px !important;font-size:13px !important;
+  transition:all .2s var(--l-ease) !important;display:inline-flex;align-items:center;gap:8px;border:1px solid transparent !important;cursor:pointer}
+.btn-primary,.btn-add{background:linear-gradient(135deg,#A53A47,#7B232C) !important;color:#FFF7F1 !important;
+  border-color:transparent !important;box-shadow:0 8px 18px -10px rgba(154,51,64,.7) !important}
+.btn-primary:hover,.btn-add:hover{transform:translateY(-2px);filter:brightness(1.05);box-shadow:0 14px 26px -12px rgba(154,51,64,.8) !important}
+.btn-secondary{background:#fff !important;color:var(--l-t2) !important;border:1px solid var(--l-line-2) !important;box-shadow:var(--l-shadow) !important}
+.btn-secondary:hover{background:var(--l-surf) !important;border-color:var(--l-gold) !important;color:var(--l-wine) !important;transform:translateY(-1px)}
+
+/* ── CARTÕES ─────────────────────────────────────────────────────────────── */
+.card,.chart-card,.dashboard-saldos-contas-card{background:var(--l-panel) !important;border:1px solid var(--l-line) !important;
+  border-radius:var(--l-radius) !important;padding:26px 28px !important;box-shadow:var(--l-shadow) !important;
+  transition:box-shadow .25s,transform .25s var(--l-ease) !important}
+.card:hover,.chart-card:hover{box-shadow:var(--l-shadow-lg) !important}
+.card-title,.subsection-title{font-family:var(--ff-display) !important;font-weight:600 !important;color:var(--l-wine) !important;
+  font-size:15px !important;display:flex;align-items:center;gap:9px}
+.card-title::before,.subsection-title::before{content:"";width:7px;height:7px;border-radius:2px;
+  background:linear-gradient(135deg,var(--l-gold),var(--l-wine));transform:rotate(45deg);flex:none}
+.kpi-card{background:var(--l-panel) !important;border:1px solid var(--l-line) !important;border-radius:var(--l-radius) !important;
+  padding:22px 24px !important;box-shadow:var(--l-shadow) !important;transition:transform .25s var(--l-ease),box-shadow .25s !important}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--l-shadow-lg) !important}
+.kpi-value{font-family:var(--ff-display) !important;font-weight:300 !important;font-size:32px !important;color:var(--l-ink) !important}
+.kpi-label{font-size:10px !important;letter-spacing:.15em !important;text-transform:uppercase !important;color:var(--l-t3) !important;font-weight:700 !important}
+
+/* ── FORMULÁRIOS ─────────────────────────────────────────────────────────── */
+label,.field label{color:var(--l-t2) !important;font-size:12px !important;font-weight:500 !important}
+input:not([type=checkbox]):not([type=radio]),select,textarea,.form-control,.search-input,.search-input-modern{
+  background:#fff !important;border:1px solid var(--l-line-2) !important;border-radius:10px !important;
+  color:var(--l-ink) !important;padding:10px 13px !important;font-size:13px !important;
+  transition:border-color .2s,box-shadow .2s !important}
+input::placeholder,textarea::placeholder{color:var(--l-t3) !important}
+input:focus,select:focus,textarea:focus,.form-control:focus,.search-input:focus,.search-input-modern:focus{
+  border-color:var(--l-gold) !important;box-shadow:0 0 0 3px rgba(176,136,62,.14) !important;outline:none !important}
+.search-input-modern{border-radius:var(--l-pill) !important}
+.hint,.sync-status{color:var(--l-t3) !important}
+
+/* ── TABELAS ─────────────────────────────────────────────────────────────── */
+.table-wrapper{border:1px solid var(--l-line) !important;border-radius:var(--l-radius) !important;overflow:hidden !important;background:#fff !important;box-shadow:var(--l-shadow) !important}
+.data-table,.modern-table{background:transparent !important;border:0 !important;border-spacing:0 !important;border-collapse:separate !important}
+.data-table thead th,.modern-table thead th{background:var(--l-surf) !important;color:var(--l-gold) !important;
+  font-size:10px !important;letter-spacing:.1em !important;text-transform:uppercase !important;font-weight:700 !important;
+  padding:13px 16px !important;border:0 !important;border-bottom:1px solid var(--l-line-2) !important}
+.data-table tbody td,.modern-table tbody td{padding:13px 16px !important;color:var(--l-t2) !important;border:0 !important;
+  border-bottom:1px solid var(--l-soft) !important;font-size:13px !important}
+.data-table tbody tr:hover td,.modern-table tbody tr:hover td{background:var(--l-surf) !important;color:var(--l-ink) !important}
+.preco-cell,.orc-total{color:var(--l-wine) !important;font-weight:700 !important;font-variant-numeric:tabular-nums}
+
+/* ── ABAS (segmented) ────────────────────────────────────────────────────── */
+.tabs{display:inline-flex !important;gap:4px !important;padding:5px !important;border:0 !important;
+  background:var(--l-surf) !important;border-radius:var(--l-pill) !important;box-shadow:inset 0 0 0 1px var(--l-line)}
+.tab{border:0 !important;border-radius:var(--l-pill) !important;padding:9px 18px !important;font-size:12px !important;
+  font-weight:600 !important;color:var(--l-t3) !important;transition:.2s var(--l-ease) !important}
+.tab:hover{color:var(--l-wine) !important}
+.tab.active{background:#fff !important;color:var(--l-wine) !important;box-shadow:var(--l-shadow) !important}
+
+/* ── MODAIS ──────────────────────────────────────────────────────────────── */
+.modal-overlay,.event-modal-backdrop{background:rgba(50,30,30,.32) !important;backdrop-filter:blur(6px) !important}
+.modal-box,.event-modal-card{background:#fff !important;border:1px solid var(--l-line) !important;border-radius:20px !important;box-shadow:var(--l-shadow-lg) !important}
+.modal-title,.event-modal-title{font-family:var(--ff-display) !important;color:var(--l-wine) !important;font-weight:600 !important}
+.modal-close,.event-modal-close{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50% !important;background:var(--l-surf) !important;color:var(--l-t3) !important;transition:.2s !important}
+.modal-close:hover,.event-modal-close:hover{background:var(--l-wine-soft) !important;color:var(--l-wine) !important;transform:rotate(90deg)}
+
+/* ── 3 PAINÉIS ───────────────────────────────────────────────────────────── */
+.pane-list{border-right:1px solid var(--l-line) !important;background:rgba(255,253,250,.6) !important}
+.pane-list-header{border-bottom:1px solid var(--l-line) !important}
+.pane-content-inner{background:transparent !important}
+
+/* ── CALENDÁRIO ──────────────────────────────────────────────────────────── */
+.calendar-weekday-header{color:var(--l-t3) !important;font-size:10px !important;letter-spacing:.1em !important;text-transform:uppercase !important;font-weight:700 !important}
+.calendar-nav-btn{border-radius:50% !important;border:1px solid var(--l-line-2) !important;background:#fff !important;color:var(--l-wine) !important}
+.calendar-nav-btn:hover{background:var(--l-wine-soft) !important}
+.mobile-header{background:rgba(255,253,250,.95) !important;border-bottom:1px solid var(--l-line) !important}
+hr{border-color:var(--l-line) !important}
+.page.active{animation:l-fade .35s var(--l-ease)}
+@keyframes l-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CONSTRUTOR DE ROTEIRO — componentes novos (rail, resumo, cartões)
+   ════════════════════════════════════════════════════════════════════════ */
+/* Layout em 3 colunas dentro do editor */
+.rb-shell{display:grid;grid-template-columns:212px 1fr 196px;gap:18px;align-items:start}
+@media(max-width:1200px){.rb-shell{grid-template-columns:1fr}.rb-rail,.rb-summary{display:none !important}}
+
+.rb-rail{position:sticky;top:12px;background:var(--l-surf);border:1px solid var(--l-line);border-radius:var(--l-radius);padding:14px 11px;max-height:82vh;overflow:auto}
+.rb-rail-head{display:flex;justify-content:space-between;align-items:center;margin:2px 6px 10px}
+.rb-rail-head span{font-size:10px;letter-spacing:.14em;color:var(--l-t3);font-weight:700}
+.rb-rail-head b{font-size:11px;color:var(--l-gold)}
+.rb-day{display:flex;gap:10px;padding:9px 10px;border-radius:11px;cursor:pointer;transition:.18s var(--l-ease);margin-bottom:4px;border:1px solid transparent}
+.rb-day:hover{background:#fff;border-color:var(--l-line)}
+.rb-day.active{background:var(--l-wine-soft);border-color:rgba(154,51,64,.2)}
+.rb-day-num{width:30px;text-align:center;flex:none}
+.rb-day-num .d{font-family:var(--ff-display);font-size:15px;color:var(--l-t2);line-height:1.1}
+.rb-day.active .rb-day-num .d{color:var(--l-wine)}
+.rb-day-num .w{font-size:8px;color:var(--l-t3);letter-spacing:.06em}
+.rb-day-info{min-width:0;flex:1}
+.rb-day-info .t{font-size:12px;font-weight:600;color:var(--l-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-day-info .s{font-size:10px;color:var(--l-t3)}
+.rb-day-dup{opacity:0;border:0;background:transparent;color:var(--l-t3);cursor:pointer;font-size:13px;transition:.15s;padding:0 2px}
+.rb-day:hover .rb-day-dup{opacity:1}
+.rb-day-dup:hover{color:var(--l-wine)}
+
+.rb-summary{position:sticky;top:12px;background:var(--l-surf);border:1px solid var(--l-line);border-radius:var(--l-radius);padding:18px 16px}
+.rb-summary h4{font-size:10px;letter-spacing:.14em;color:var(--l-t3);font-weight:700;margin:0 0 14px}
+.rb-total{font-family:var(--ff-display);font-size:23px;color:var(--l-wine);line-height:1.1}
+.rb-total-sub{font-size:10px;color:var(--l-t3);margin-top:3px}
+.rb-stat{display:flex;justify-content:space-between;font-size:12px;color:var(--l-t2);padding:7px 0;border-bottom:1px solid var(--l-soft)}
+.rb-stat b{color:var(--l-ink)}
+.rb-warn{margin-top:14px;padding:11px;background:var(--l-gold-soft);border:1px solid rgba(176,136,62,.3);border-radius:10px;font-size:11px;color:#7A5E23;line-height:1.5}
+.rb-warn.ok{background:#EAF4EE;border-color:rgba(62,122,83,.3);color:var(--l-green)}
+.rb-warn-item{display:block;margin-top:5px}
+.rb-warn-item:first-child{margin-top:0}
+
+/* Cartões de elemento recolhíveis (envolvem os blocos existentes) */
+.rb-card{background:var(--l-panel);border:1px solid var(--l-line);border-radius:13px;margin-bottom:10px;
+  box-shadow:var(--l-shadow);overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.rb-card.open{border-color:rgba(154,51,64,.22);box-shadow:var(--l-shadow-lg)}
+.rb-card-head{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;user-select:none}
+.rb-card-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.rb-ico-seq{background:var(--l-wine-soft);color:var(--l-wine)}
+.rb-ico-transporte{background:var(--l-gold-soft);color:var(--l-gold)}
+.rb-ico-experiencia{background:var(--l-wine-soft);color:var(--l-wine)}
+.rb-ico-texto{background:var(--l-surf);color:var(--l-t2)}
+.rb-ico-info{background:#EAF1F6;color:#456}
+.rb-card-meta{flex:1;min-width:0}
+.rb-card-meta .t{font-size:13px;font-weight:600;color:var(--l-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-card-meta .s{font-size:11px;color:var(--l-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-card-chev{color:var(--l-t3);font-size:11px;flex:none;transition:.2s}
+.rb-card.open .rb-card-chev{color:var(--l-wine)}
+.rb-card-body{display:none;padding:2px 14px 14px;border-top:1px solid var(--l-soft)}
+.rb-card.open .rb-card-body{display:block}
+/* dentro do corpo, neutraliza as bordas/fundos coloridos antigos p/ ficar limpo */
+.rb-card-body>div[style*="border-left"]{border-left:0 !important;background:transparent !important;padding-left:0 !important;margin-bottom:0 !important}
+.rb-flag{font-size:10px;font-weight:700;color:var(--l-gold);margin-left:6px}
+
+/* dia-card: cabeçalho mais suave (não vermelho cheio) */
+.dia-card.card{border-radius:var(--l-radius) !important;border:1px solid var(--l-line) !important}
+
+/* ── EDIÇÃO: esconde a coluna "Roteiros" e usa largura total ─────────────── */
+#page-roteiros.rb-editing .pane-list{display:none !important}
+#page-roteiros.rb-editing .pane-content{flex:1 1 100% !important;width:100% !important;max-width:100% !important}
+#page-roteiros.rb-editing .pane-content-inner{padding:0 !important}
+
+/* ── Inputs do cabeçalho do dia (número/data) não podem ser "engolidos" ──── */
+.dia-card input[type="number"]{padding:3px 6px !important;font-size:14px !important;border-radius:7px !important}
+.dia-card > div:first-child input[type="number"]{width:48px !important;text-align:center !important;
+  background:rgba(255,255,255,.96) !important;color:var(--l-wine) !important;font-weight:800 !important;
+  border:1px solid rgba(255,255,255,.6) !important}
+.dia-card > div:first-child input[type="date"]{padding:4px 8px !important;font-size:13px !important;
+  background:rgba(255,255,255,.96) !important;color:var(--l-wine) !important;font-weight:700 !important;
+  border:1px solid rgba(255,255,255,.6) !important;min-width:128px !important}
+.rb-card-body input[type="number"]{padding:6px 8px !important}
+
+/* ── EDIÇÃO: aproveitar todo o espaço (remove cap de 1000px e a centralização) ── */
+#page-roteiros.rb-editing .pane-content{justify-content:flex-start !important;padding:16px 26px !important}
+#page-roteiros.rb-editing .pane-content-inner{max-width:none !important;width:100% !important;padding:22px 24px !important;margin-bottom:24px !important}
+/* colunas do construtor podem encolher (evita estourar pra direita) */
+.rb-shell{min-width:0}
+.rb-shell > *{min-width:0}
+.rb-mid{min-width:0}
+.rb-card,.dia-card.card{max-width:100%}
+.rb-card-meta .t,.rb-card-meta .s{max-width:100%}
+/* trilha um pouco mais larga já que sobra espaço */
+.rb-shell{grid-template-columns:230px minmax(0,1fr) 210px !important}
+
+/* ── "Dados do Cliente" recolhível ──────────────────────────────────────── */
+#roteiroEditContainer .card .rb-cli-toggle{ margin-left:10px; flex:none; width:30px; height:30px; border-radius:50%;
+  border:1px solid var(--l-line-2); background:#fff; color:var(--l-t2); cursor:pointer; font-size:13px; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center; transition:.18s var(--l-ease); }
+#roteiroEditContainer .card .rb-cli-toggle:hover{ border-color:var(--l-gold); color:var(--l-wine); transform:translateY(-1px); }
+.card.rb-cli-closed .rb-cli-body{ display:none; }
+.card.rb-cli-open .rb-cli-summary{ display:none; }
+.card.rb-cli-closed{ padding-bottom:18px !important; }
+.rb-cli-summary{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; padding:6px 2px 0; }
+.rb-cli-summary .t{ font-family:var(--ff-display); font-weight:700; color:var(--l-ink); font-size:16px; }
+.rb-cli-summary .m{ color:var(--l-t2); font-size:13px; }
+.card.rb-cli-open .card-title, .card.rb-cli-closed .card-title{ cursor:pointer; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   COTAÇÃO — painel fixo + itens recolhíveis + alertas
+   ════════════════════════════════════════════════════════════════════════ */
+#page-orcamento .cot-shell{ display:grid; grid-template-columns:minmax(0,1fr) 286px; gap:22px; align-items:start; }
+#page-orcamento .cot-main{ min-width:0; }
+@media(max-width:1150px){ #page-orcamento .cot-shell{ grid-template-columns:1fr; } #page-orcamento .cot-aside{ display:none; } }
+.cot-hide-original{ display:none !important; }
+
+.cot-aside{ position:sticky; top:12px; }
+.cot-aside-inner{ background:var(--l-surf); border:1px solid var(--l-line); border-radius:var(--l-radius); padding:18px 16px; box-shadow:var(--l-shadow); }
+.cot-aside-h{ font-size:10px; letter-spacing:.14em; color:var(--l-t3); font-weight:700; margin-bottom:14px; }
+.cot-total-box{ background:linear-gradient(160deg,#9A3340,#6E2028); border-radius:14px; padding:16px; color:#fff; margin-bottom:14px; }
+.cot-total-lbl{ font-size:10px; letter-spacing:.12em; color:rgba(240,220,166,.85); }
+.cot-total{ font-family:var(--ff-display); font-size:26px; margin-top:4px; line-height:1.1; }
+.cot-total-sub{ font-size:11px; color:rgba(255,255,255,.85); margin-top:4px; }
+.cot-rows{ display:flex; flex-direction:column; }
+.cot-row{ display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--l-soft); font-size:12.5px; color:var(--l-t2); }
+.cot-row:last-child{ border-bottom:0; }
+.cot-row b{ color:var(--l-ink); font-variant-numeric:tabular-nums; }
+.cot-sinal{ margin-top:12px; background:var(--l-gold-soft); border:1px solid rgba(176,136,62,.3); border-radius:10px; padding:11px 13px; }
+.cot-sinal-lbl{ font-size:10px; letter-spacing:.1em; color:#7A5E23; font-weight:700; }
+.cot-sinal-val{ font-family:var(--ff-display); font-size:18px; color:var(--l-wine); margin-top:3px; }
+.cot-margem{ margin-top:14px; border-top:1px dashed var(--l-line-2); padding-top:12px; }
+.cot-margem-h{ font-size:10px; letter-spacing:.12em; color:var(--l-t3); font-weight:700; margin-bottom:8px; }
+.cot-margem-h span{ color:var(--l-t3); font-weight:600; letter-spacing:0; }
+.cot-margem-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--l-t2); }
+.cot-margem-row input{ width:108px; padding:7px 9px !important; text-align:right; }
+.cot-alertas{ margin-top:14px; }
+.cot-al-h{ font-size:10px; font-weight:700; letter-spacing:.08em; color:#9A6A1E; margin-bottom:6px; }
+.cot-al-i{ display:block; font-size:11px; color:#7A5E23; line-height:1.5; }
+.cot-al-ok{ font-size:11px; color:var(--l-green); }
+
+/* subtotal por seção no título do card */
+.cot-card-sub{ margin-left:auto; font-family:var(--ff-display); font-weight:600; color:var(--l-ink); font-size:15px; }
+
+/* itens recolhíveis */
+.item-row.cot-collapsed .form-grid{ display:none !important; }
+.cot-item-name{ font-size:13px; font-weight:600; color:var(--l-ink); margin:0 4px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cot-chev{ font-size:11px; color:var(--l-t3); margin-left:6px; }
+.item-row.cot-open .cot-chev{ color:var(--l-wine); }
+.cot-dup{ border:0; background:transparent; color:var(--l-t3); cursor:pointer; font-size:13px; padding:0 6px; }
+.cot-dup:hover{ color:var(--l-wine); }
+
+/* ── COTAÇÃO v2: editor largura total + lista recolhível + resumo flutuante ── */
+#orcamentosContent{ justify-content:flex-start !important; padding:16px 28px !important; }
+#orcamentosContentInner{ max-width:none !important; width:100% !important; }
+
+.pane-layout.cot-list-hidden .pane-list{ display:none !important; }
+.pane-layout.cot-list-hidden .pane-content{ flex:1 1 100% !important; max-width:100% !important; }
+.cot-list-toggle{ position:fixed; left:274px; top:16px; z-index:60; border:1px solid var(--l-line-2); background:#fff;
+  color:var(--l-t2); font-weight:600; font-size:12px; padding:8px 14px; border-radius:999px; cursor:pointer; box-shadow:var(--l-shadow); }
+.cot-list-toggle:hover{ border-color:var(--l-gold); color:var(--l-wine); }
+.cot-list-toggle.on{ background:var(--l-wine-soft); color:var(--l-wine); border-color:rgba(154,51,64,.3); }
+
+.cot-fab{ position:fixed; right:24px; bottom:24px; z-index:70; display:inline-flex; align-items:center; gap:10px;
+  border:1px solid rgba(176,136,62,.4); background:linear-gradient(135deg,#9A3340,#6E2028); color:#fff;
+  padding:11px 18px; border-radius:999px; cursor:pointer; box-shadow:0 12px 30px -10px rgba(110,32,40,.6); transition:.18s var(--l-ease); }
+.cot-fab:hover{ filter:brightness(1.06); transform:translateY(-1px); }
+.cot-fab-lbl{ font-size:9px; letter-spacing:.14em; color:rgba(240,220,166,.9); text-transform:uppercase; }
+.cot-fab-val{ font-family:var(--ff-display); font-size:17px; }
+.cot-fab-ic{ font-size:11px; opacity:.85; }
+.cot-fab.has-alert::after{ content:""; position:absolute; top:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#E0A33A; border:2px solid #6E2028; }
+
+.cot-aside{ position:fixed !important; right:24px; bottom:82px; top:auto !important; width:300px; max-height:78vh; overflow:auto;
+  z-index:71; background:var(--l-panel); border:1px solid var(--l-line); border-radius:16px; padding:16px;
+  box-shadow:0 24px 60px -16px rgba(60,30,30,.4); transform:translateY(12px) scale(.98); opacity:0; pointer-events:none; transition:.2s var(--l-ease); }
+.cot-aside.open{ transform:none; opacity:1; pointer-events:auto; }
+.cot-aside-top{ display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:.14em; color:var(--l-t3); font-weight:700; margin-bottom:12px; }
+.cot-close{ border:0; background:var(--l-surf); color:var(--l-t3); width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:12px; }
+.cot-close:hover{ background:var(--l-wine-soft); color:var(--l-wine); }
+@media(max-width:760px){ .cot-aside{ right:12px; left:12px; width:auto; } .cot-list-toggle{ left:12px; } }
+
+/* ── COTAÇÃO v3: header reexibido + ações dos itens maiores + resumo rico ── */
+#orcamentosEditorWrapper .page-header{ display:flex !important; padding:14px 0 16px !important; margin-bottom:16px !important; }
+#orcamentosEditorWrapper .page-header h1{ font-size:24px !important; }
+#orcamentosEditorWrapper .page-header .header-actions{ flex-wrap:wrap; gap:8px !important; }
+.cot-list-toggle{ position:static !important; left:auto !important; top:auto !important; }
+.item-row-header{ gap:10px !important; }
+.cot-actions{ display:inline-flex; align-items:center; gap:6px; margin-left:12px; flex:none; }
+.cot-actions > button{ width:34px !important; height:34px !important; min-width:34px; border-radius:9px !important; display:inline-flex !important;
+  align-items:center !important; justify-content:center !important; border:1px solid var(--l-line-2) !important; background:#fff !important;
+  color:var(--l-t2) !important; cursor:pointer; font-size:15px !important; padding:0 !important; transition:.15s var(--l-ease); box-shadow:none !important; }
+.cot-actions > button:hover{ transform:translateY(-1px); box-shadow:var(--l-shadow) !important; }
+.cot-actions .cot-dup:hover,.cot-actions .cot-chev-btn:hover{ border-color:var(--l-gold) !important; color:var(--l-wine) !important; }
+.cot-actions .btn-remove{ font-size:14px !important; }
+.cot-actions .btn-remove:hover{ border-color:#E2A0A0 !important; color:#B23A3A !important; background:#FCEFEF !important; }
+.cot-item-name{ font-size:13px !important; color:var(--l-t2) !important; margin:0 6px !important; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cot-item-name b{ color:var(--l-ink); font-weight:600; }
+
+.cot-item-name .cot-empty{ color:var(--l-t3); font-style:italic; }
+
+/* ── Custo real por item (Fase 1, interno) ──────────────────────────────── */
+.cot-custo{ grid-column:1/-1; margin-top:10px; padding:12px 14px; border:1px dashed var(--l-line-2); border-radius:10px; background:var(--l-surf); }
+.cot-custo-h{ font-size:11px; font-weight:700; letter-spacing:.03em; color:var(--l-t2); margin-bottom:8px; }
+.cot-custo-row,.cot-ficha-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
+.cot-custo-row span,.cot-ficha-row span{ font-size:12px; color:var(--l-t2); }
+.cot-custo-in,.cot-ficha-in{ width:130px; padding:6px 9px !important; text-align:right; }
+.cot-custo-sum{ font-size:12px; color:var(--l-t2); margin:4px 0 2px; }
+.cot-custo-sum b{ color:var(--l-ink); font-variant-numeric:tabular-nums; }
+.cot-econ{ margin-top:8px; font-size:12px; color:var(--l-t2); border-top:1px solid var(--l-soft); padding-top:8px; }
+.cot-econ b{ color:var(--l-ink); }
+.cot-econ-pend{ color:var(--l-t3); font-style:italic; }
+.cot-econ-note{ font-size:10.5px; color:var(--l-t3); margin-top:6px; font-style:italic; }

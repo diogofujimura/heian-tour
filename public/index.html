@@ -1,1960 +1,334 @@
-<!DOCTYPE html><html lang="pt-BR"><head>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heian Tour — Orçamentos</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=premium_vis10">
-  
-  <!-- Configurações PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#8e1c1c">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Heian Tour">
-  <link rel="apple-touch-icon" href="assets/logo-192.png">
+  <title>Heian Tour — Em Breve</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --crimson: #8e1c1c;
+      --crimson-lt: #b22222;
+      --gold: #c4a35a;
+      --gold-dk: #a07030;
+      --ink: #1a1a2e;
+      --bg: #fdfaf6;
+    }
 
-<script>
-// Limpa credenciais na URL para evitar erro TypeError no fetch em navegadores mobile
-if (window.location.href.includes('@') && (window.location.href.includes('http://') || window.location.href.includes('https://'))) {
-  try {
-    const cleanUrl = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + window.location.pathname + window.location.hash;
-    window.location.replace(cleanUrl);
-  } catch (err) {
-    console.error('Erro ao limpar URL:', err);
-  }
-}
-window.addEventListener('error', function(e) {
-  let errBox = document.getElementById('debugErrorBox');
-  if (!errBox) {
-    errBox = document.createElement('div');
-    errBox.id = 'debugErrorBox';
-    errBox.style.position = 'fixed';
-    errBox.style.bottom = '10px';
-    errBox.style.right = '10px';
-    errBox.style.backgroundColor = 'red';
-    errBox.style.color = 'white';
-    errBox.style.padding = '10px';
-    errBox.style.zIndex = '999999';
-    errBox.style.maxWidth = '400px';
-    errBox.style.fontSize = '12px';
-    document.body.appendChild(errBox);
-  }
-  errBox.innerHTML += '<p>' + e.message + ' at ' + e.filename + ':' + e.lineno + '</p>';
-});
-window.addEventListener('unhandledrejection', function(e) {
-  let errBox = document.getElementById('debugErrorBox');
-  if (!errBox) {
-    errBox = document.createElement('div');
-    errBox.id = 'debugErrorBox';
-    errBox.style.position = 'fixed';
-    errBox.style.bottom = '10px';
-    errBox.style.right = '10px';
-    errBox.style.backgroundColor = 'red';
-    errBox.style.color = 'white';
-    errBox.style.padding = '10px';
-    errBox.style.zIndex = '999999';
-    errBox.style.maxWidth = '400px';
-    errBox.style.fontSize = '12px';
-    document.body.appendChild(errBox);
-  }
-  errBox.innerHTML += '<p>Unhandled Promise: ' + e.reason + '</p>';
-});
-</script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Quill.js for Rich Text Editing -->
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Fundo decorativo */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(142,28,28,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 60% at 80% 80%, rgba(196,163,90,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Pétalas de sakura animadas */
+    .sakura-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .petal {
+      position: absolute;
+      top: -20px;
+      width: 10px;
+      height: 10px;
+      background: radial-gradient(circle, rgba(255,182,193,0.9) 30%, rgba(255,105,135,0.4) 100%);
+      border-radius: 50% 0 50% 0;
+      animation: fall linear infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes fall {
+      0%   { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.8; }
+      50%  { transform: translateY(50vh) rotate(180deg) translateX(30px); opacity: 0.6; }
+      100% { transform: translateY(110vh) rotate(360deg) translateX(-20px); opacity: 0; }
+    }
+
+    /* Linha decorativa horizontal */
+    .line-dec {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 0 auto;
+    }
+
+    /* Container principal */
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 40px 32px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    /* Logo */
+    .logo-wrap {
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-img {
+      height: 70px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 16px rgba(142,28,28,0.15));
+    }
+
+    .logo-text {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--crimson);
+      opacity: 0.8;
+    }
+
+    /* Título */
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.15;
+      margin: 16px 0 12px;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, var(--crimson), var(--gold-dk));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: #555;
+      line-height: 1.7;
+      margin: 16px 0 32px;
+    }
+
+    /* Contador regressivo */
+    .countdown-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin: 32px 0;
+      flex-wrap: wrap;
+    }
+
+    .countdown-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #fff;
+      border: 1px solid rgba(142,28,28,0.12);
+      border-radius: 16px;
+      padding: 16px 20px;
+      min-width: 76px;
+      box-shadow: 0 4px 24px rgba(142,28,28,0.06);
+    }
+
+    .countdown-num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--crimson);
+      line-height: 1;
+    }
+
+    .countdown-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    /* CTA: link de cadastro */
+    .cta-box {
+      background: linear-gradient(135deg, rgba(142,28,28,0.06), rgba(196,163,90,0.07));
+      border: 1px solid rgba(142,28,28,0.12);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-top: 32px;
+    }
+
+    .cta-box p {
+      font-size: 0.95rem;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--crimson), var(--crimson-lt));
+      color: #fff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 12px 28px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 20px rgba(142,28,28,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(142,28,28,0.4);
+    }
+
+    /* Rodapé */
+    footer {
+      position: relative;
+      z-index: 1;
+      margin-top: 40px;
+      font-size: 12px;
+      color: #bbb;
+      letter-spacing: 0.05em;
+    }
+
+    footer a {
+      color: var(--crimson);
+      text-decoration: none;
+      opacity: 0.7;
+    }
+
+    footer a:hover { opacity: 1; }
+
+    /* Animação de entrada */
+    .container, footer {
+      animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    footer { animation-delay: 0.3s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- SVG Sprite de Ícones Sofisticados -->
-  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-    <!-- Calendário -->
-    <symbol id="icon-calendar" viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
-    </symbol>
-    <!-- Viajantes / Passageiros -->
-    <symbol id="icon-users" viewBox="0 0 24 24">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-    </symbol>
-    <!-- Pin de Localização -->
-    <symbol id="icon-map-pin" viewBox="0 0 24 24">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
-    </symbol>
-    <!-- Bússola -->
-    <symbol id="icon-compass" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-    </symbol>
-    <!-- Serviços Inclusos (Briefcase) -->
-    <symbol id="icon-briefcase" viewBox="0 0 24 24">
-      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-    </symbol>
-    <!-- Voos (Avião) -->
-    <symbol id="icon-plane" viewBox="0 0 24 24">
-      <path d="M21 16V8a2 2 0 0 0-2-2h-5l-4-4H8l2 8h-4L4 8H2l2 4-2 4h2l2-2h4l-2 8h2l4-4h5a2 2 0 0 0 2-2z"></path>
-    </symbol>
-    <!-- Financeiro (Cartão) -->
-    <symbol id="icon-credit-card" viewBox="0 0 24 24">
-      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>
-    </symbol>
-    <!-- Ingressos (Ticket) -->
-    <symbol id="icon-ticket" viewBox="0 0 24 24">
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path>
-    </symbol>
-    <!-- Passeios (Flor) -->
-    <symbol id="icon-flower" viewBox="0 0 24 24">
-      <path d="M12 7.5a2.5 2.5 0 0 0-2.5 2.5c0 1.5 1.5 2.5 2.5 3.5 1-1 2.5-2 2.5-3.5a2.5 2.5 0 0 0-2.5-2.5z"></path>
-      <path d="M12 16.5a2.5 2.5 0 0 0 2.5-2.5c0-1.5-1.5-2.5-2.5-3.5-1 1-2.5 2-2.5 3.5a2.5 2.5 0 0 0 2.5 2.5z"></path>
-      <path d="M7.5 12a2.5 2.5 0 0 0 2.5 2.5c1.5 0 2.5-1.5 3.5-2.5-1-1-2-2.5-3.5-2.5A2.5 2.5 0 0 0 7.5 12z"></path>
-      <path d="M16.5 12a2.5 2.5 0 0 0-2.5-2.5c-1.5 0-2.5 1.5-3.5 2.5 1 1 2 2.5 3.5 2.5a2.5 2.5 0 0 0 2.5-2.5z"></path>
-    </symbol>
-    <!-- Transportes (Trem) -->
-    <symbol id="icon-train" viewBox="0 0 24 24">
-      <rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path><circle cx="8" cy="7" r="1"></circle><circle cx="16" cy="7" r="1"></circle>
-    </symbol>
-    <!-- Hospedagens (Hotel / Home) -->
-    <symbol id="icon-hotel" viewBox="0 0 24 24">
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
-    </symbol>
-    <!-- Download -->
-    <symbol id="icon-download" viewBox="0 0 24 24">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
-    </symbol>
-    <!-- Globo / Link Externo -->
-    <symbol id="icon-globe" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-    </symbol>
-    <!-- Alerta / Atenção -->
-    <symbol id="icon-alert" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-    </symbol>
-    <!-- Check / Proteção -->
-    <symbol id="icon-shield-check" viewBox="0 0 24 24">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path>
-    </symbol>
-    <!-- Usuário Individual -->
-    <symbol id="icon-user" viewBox="0 0 24 24">
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-    </symbol>
-    <!-- Relógio -->
-    <symbol id="icon-clock" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
-    </symbol>
-    <!-- Brilho / Erro (Sparkles) -->
-    <symbol id="icon-sparkles" viewBox="0 0 24 24">
-      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path>
-    </symbol>
-    <!-- Dashboard / Painel -->
-    <symbol id="icon-dashboard" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="9" y1="9" x2="21" y2="9"></line><line x1="9" y1="15" x2="21" y2="15"></line>
-    </symbol>
-    <!-- Dólar / Moeda -->
-    <symbol id="icon-dollar" viewBox="0 0 24 24">
-      <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-    </symbol>
-    <!-- Database / Base -->
-    <symbol id="icon-database" viewBox="0 0 24 24">
-      <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
-    </symbol>
-    <!-- Lixeira -->
-    <symbol id="icon-trash" viewBox="0 0 24 24">
-      <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>
-    </symbol>
-    <!-- Engrenagem / Configurações -->
-    <symbol id="icon-settings" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-    </symbol>
-    <!-- Salvar / Disquete -->
-    <symbol id="icon-save" viewBox="0 0 24 24">
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>
-    </symbol>
-    <!-- Seta para Esquerda -->
-    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
-      <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
-    </symbol>
-    <!-- Seta para Direita -->
-    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
-      <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-    </symbol>
-    <!-- Desfazer -->
-    <symbol id="icon-undo" viewBox="0 0 24 24">
-      <path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
-    </symbol>
-    <!-- Raio / Ação Rápida -->
-    <symbol id="icon-zap" viewBox="0 0 24 24">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-    </symbol>
-    <!-- Impressora -->
-    <symbol id="icon-printer" viewBox="0 0 24 24">
-      <polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>
-    </symbol>
-    <!-- Lápis / Editar -->
-    <symbol id="icon-edit" viewBox="0 0 24 24">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-    </symbol>
-    <!-- Mapa (Geral) -->
-    <symbol id="icon-map" viewBox="0 0 24 24">
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
-    </symbol>
-    <!-- Lâmpada -->
-    <symbol id="icon-lightbulb" viewBox="0 0 24 24">
-      <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.1.7.7 1.3 1.5 1.5 2.4"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>
-    </symbol>
-    <!-- Arquivo -->
-    <symbol id="icon-file" viewBox="0 0 24 24">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>
-    </symbol>
-  </svg>
- <aside class="sidebar">
-  <div class="sidebar-logo"><img src="assets/logo.png" alt="Heian Tour"></div>
-  <nav class="sidebar-nav">
-    <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gestão & Vendas</div>
-    <a class="nav-item active" data-page="dashboard"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>&nbsp;Painel Geral</a>
-    <a class="nav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-users"></use></svg>&nbsp;Clientes</a>
-    <a class="nav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-calendar"></use></svg>&nbsp;Calendário</a>
-    <a class="nav-item" data-page="colaboradores"><svg class="v-icon"><use href="#icon-user"></use></svg>&nbsp;Colaboradores</a>
-    <a class="nav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-dollar"></use></svg>&nbsp;Contabilidade</a>
-    
-    <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
-    <a class="nav-item" data-page="base"><svg class="v-icon"><use href="#icon-database"></use></svg>&nbsp;Base de Dados</a>
-    <a class="nav-item" data-page="lixeira"><svg class="v-icon"><use href="#icon-trash"></use></svg>&nbsp;Lixeira</a>
-    <a class="nav-item" data-page="config"><svg class="v-icon"><use href="#icon-settings"></use></svg>&nbsp;Configurações</a>
-  </nav>
-  
-  <div class="sidebar-cambio">
-    <div style="font-size: 11px; font-weight: 700; color: var(--crimson-dk); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
-      <span>Câmbio no App</span>
-      <div>
-        <button id="btnToggleMenuCambioConfig" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0 6px; display:inline-flex; align-items:center;" title="Configurar Câmbio"><svg class="v-icon no-margin" style="width:1.1em; height:1.1em;"><use href="#icon-settings"></use></svg></button>
-        <button id="btnRefreshCambioMenu" style="background:transparent; border:none; color:var(--crimson); cursor:pointer; font-size:12px; padding:0; display:inline-flex; align-items:center;" title="Zerar valores"><svg class="v-icon no-margin" style="width:1.1em; height:1.1em;"><use href="#icon-undo"></use></svg></button>
-      </div>
-    </div>
-    
-    <div id="menuCambioConfig" style="display:none; flex-direction:column; gap:6px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed rgba(107,31,42,0.2)">
-      <div style="font-size:10px; color:var(--crimson); font-weight:600; margin-bottom:2px">TAXAS AUTOMÁTICAS:</div>
-      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">¥→US$</span><input type="number" id="menuCambioRateUSD" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
-      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-weight:600; font-size:10px">¥→R$</span><input type="number" id="menuCambioRateBRL" step="0.000001" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:4px 6px; font-family:var(--ff-num); font-size:11px"></div>
-      <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px">
-        <button id="btnMenuCambioFetch" style="flex:1; font-size:10px; padding:5px; background:var(--crimson); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:2px;" title="Buscar do dia"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:2px;"><use href="#icon-globe"></use></svg>Do Dia</button>
-        <button id="btnMenuCambioSave" style="flex:1; font-size:10px; padding:5px; background:var(--ink); border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:2px;" title="Salvar taxa no servidor"><svg class="v-icon" style="width:1.1em; height:1.1em; margin-right:2px;"><use href="#icon-save"></use></svg>Salvar</button>
-      </div>
-      <div id="menuCambioStatus" style="font-size:10px; color:var(--crimson); font-weight:600; margin-top:2px; text-align:center"></div>
-    </div>
- 
-    <div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:6px">
-      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">JPY ¥</span><input type="number" id="menuCambioJPY" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
-      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">USD $</span><input type="number" id="menuCambioUSD" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
-      <div style="display:flex; flex-wrap:wrap; align-items:center"><span style="width:35px; color:var(--crimson-dk); font-size:12px; font-weight:600">BRL R$</span><input type="number" id="menuCambioBRL" placeholder="0" style="flex:1; width:100%; background:#fff; border:1px solid rgba(107,31,42,0.2); color:var(--ink); border-radius:4px; padding:6px 8px; font-family:var(--ff-num); font-size:13px; outline:none"></div>
-    </div>
-  </div>
- 
-  <div class="sidebar-sync">
-    <button id="btnSync" class="btn-sync" style="display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-undo"></use></svg>Sincronizar Sheets</button>
-    <p id="syncStatus" class="sync-status"></p>
-  </div>
-</aside>s</button>
-    <p id="syncStatus" class="sync-status"></p>
-  </div>
-</aside>
+  <!-- Pétalas de Sakura -->
+  <div class="sakura-container" id="sakuraContainer"></div>
 
-<main class="main">
-
-  <!-- ── MOBILE HEADER ────────────────────────────────────────────────────── -->
-  <div class="mobile-header">
-    <button id="mobileMenuToggle" class="btn-mobile-menu" aria-label="Abrir Menu">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-    </button>
-    <img src="assets/logo.png" alt="Heian Tour" class="mobile-logo" style="height:24px;">
-  </div>
-
-  <!-- ── ORÇAMENTO ──────────────────────────────────────────────────────── -->
-  <div id="page-orcamento" class="page active">
-    <div class="page-header">
-      <h1 id="orcTitulo">Nova Cotação</h1>
-      <div class="header-actions">
-        <button class="btn-secondary" onclick="window.voltarParaClientesDeCotacao()" style="margin-right:8px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-arrow-left"></use></svg>Voltar para Clientes</button>
-        <button class="btn-secondary" onclick="window.desfazerAcaoCotacao()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:8px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
-        <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
-        <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro ➔</button>
-        <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Exportar para Roteiro</button>
-        <button id="btnPreview" class="btn-secondary">Visualizar PDF</button>
-        <button id="btnPrint" class="btn-primary">Exportar PDF</button>
-      </div>
+  <div class="container">
+    <div class="logo-wrap">
+      <img src="assets/logo.png" alt="Heian Tour" class="logo-img">
+      <span class="logo-text">Heian Tour</span>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Dados do Cliente<button id="btnImportNotion" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Importar do Notion</button></h2>
-      <div class="form-grid">
-  <div class="field" id="notionSelectWrapper" style="display:none; grid-column: span 2; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-    <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
-    <select id="notionClienteSelect" style="width: 100%; padding: 8px; margin-top: 5px;">
-      <option value="">Carregando clientes...</option>
-    </select>
-  </div>
-        <div class="field" style="grid-column: span 3"><label>Nome da Cotação</label><input type="text" id="orcNome" placeholder="Ex: Gisela — Set/2026"></div>
-        <div class="field" style="grid-column: span 1">
-          <label>Status da Venda</label>
-          <select id="orcStatus" style="width: 100%; padding: 8px; border: 1px solid var(--border-dk); border-radius: 4px; outline: none; background: #fff;">
-            <option value="Pendente">● Pendente</option>
-            <option value="Fechado">● Fechado</option>
-            <option value="Perdido">● Perdido</option>
-          </select>
-        </div>
-      </div>
-      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-top:12px; margin-bottom:8px;">
-        <h3 style="margin:0; font-size:16px; color:#5c1d24; font-family: 'Playfair Display', serif;">Dados do Cliente (Cabeça)</h3>
-        <button id="btnEditarClienteCotacao" class="btn-secondary" style="font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px;" type="button" onclick="handleAcaoClienteCotacao()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg>Editar Cliente</button>
-      </div>
-      <div class="form-grid" style="margin-top:0">
-        <div class="field"><label>Nome do Cliente</label><input type="text" id="clienteNome" ></div>
-        <div class="field" style="max-width:90px"><label>Adultos</label><input type="number" id="clienteAdultos" value="2" min="1" ></div>
-        <div class="field" style="max-width:90px"><label>Crianças</label><input type="number" id="clienteCriancas" value="0" min="0" ></div>
-        <div class="field"><label>Data do Orçamento</label><input type="date" id="clienteDataOrcamento"></div>
-      </div>
-      
-      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 20px;">
-        <div class="subsection-title" style="margin: 0;">Estadias (Herdadas do Cliente)</div>
-      </div>
-      <div id="estadiasReadOnlyList" style="margin-bottom: 20px; font-size: 14px; color: #475569; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <p class="hint" style="margin:0;">Nenhuma estadia. Edite o cliente na aba "Clientes (Notion)" para adicionar estadias.</p>
-      </div>
+    <div class="line-dec"></div>
 
-      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 20px;">
-        <div class="subsection-title" style="margin: 0;">Valores Base para Tours Guiados (¥)</div>
-      </div>
-      <div style="margin-bottom: 20px; padding: 15px; background: #fffcf0; border: 1px solid #fde68a; border-radius: 6px;">
-        <div class="form-grid" style="grid-template-columns: repeat(5, 1fr); gap: 10px;">
-          <div class="field"><label>4 Horas</label><input type="number" id="baseTour4h" placeholder="Ex: 35000" oninput="updBaseTour('4h', this.value)"></div>
-          <div class="field"><label>6 Horas</label><input type="number" id="baseTour6h" placeholder="Ex: 45000" oninput="updBaseTour('6h', this.value)"></div>
-          <div class="field"><label>8 Horas</label><input type="number" id="baseTour8h" placeholder="Ex: 55000" oninput="updBaseTour('8h', this.value)"></div>
-          <div class="field"><label>10 Horas</label><input type="number" id="baseTour10h" placeholder="Ex: 65000" oninput="updBaseTour('10h', this.value)"></div>
-          <div class="field"><label>12 Horas</label><input type="number" id="baseTour12h" placeholder="Ex: 75000" oninput="updBaseTour('12h', this.value)"></div>
-        </div>
-        <p style="margin: 5px 0 0 0; font-size: 11px; color: #b45309;">Esses valores servem de guia para o orçamento e auto-preenchem a lista de tours e a importação do roteiro.</p>
-      </div>
+    <h1>Algo incrível está<br><span>chegando em breve</span></h1>
+
+    <p class="subtitle">
+      Estamos preparando uma experiência única para você descobrir o Japão com todo o cuidado e personalização que merece.
+    </p>
+
+    <div class="countdown-wrap" id="countdown">
+      <div class="countdown-item"><span class="countdown-num" id="days">--</span><span class="countdown-label">Dias</span></div>
+      <div class="countdown-item"><span class="countdown-num" id="hours">--</span><span class="countdown-label">Horas</span></div>
+      <div class="countdown-item"><span class="countdown-num" id="minutes">--</span><span class="countdown-label">Min</span></div>
+      <div class="countdown-item"><span class="countdown-num" id="seconds">--</span><span class="countdown-label">Seg</span></div>
     </div>
 
-    <div class="card" style="display: none;">
-      <h2 class="card-title">Roteiro Vinculado</h2>
-      <p class="hint">Você pode criar um roteiro vinculado a este orçamento ou gerar um esqueleto automático com base nas estadias.</p>
-      <div class="form-grid" style="align-items:end; margin-bottom: 12px">
-        <div class="field">
-          <label>Roteiro Selecionado</label>
-          <select id="orcRoteiroVinculado" class="select-roteiro" style="width:100%">
-             <option value="">Nenhum roteiro vinculado</option>
-          </select>
-        </div>
-        <button id="btnGerarRoteiroEstadias" class="btn-secondary">Gerar Esqueleto via Estadias</button>
-      </div>
-      <div id="orcRoteiroStatus" style="font-size:12px; color:var(--ink-lt)">
-        Salve a cotação para gravar o vínculo do roteiro no servidor.
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title-row">
-        <h2 class="card-title">Roteirização e Suporte</h2>
-        <label class="toggle"><input type="checkbox" id="consultoriaToggle"><span class="toggle-slider"></span></label>
-      </div>
-      <div id="consultoriaFields" class="hidden">
-        <div class="form-grid">
-          <div class="field"><label>Valor ¥</label><input type="number" id="consultoriaValor" placeholder="Ex: 30000"></div>
-          <div class="field"><label>Descrição</label><input type="text" id="consultoriaDesc" placeholder="Ex: Roteirização + Suporte completo"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 class="card-title">Tours</h2>
-      <div id="toursList"></div>
-      <button class="btn-add" id="btnAddTour">+ Adicionar Tour</button>
-    </div>
-
-    <div class="card">
-      <h2 class="card-title">Transportes</h2>
-      <div id="transportesList"></div>
-      <button class="btn-add" id="btnAddTransporte">+ Adicionar Transporte</button>
-    </div>
-
-    <div class="card">
-      <h2 class="card-title">Experiências <span class="optional-badge">opcional</span></h2>
-      <div id="experienciasList"></div>
-      <button class="btn-add" id="btnAddExperiencia">+ Adicionar Experiência</button>
-    </div>
-
-    <div class="card">
-      <h2 class="card-title">Itens Adicionais <span class="optional-badge">opcional</span></h2>
-      <div id="itensAdicionaisList"></div>
-      <button class="btn-add" id="btnAddItemAdicional">+ Adicionar Item Adicional</button>
-    </div>
-
-
-    <div class="card" id="cardTextosCustom">
-      <div class="card-title-row">
-        <h2 class="card-title" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon"><use href="#icon-edit"></use></svg>Personalizar Textos do PDF</h2>
-        <button class="btn-secondary" onclick="toggleCardTextos()" id="btnToggleTextos" style="font-size:11px;padding:6px 14px">Expandir</button>
-      </div>
-      <div id="textosCustomForm" class="hidden">
-        <p class="hint" style="margin-bottom:16px">Personalize qualquer título ou rótulo que aparece no PDF desta cotação.</p>
-        <div class="subsection-title">Capa</div>
-        <div class="form-grid">
-          <div class="field"><label>Rótulo da capa</label><input type="text" id="tx_coverLabel" placeholder="COTAÇÃO DE VIAGEM"></div>
-          <div class="field"><label>Subtítulo da capa</label><input type="text" id="tx_coverSub" placeholder="Roteiro personalizado"></div>
-        </div>
-        <div class="subsection-title">Títulos das Seções</div>
-        <div class="form-grid">
-          <div class="field"><label>Estadias</label><input type="text" id="tx_secEstadias" placeholder="Estadias"></div>
-          <div class="field"><label>Transporte</label><input type="text" id="tx_secTransp" placeholder="Transporte"></div>
-          <div class="field"><label>Tours</label><input type="text" id="tx_secTours" placeholder="Tours"></div>
-          <div class="field"><label>Experiências</label><input type="text" id="tx_secExp" placeholder="Experiências"></div>
-          <div class="field"><label>Resumo financeiro</label><input type="text" id="tx_secResumo" placeholder="Resumo Financeiro"></div>
-        </div>
-        <div class="subsection-title">Rótulos do Resumo Financeiro</div>
-        <div class="form-grid">
-          <div class="field"><label>Total Tours</label><input type="text" id="tx_lblTours" placeholder="Total Tours"></div>
-          <div class="field"><label>Total Transportes</label><input type="text" id="tx_lblTransp" placeholder="Total Transportes"></div>
-          <div class="field"><label>Total Experiências</label><input type="text" id="tx_lblExp" placeholder="Total Experiências"></div>
-          <div class="field"><label>Roteirização e Suporte</label><input type="text" id="tx_lblCons" placeholder="Roteirização e Suporte"></div>
-          <div class="field"><label>Total Geral</label><input type="text" id="tx_lblTotal" placeholder="Total Geral"></div>
-          <div class="field"><label>Sinal 30%</label><input type="text" id="tx_lblSinal" placeholder="Sinal 30% — Tours"></div>
-        </div>
-        <div class="subsection-title">Títulos do Rodapé</div>
-        <div class="form-grid">
-          <div class="field"><label>Observações</label><input type="text" id="tx_secObs" placeholder="Observações Importantes"></div>
-          <div class="field"><label>Condições</label><input type="text" id="tx_secCond" placeholder="Condições de Pagamento"></div>
-          <div class="field"><label>Cancelamento</label><input type="text" id="tx_secCanc" placeholder="Políticas de Cancelamento"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card card-resumo">
-      <h2 class="card-title">Resumo Financeiro</h2>
-      <div class="resumo-grid" id="resumoGrid"></div>
+    <div class="cta-box">
+      <p>Já tem interesse em viajar para o Japão? Faça seu pré-cadastro e seja um dos primeiros a receber nossas propostas exclusivas.</p>
+      <a href="/cadastro" class="btn-cta">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Fazer Pré-Cadastro
+      </a>
     </div>
   </div>
 
-  <!-- ── ROTEIROS ───────────────────────────────────────────────────────── -->
-  <div id="page-roteiros" class="page pane-layout">
-    <div class="pane-list">
-      <div class="pane-list-header">
-        <h2 style="font-family: var(--ff-display); font-size: 26px; font-weight: 400; color: var(--crimson);">Roteiros</h2>
-        <div style="display:flex; gap:8px">
-          <input type="text" id="pesquisaRoteirosList" class="search-input-modern" placeholder="Pesquisar roteiro..." onkeyup="filterRoteirosList()">
-          <button class="btn-primary" id="btnNovoRoteiroList" style="padding: 10px 14px; border-radius:8px;" title="Novo Roteiro">+</button>
-        </div>
-      </div>
-      <div class="pane-list-content" id="roteirosLista"></div>
-    </div>
-
-    <div class="pane-content" id="roteirosPaneContent">
-      <div class="pane-content-inner" id="roteirosContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
-        
-        <div id="roteirosEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
-           <img src="assets/logo.png" style="width: 80px; opacity:0.2; margin-bottom: 20px; filter: grayscale(1);">
-           <p style="font-size:18px; font-family: var(--ff-display);">Selecione um roteiro na lista lateral<br>ou crie um novo.</p>
-        </div>
-
-        <div id="roteirosDetailWrapper" style="display:none; width: 100%; padding: 40px;">
-          <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid rgba(0,0,0,0.1)">
-             <div style="display:flex; gap: 15px; align-items:center;">
-               <label style="font-size:13px; margin-right:10px; display:inline-flex; align-items:center; cursor:pointer; color:var(--ink-lt)">
-                 <input type="checkbox" id="chkIncluirDescricoesPdf" style="margin-right:6px; accent-color:var(--crimson)">
-                 Incluir descrições no PDF
-               </label>
-               <button id="btnGerarRoteiro" class="btn-secondary" style="font-size:13px; display:inline-flex; align-items:center; gap:4px;" disabled=""><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
-             </div>
-          </div>
-          
-          <div class="roteiro-container" style="display:block;">
-            <div id="roteiroPreviewHeader" style="display:none; margin-bottom: 20px; align-items: center; justify-content: space-between;">
-              <div style="display:flex; align-items:center; gap: 15px;">
-                 <h2 id="roteiroPreviewTitle" style="margin:0; color: var(--gold-dk); font-size: 24px;"></h2>
-                 <button id="btnEditarRoteiro" class="btn-primary" style="padding: 6px 16px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-edit"></use></svg>Editar Roteiro</button>
-                 <button id="btnExcluirRoteiro" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); padding: 5px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Roteiro</button>
-              </div>
-            </div>
-            <div class="roteiro-timeline" id="roteiroTimeline"></div>
-            
-            <div class="roteiro-edit-container" id="roteiroEditContainer" style="display:none; margin-top: 20px;">
-               <div id="roteiroEditHeaderDisplay" style="text-align: center; margin-bottom: 24px; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                 <h2 id="roteiroEditTitle" style="margin: 0; color: var(--gold-dk); font-size: 22px; font-weight: 600;">Roteiro em Edição</h2>
-                 <p id="roteiroEditSubtitle" style="margin: 6px 0 0 0; color: var(--text-sec); font-size: 15px; font-weight: 500;">Cliente: - | Viagem: -</p>
-               </div>
-               <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom: 24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-                 <div class="field" style="margin:0; width:100%; max-width:300px">
-                   <label>Nome do Roteiro (Salvo na Base)</label>
-                   <input type="text" id="editRoteiroNome" placeholder="Ex: Roteiro do Cliente">
-                 </div>
-                 <div style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center;">
-                   <div style="flex:1"></div>
-                   <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
-                     <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
-                     <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-                     <button id="btnVerPerfilClienteRoteiro" class="btn-secondary" style="background:rgba(196,163,90,0.06); border-color:rgba(196,163,90,0.25); color:var(--gold-dk); font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirDrawerPerfilCliente()"><svg class="v-icon" style="margin-right:2px; stroke:var(--gold-dk);"><use href="#icon-user"></use></svg>Ver Perfil do Cliente</button>
-                     <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()"><svg class="v-icon" style="margin-right:2px; stroke:#6d28d9;"><use href="#icon-sparkles"></use></svg>Gerar com IA</button>
-                     <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
-                     <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
-                     <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
-                     <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent">Cancelar</button>
-                   </div>
-                 </div>
-               </div>
-               
-               <div class="card" style="margin-bottom: 24px">
-                 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
-                   <h2 class="card-title" style="font-size:14px; margin:0">Dados do Cliente <button id="btnImportNotionRoteiro" class="btn-secondary" style="margin-left: 10px; font-size: 12px; background-color: rgb(241, 245, 249); display:inline-flex; align-items:center; gap:4px;" type="button" onclick="toggleImportNotionRoteiro()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Importar do Notion</button></h2>
-                   <div>
-                     <button id="btnEditarClienteRoteiro" class="btn-secondary" style="font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px;" type="button" onclick="handleAcaoClienteRoteiro()"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-user"></use></svg>Editar Cliente</button>
-                   </div>
-                 </div>
-                 <div class="form-grid" id="rotNotionSelectWrapper" style="display:none; margin-bottom: 15px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-                   <label style="color: #0f172a; font-weight: 600;">Selecione o Cliente no Notion:</label>
-                   <select id="rotNotionClienteSelect" style="width: 100%; padding: 8px; margin-top: 5px;" onchange="vincularClienteRoteiroFromSelect()">
-                     <option value="">Carregando clientes...</option>
-                   </select>
-                 </div>
-                 <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr">
-                   <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" ></div>
-                   <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" ></div>
-                   <div class="field"><label>Crianças</label><input type="number" id="rotClienteCriancas" value="0" min="0" ></div>
-                 </div>
-                 <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
-                   <div class="field"><label>Data de Início</label><input type="date" id="rotClienteData" ></div>
-                   <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" ></div>
-                 </div>
-                 <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
-                   <div class="field"><label>Voo Chegada</label><input type="text" id="rotClienteVooChegada" placeholder="Ex: JL01 10/10 14:00" onchange="updRotCliente('vooChegada', this.value)"></div>
-                   <div class="field"><label>Voo Partida</label><input type="text" id="rotClienteVooPartida" placeholder="Ex: JL02 20/10 18:00" onchange="updRotCliente('vooPartida', this.value)"></div>
-                 </div>
-                 
-                 <div style="margin-top:12px; text-align: right;">
-                   <button class="btn-primary" id="btnGerarDiasAutomaticamente" style="font-size:11px; padding: 6px 12px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Cria automaticamente todos os dias baseado na Data de Início e Data Final."><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-sparkles"></use></svg>Gerar Dias Automaticamente</button>
-                 </div>
-                 <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
-                  <div id="rotEstadiasList"></div>
-                  <div style="display: flex; gap: 8px; margin-top: 8px;">
-                    <button class="btn-add" id="btnRotAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
-                    <button class="btn-secondary" id="btnRotOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;"><svg class="v-icon"><use href="#icon-calendar"></use></svg>Ordenar por Data</button>
-                  </div>
-                </div>
-
-               <div id="editRoteiroDiasList"></div>
-               <button class="btn-add" id="btnAddDiaRoteiro" style="margin-top:12px">+ Adicionar Dia</button>
-            </div>
-            
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── MEUS ORÇAMENTOS ────────────────────────────────────────────────── -->
-  <div id="page-meus" class="page pane-layout">
-    <div class="pane-list">
-      <div class="pane-list-header">
-        <h2 style="font-family: var(--ff-display); font-size: 26px; font-weight: 400; color: var(--crimson);">Cotações</h2>
-        <div style="display:flex; gap:8px">
-          <input type="text" id="pesquisaOrcamentosList" class="search-input-modern" placeholder="Pesquisar cotação..." onkeyup="filterOrcamentosList()">
-          <button class="btn-primary" id="btnNovoOrcList" style="padding: 10px 14px; border-radius:8px;" title="Nova Cotação">+</button>
-        </div>
-      </div>
-      <div class="pane-list-content" id="orcamentosLista"></div>
-    </div>
-    
-    <div class="pane-content" id="orcamentosContent">
-      <!-- Container que segura ou o Preview ou o Editor -->
-      <div class="pane-content-inner" id="orcamentosContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
-        
-        <!-- Estado Vazio -->
-        <div id="orcamentosEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
-           <img src="assets/logo.png" style="width: 80px; opacity:0.2; margin-bottom: 20px; filter: grayscale(1);">
-           <p style="font-size:18px; font-family: var(--ff-display);">Selecione uma cotação na lista lateral<br>ou crie uma nova.</p>
-        </div>
-
-        <!-- Area de Preview -->
-        <div id="orcamentosPreviewWrapper" style="display:none; width: 100%; padding: 40px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:1px solid var(--border); padding-bottom:20px;">
-                <h3 id="orcamentosPreviewTitle" style="font-family: var(--ff-display); font-size: 24px; color: var(--crimson);">Pré-visualização</h3>
-                <div style="display:flex; gap: 10px;">
-                    <button id="btnEditFromPreview2" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
-                    <button id="btnExcluirCotacaoInline" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
-                    <button class="btn-secondary" onclick="document.getElementById('btnPrintFromPreview').click()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
-                </div>
-            </div>
-            <div id="previewContainerInline" style="max-width:800px; margin:0 auto;"></div>
-        </div>
-        
-        <!-- O Formulário de Edição virá para cá via JS -->
-        <div id="orcamentosEditorWrapper" style="display:none; width: 100%;"></div>
-
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
-  <div id="page-dashboard" class="page active">
-    <div class="page-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1 id="dashboardPageTitle" style="margin: 0;">Painel Geral & Operacional</h1>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.45); padding: 12px 18px; border-radius: 12px; border: 1px solid var(--border);">
-        <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt);">Visualizar Relatório:</span>
-        <select id="dashClienteSelect" class="search-input-modern" style="max-width: 300px; padding: 8px 12px; font-size: 13px;" onchange="selecionarClienteDashboard(this.value)">
-          <option value="">Geral (Todos os orçamentos locais)</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Container Geral -->
-    <div id="dashboardGeralContainer">
-      <!-- Ordens de Serviço (Dia e Semana) -->
-      <div class="dashboard-agenda-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-calendar"></use></svg> <span>Agenda Operacional (Ordens de Serviço)</span>
-        </h3>
-        
-        <div class="agenda-layout-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-          <!-- Ordens do Dia (Hoje) -->
-          <div class="agenda-dia-section">
-            <h4 style="font-size: 13px; color: var(--gold-dk); font-weight: 700; text-transform: uppercase; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(0,0,0,0.1); padding-bottom:6px;">
-              <span>Ordens de Hoje</span>
-              <span id="agendaHojeData" style="font-size:11px; font-weight:500; text-transform:none; color:var(--ink-lt)"></span>
-            </h4>
-            <div id="agendaHojeLista" style="display:flex; flex-direction:column; gap:12px;">
-              <p style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando...</p>
-            </div>
-          </div>
-          
-          <!-- Ordens da Semana -->
-          <div class="agenda-semana-section">
-            <h4 style="font-size: 13px; color: var(--gold-dk); font-weight: 700; text-transform: uppercase; margin-bottom: 12px; border-bottom:1px dashed rgba(0,0,0,0.1); padding-bottom:6px;">
-              Ordens da Semana (Próximos 7 dias)
-            </h4>
-            <div id="agendaSemanaLista" style="display:flex; flex-direction:column; gap:12px;">
-              <p style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Kanban de Clientes -->
-      <div class="dashboard-kanban-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
-        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-users"></use></svg> <span>Quadro de Clientes (Status Notion)</span>
-        </h3>
-        
-        <div id="kanbanBoard" class="kanban-board-scroll">
-          <div style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando Kanban...</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Container do Cliente (Notion) -->
-    <div id="dashboardClienteContainer" class="hidden">
-      <!-- KPIs do Cliente -->
-      <div class="dashboard-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px;">
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); border-left: 4px solid #2ecc71;">
-          <h3 style="font-size: 12px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Total Recebido</h3>
-          <p id="kpiCliRecebido" style="font-family: var(--ff-display); font-size: 24px; color: #2ecc71; margin-top: 5px; font-weight: 600;">¥ 0</p>
-          <span style="font-size:10px; color:var(--ink-lt)">Soma das Entradas no Notion</span>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); border-left: 4px solid #e74c3c;">
-          <h3 style="font-size: 12px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Despesas Viagem</h3>
-          <p id="kpiCliDespesas" style="font-family: var(--ff-display); font-size: 24px; color: #e74c3c; margin-top: 5px; font-weight: 600;">¥ 0</p>
-          <span style="font-size:10px; color:var(--ink-lt)">Soma das Saídas no Notion</span>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); border-left: 4px solid var(--gold);">
-          <h3 style="font-size: 12px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Custo Guias (Diárias)</h3>
-          <p id="kpiCliCustoGuias" style="font-family: var(--ff-display); font-size: 24px; color: var(--gold-dk); margin-top: 5px; font-weight: 600;">¥ 0</p>
-          <span id="kpiCliCustoGuiasDet" style="font-size:10px; color:var(--ink-lt)">¥ 0 Pago / ¥ 0 Pendente</span>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); border-left: 4px solid #3498db;">
-          <h3 style="font-size: 12px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Caixa Atual (Líquido)</h3>
-          <p id="kpiCliCaixaAtual" style="font-family: var(--ff-display); font-size: 24px; color: #3498db; margin-top: 5px; font-weight: 600;">¥ 0</p>
-          <span style="font-size:10px; color:var(--ink-lt)">Recebido - Custos Pagos</span>
-        </div>
-        <div class="kpi-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); border-left: 4px solid var(--crimson);">
-          <h3 style="font-size: 12px; color: var(--ink-lt); font-weight: 500; text-transform: uppercase;">Lucro Projetado (Final)</h3>
-          <p id="kpiCliLucroProjetadoFinal" style="font-family: var(--ff-display); font-size: 24px; color: var(--crimson); margin-top: 5px; font-weight: 600;">¥ 0</p>
-          <span style="font-size:10px; color:var(--ink-lt)">Contrato - Custos Totais</span>
-        </div>
-      </div>
-
-      <!-- Gráfico e Detalhes do Cliente -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-        <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); height: 350px; display: flex; flex-direction: column;">
-          <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Comparativo Financeiro</h3>
-          <div style="flex:1; position:relative;">
-            <canvas id="chartClienteFinanceiro"></canvas>
-          </div>
-        </div>
-        <div class="chart-card" style="background: var(--warm-white); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); height: 350px; display: flex; flex-direction: column;">
-          <h3 style="font-size: 15px; color: var(--crimson); font-weight: 600; margin-bottom: 16px;">Previsão da Ficha do Cliente</h3>
-          <div style="display:flex; flex-direction:column; gap:16px; justify-content:center; height:100%;">
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px;">
-              <span style="color:var(--ink-lt); font-weight:500;">Valor Total Fechado:</span>
-              <span id="cliFichaValorTotal" style="font-family:var(--ff-num); font-weight:600; color:var(--ink)">¥ 0</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px;">
-              <span style="color:var(--ink-lt); font-weight:500;">Total já Pago (Notion Rollup):</span>
-              <span id="cliFichaTotalPago" style="font-family:var(--ff-num); font-weight:600; color:#2ecc71">¥ 0</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px;">
-              <span style="color:var(--ink-lt); font-weight:500;">Saldo a Receber:</span>
-              <span id="cliFichaSaldoPagar" style="font-family:var(--ff-num); font-weight:600; color:#e74c3c">¥ 0</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:8px; align-items:center;">
-              <span style="color:var(--ink-lt); font-weight:500;">Status do Pagamento:</span>
-              <span id="cliFichaStatusPgto" style="font-weight:600; background:rgba(0,0,0,0.04); padding:2px 8px; border-radius:4px;">-</span>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 10px; width: 100%; flex-wrap: wrap;">
-              <button class="btn-primary" id="btnFichaRegistrarEntrada" onclick="abrirModalRegistrarEntrada()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #2ecc71; border-color: #27ae60; font-size:12px;">
-                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-credit-card"></use></svg>Recebimento
-              </button>
-              <button class="btn-primary" id="btnFichaRegistrarSaida" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background-color: #e74c3c; border-color: #c0392b; font-size:12px;">
-                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg>Registrar Saída
-              </button>
-              <button class="btn-secondary" id="btnFichaLinkCliente" onclick="copiarLinkCliente()" style="margin-top: 0; padding: 10px; flex: 1; min-width: 100px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size:12px; background-color: #34495e; border-color: #2c3e50; color: white;" title="Copiar Link da Área do Cliente">
-                <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-globe"></use></svg>Link do Cliente
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Detalhamento de Transações -->
-      <div class="card">
-        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 600; margin-bottom: 16px; font-family: var(--ff-display);">Detalhamento de Transações</h3>
-        
-        <!-- Tabs de detalhamento -->
-        <div class="tabs" style="margin-bottom:15px;">
-          <button class="tab active" onclick="switchCliDashTab(event, 'cli-entradas-tab')">Entradas</button>
-          <button class="tab" onclick="switchCliDashTab(event, 'cli-saidas-tab')">Saídas (Custos)</button>
-          <button class="tab" onclick="switchCliDashTab(event, 'cli-guias-tab')">Diárias de Guias</button>
-          <button class="tab" onclick="switchCliDashTab(event, 'cli-tasks-tab')">Tasks & Serviços</button>
-        </div>
-
-        <div id="cli-entradas-tab" class="tab-content active" style="padding-top:0">
-          <div class="table-wrapper">
-            <table class="data-table" id="tableCliEntradas">
-              <thead><tr><th>Data</th><th>Descrição</th><th>Tipo Pagamento</th><th style="text-align:right">Valor ¥</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="cli-saidas-tab" class="tab-content" style="padding-top:0; display:none">
-          <div class="table-wrapper">
-            <table class="data-table" id="tableCliSaidas">
-              <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo Serviço</th><th style="text-align:right">Valor ¥</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="cli-guias-tab" class="tab-content" style="padding-top:0; display:none">
-          <div class="table-wrapper">
-            <table class="data-table" id="tableCliGuias">
-              <thead><tr><th>Data Serviço</th><th>Serviço</th><th>Guia / Motorista</th><th style="text-align:right">Diária ¥</th><th style="text-align:center">Pago?</th><th style="text-align:center">Ações</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="cli-tasks-tab" class="tab-content" style="padding-top:0; display:none">
-          <div class="table-wrapper">
-            <table class="data-table" id="tableCliTasks">
-              <thead><tr><th>Data Serviço</th><th>Task name</th><th>Status</th><th style="text-align:right">Total Cliente ¥</th><th style="text-align:right">Taxa Serviço ¥</th><th style="text-align:right">Lucro ¥</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CONTABILIDADE ─────────────────────────────────────────────────── -->
-  <div id="page-contabilidade" class="page">
-    <div class="page-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px;">
-      <h1 style="margin: 0; color: var(--crimson); font-family: var(--ff-display); font-size: 28px; font-weight: 400;">Contabilidade & Saldos</h1>
-      <p style="margin: 0; color: var(--ink-lt); font-size: 13px;">Consolidação e controle financeiro multimoeda integrado ao Notion</p>
-    </div>
-
-    <!-- Ações Financeiras Rápidas -->
-    <div style="display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap;">
-      <button class="btn-primary" onclick="abrirModalRegistrarEntradaGeral()" style="margin-top: 0; padding: 12px 20px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background-color: #2ecc71; border-color: #27ae60; box-shadow: 0 2px 6px rgba(46, 204, 113, 0.15);">
-        <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-shield-check"></use></svg> Registrar Recebimento (Entrada)
-      </button>
-      <button class="btn-primary" onclick="abrirModalRegistrarSaidaGeral()" style="margin-top: 0; padding: 12px 20px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background-color: #e74c3c; border-color: #c0392b; box-shadow: 0 2px 6px rgba(231, 76, 60, 0.15);">
-        <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg> Registrar Pagamento / Despesa (Saída)
-      </button>
-    </div>
-
-    <!-- Painel de Consolidação Financeira (KPIs) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 28px;" id="kpisConsolidadosFinanceiros">
-      <!-- Total Caixa Consolidado -->
-      <div style="background: linear-gradient(135deg, var(--crimson) 0%, #4a0d15 100%); padding: 24px; border-radius: 12px; border: 1px solid rgba(107,31,42,0.2); box-shadow: var(--shadow); color: white; display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-dollar"></use></svg> Caixa Geral Consolidado (Est.)</span>
-        <h2 id="kpiCaixaConsolidado" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600;">¥ 0</h2>
-        <span style="font-size: 10px; opacity: 0.7;">Soma de todas as moedas convertida em JPY</span>
-      </div>
-      <!-- Total Entradas Mês -->
-      <div style="background: var(--warm-white); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#2ecc71; margin-right:2px;"><use href="#icon-shield-check"></use></svg> Total Recebido (Mês Atual)</span>
-        <h2 id="kpiEntradasMes" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600; color: #2ecc71;">¥ 0</h2>
-        <span id="subkpiEntradasMes" style="font-size: 10px; color: var(--ink-lt);">Carregando entradas...</span>
-      </div>
-      <!-- Total Saídas Mês -->
-      <div style="background: var(--warm-white); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-lt); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="stroke:#e74c3c; margin-right:2px;"><use href="#icon-dollar"></use></svg> Total Pago/Despesas (Mês Atual)</span>
-        <h2 id="kpiSaidasMes" style="font-family: var(--ff-display); font-size: 24px; margin: 0; font-weight: 600; color: #e74c3c;">¥ 0</h2>
-        <span id="subkpiSaidasMes" style="font-size: 10px; color: var(--ink-lt);">Carregando saídas...</span>
-      </div>
-    </div>
-
-    <!-- Layout da Contabilidade (Contas na Esquerda, Diárias Pendentes na Direita) -->
-    <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 28px; align-items: start;" class="contabilidade-layout-grid">
-      <!-- Coluna da Esquerda: Contas -->
-      <div style="display: flex; flex-direction: column; gap: 28px;">
-        <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 28px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-          <h3 style="font-size: 18px; color: var(--crimson); font-weight: 700; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 10px; display:flex; align-items:center; gap:8px">
-            <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-credit-card"></use></svg> <span>Saldos Disponíveis por Conta</span>
-          </h3>
-          <div id="saldosContasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
-            <div style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Carregando saldos de contas...</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Coluna da Direita: Diárias Pendentes -->
-      <div class="dashboard-saldos-contas-card" style="background: var(--warm-white); padding: 28px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);">
-        <h3 style="font-size: 18px; color: var(--crimson); font-weight: 700; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 10px; display:flex; align-items:center; gap:8px">
-          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-user"></use></svg> <span>Diárias Pendentes de Guias</span>
-        </h3>
-        <div id="diarasPendentesContabilidadeContainer" style="display: flex; flex-direction: column; gap: 14px;">
-          <div style="color:var(--ink-lt); font-size:13px; font-style:italic; padding:10px 0;">Carregando diárias pendentes...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CLIENTES ──────────────────────────────────────────────────────── -->
-  <div id="page-clientes" class="page pane-layout">
-    <div class="pane-list">
-      <div class="pane-list-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-family: var(--ff-display); font-size: 26px; font-weight: 400; color: var(--crimson); margin: 0;">Clientes</h2>
-          <div style="display:flex; gap:8px">
-            <button class="btn-secondary" id="btnRefreshClientes" style="padding: 10px; border-radius:8px;" title="Sincronizar Notion">↻</button>
-            <button class="btn-primary" id="btnNovoCliente" style="padding: 10px 14px; border-radius:8px;" title="Novo Cliente">+</button>
-          </div>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" id="pesquisaClientesList" class="search-input-modern" style="flex: 1; min-width: 0;" placeholder="Pesquisar cliente..." onkeyup="renderClientesTabela()">
-          <select id="filtroMesAnoClientes" class="search-input-modern" style="width: 145px; padding: 10px 14px; font-size: 13px;" onchange="renderClientesTabela()">
-            <option value="">Todos os meses</option>
-          </select>
-        </div>
-      </div>
-      <div class="pane-list-content" id="tabelaClientesList"></div>
-    </div>
-    
-    <div class="pane-content" id="clientesPaneContent">
-      <div class="pane-content-inner" id="clientesContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
-        
-        <div id="clientesEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
-           <img src="assets/logo.png" style="width: 80px; opacity:0.2; margin-bottom: 20px; filter: grayscale(1);">
-           <p style="font-size:18px; font-family: var(--ff-display);">Selecione um cliente na lista lateral para ver os detalhes.</p>
-        </div>
-
-        <div id="clientesDetailWrapper" style="display:none; width: 100%; padding: 40px;">
-           <!-- Container de Preview de Leitura -->
-           <div id="clientesPreviewContainer" style="display:block;"></div>
-           
-           <!-- Container de Edição -->
-           <div id="clientesEditorContainer" style="display:none;">
-              <div id="modalClienteContentInline">
-                 <div class="modal-header" style="margin-bottom: 20px;">
-                   <h2 id="modalClienteTitle" style="margin:0; color: var(--gold-dk); font-size: 24px;">Novo Cliente</h2>
-                 </div>
-                  <div class="form-grid">
-                    <div class="field full-width"><label>Nome do Grupo (Cliente)</label><input type="text" id="mcNome" placeholder="Ex: Família Silva"></div>
-                    <div class="field"><label>Status</label>
-                      <select id="mcStatus">
-                        <option value="Início/call de dúvidas">Início/call de dúvidas</option>
-                        <option value="Roteiro Rascunho">Roteiro Rascunho</option>
-                        <option value="Roteiro versão final">Roteiro versão final</option>
-                        <option value="Negociação Aprovada">Negociação Aprovada</option>
-                        <option value="Finalizados">Finalizados</option>
-                        <option value="Cancelado">Cancelado</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk);">
-                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-user"></use></svg> Foto de Perfil (Opcional)</span>
-                  </div>
-                  <div style="background: rgba(196, 163, 90, 0.04); border: 1px dashed rgba(196, 163, 90, 0.3); border-radius: 12px; padding: 16px; margin-top: 8px;">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                      <div id="mcFotoPerfilPreview" style="width:64px; height:64px; border-radius:50%; background:#fdfaf6; color:#9c8248; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; border:2px dashed #c4a35a; overflow:hidden; flex-shrink:0;">
-                        <span>HT</span>
-                      </div>
-                      <div style="flex:1">
-                        <input type="file" id="mcFotoPerfilFile" accept="image/*" style="display:none;" onchange="previewEditFotoPerfil(this)">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('mcFotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
-                        <button type="button" id="mcBtnRemoverFoto" class="btn-secondary" onclick="removerEditFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
-                        <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem quadrada de até 250KB.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="subsection-title" style="margin-top:20px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-plane"></use></svg> Voos e Datas</span>
-                  </div>
-                  <div class="form-grid" style="margin-top:8px;">
-                    <div class="field"><label>Data de Chegada</label><input type="date" id="mcDataInicio"></div>
-                    <div class="field"><label>Data de Partida</label><input type="date" id="mcDataFim"></div>
-                  </div>
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:8px;">
-                    <div style="background: rgba(196,163,90,0.04); border:1px solid var(--border); border-radius:10px; padding:14px;">
-                      <div style="font-size:11px; font-weight:600; color:var(--crimson); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">Voo de Chegada</div>
-                      <div class="form-grid">
-                        <div class="field"><label>Nº do Voo</label><input type="text" id="mcVooChegadaNum" placeholder="Ex: NH 203"></div>
-                        <div class="field"><label>Horário</label><input type="time" id="mcVooChegadaHora"></div>
-                      </div>
-                    </div>
-                    <div style="background: rgba(196,163,90,0.04); border:1px solid var(--border); border-radius:10px; padding:14px;">
-                      <div style="font-size:11px; font-weight:600; color:var(--crimson); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">Voo de Partida</div>
-                      <div class="form-grid">
-                        <div class="field"><label>Nº do Voo</label><input type="text" id="mcVooPartidaNum" placeholder="Ex: JL 785"></div>
-                        <div class="field"><label>Horário</label><input type="time" id="mcVooPartidaHora"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-users"></use></svg> Viajantes</span>
-                    <span id="mcViajantesResumo" style="font-size:10px; font-weight:400; color:var(--ink-lt); text-transform:none; letter-spacing:0;"></span>
-                  </div>
-                  <div id="viajantesList" style="margin-top:8px;"></div>
-                  <button class="btn-add" id="btnAddViajante" style="margin-top:8px; border-style:dashed">+ Adicionar Viajante</button>
-
-                  <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk); display:flex; justify-content:space-between; align-items:center;">
-                    <span><svg class="v-icon" style="stroke:var(--gold-dk); margin-right:3px;"><use href="#icon-file"></use></svg> E-mails</span>
-                  </div>
-                  <div id="emailsList" style="margin-top:8px;"></div>
-                  <button class="btn-add" id="btnAddEmail" style="margin-top:8px; border-style:dashed">+ Adicionar E-mail</button>
-
-                  <div class="subsection-title" style="margin-top:24px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-dk)">Estadias</div>
-                  <div id="estadiasList"></div>
-                  <div style="display: flex; gap: 8px; margin-top: 8px;">
-                    <button class="btn-add" id="btnAddEstadia" style="flex: 1; border-style:dashed; margin-top:0;">+ Adicionar Estadia</button>
-                    <button class="btn-secondary" id="btnOrdenarEstadias" style="width: auto; padding: 0 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px;"><svg class="v-icon"><use href="#icon-calendar"></use></svg> Ordenar por Data</button>
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button id="btnAcessoCotacao" class="btn-secondary" style="flex: 1; display: none;">Cotação</button>
-                    <button id="btnAcessoRoteiro" class="btn-secondary" style="flex: 1; display: none;">Roteiro</button>
-                  </div>
-                  <div class="modal-actions" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button class="btn-secondary" onclick="closeClienteModal()">Cancelar</button>
-                    <button class="btn-primary" id="btnSalvarClienteModal">Salvar no Notion</button>
-                  </div>
-              </div>
-           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── BASE DE DADOS ───────────────────────────────────────────────────────── -->
-  <div id="page-base" class="page">
-    <div class="page-header">
-      <h1>Base de Dados</h1>
-    </div>
-    <div class="tabs">
-      <button class="tab active" data-tab="transportes-tab">Transportes</button>
-      <button class="tab" data-tab="experiencias-tab">Experiências</button>
-      <button class="tab" data-tab="atracoes-tab">Atrações (Roteiros)</button>
-      <button class="tab" data-tab="rotas-tab">Rotas (Sequências)</button>
-      <button class="tab" data-tab="hoteis-tab">Hotéis</button>
-    </div>
-    <div id="transportes-tab" class="tab-content active">
-      <div class="table-header">
-        <input type="text" id="searchTransporte" placeholder="Buscar transporte..." class="search-input">
-        <button class="btn-primary" id="btnNovoTransporte">+ Novo Transporte</button>
-      </div>
-      <div class="table-wrapper">
-        <table id="tabelaTransportes" class="data-table">
-          <thead><tr><th>Trecho</th><th>Idade</th><th>Tipo</th><th>Linha</th><th>Categoria</th><th>Preço ¥</th><th>Tempo</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="experiencias-tab" class="tab-content">
-      <div class="table-header">
-        <input type="text" id="searchExperiencia" placeholder="Buscar experiência..." class="search-input">
-        <button class="btn-primary" id="btnNovaExperiencia">+ Nova Experiência</button>
-      </div>
-      <div class="table-wrapper">
-        <table id="tabelaExperiencias" class="data-table">
-          <thead><tr><th>Nome</th><th>Tipo</th><th>Preço ¥</th><th>Observação</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="atracoes-tab" class="tab-content">
-      <div class="table-header">
-        <input type="text" id="searchAtracao" placeholder="Buscar atração..." class="search-input">
-        <button class="btn-primary" id="btnNovaAtracao">+ Nova Atração</button>
-      </div>
-      <div class="table-wrapper">
-        <table id="tabelaAtracoes" class="data-table">
-          <thead><tr><th>Cidade</th><th>Bairro</th><th>Nome da Atração</th><th>Preço (Ingresso)</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="rotas-tab" class="tab-content">
-      <div class="table-header">
-        <input type="text" id="searchRota" placeholder="Buscar rota..." class="search-input">
-        <button class="btn-primary" id="btnNovaRota">+ Nova Rota Base</button>
-      </div>
-      <div class="table-wrapper">
-        <table id="tabelaRotas" class="data-table">
-          <thead><tr><th>Cidade</th><th>Nome da Rota</th><th>Atrações</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="hoteis-tab" class="tab-content">
-      <div class="table-header">
-        <input type="text" id="searchHotel" placeholder="Buscar hotel..." class="search-input">
-        <button class="btn-primary" id="btnNovoHotel">+ Novo Hotel</button>
-      </div>
-      <div class="table-wrapper">
-        <table id="tabelaHoteis" class="data-table">
-          <thead><tr><th>Cidade</th><th>Nome do Hotel</th><th>Descrição</th><th>Comodidades</th><th>Foto</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CONFIGURAÇÕES ──────────────────────────────────────────────────── -->
-  <div id="page-config" class="page">
-    <div class="page-header"><h1>Configurações</h1></div>
-    <div class="card">
-      <h2 class="card-title">Câmbio</h2>
-      <div class="form-grid">
-        <div class="field"><label>¥ → USD</label><input type="number" id="cambioUSD" step="0.000001"></div>
-        <div class="field"><label>¥ → BRL</label><input type="number" id="cambioBRL" step="0.000001"></div>
-      </div>
-      <p id="cambioDataRef" class="hint" style="margin-top:8px"></p>
-      <div style="display:flex; flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center">
-        <button class="btn-primary" id="btnSalvarCambio">Salvar Câmbio Manual</button>
-        <button class="btn-secondary" id="btnCambioAuto">↻ Buscar Câmbio do Dia</button>
-        <span id="cambioAutoStatus" style="font-size:11px;color:var(--ink-lt)"></span>
-      </div>
-    </div>
-    <div class="card">
-      <h2 class="card-title">Google Sheets</h2>
-      <p class="hint">Cole o ID da planilha (parte da URL entre /d/ e /edit). A planilha precisa estar acessível com o link.</p>
-      <div class="field"><label>ID do Google Sheets</label><input type="text" id="sheetsId"></div>
-      <div class="field" style="margin-top:14px"><label>URL do Google Apps Script (Para Sincronização de Envio Automático)</label><input type="text" id="sheetsScriptUrl" placeholder="Cole a URL implantada do Google Apps Script (opcional)"></div>
-      <div class="form-grid" style="margin-top:14px">
-        <div class="field"><label>Nome da aba de Transportes</label><input type="text" id="abaTransportes" placeholder="Ex: Transportes"></div>
-        <div class="field"><label>Nome da aba de Experiências</label><input type="text" id="abaExperiencias" placeholder="Ex: Experiências"></div>
-        <div class="field"><label>Nome da aba de Atrações</label><input type="text" id="abaAtracoes" placeholder="Ex: Atracoes"></div>
-        <div class="field"><label>Nome da aba de Rotas</label><input type="text" id="abaRotas" placeholder="Ex: Rotas"></div>
-        <div class="field"><label>Nome da aba de Hotéis</label><input type="text" id="abaHoteis" placeholder="Ex: Hotéis"></div>
-      </div>
-      <button class="btn-primary" id="btnSalvarSheets" style="margin-top:14px">Salvar Configurações do Sheets</button>
-    </div>
-    <div class="card">
-      <h2 class="card-title">Textos Padrão do Orçamento</h2>
-      <div class="field" style="margin-bottom:14px"><label>Observações Importantes</label><textarea id="textoObservacoes" rows="5"></textarea></div>
-      <div class="field" style="margin-bottom:14px"><label>Condições de Pagamento</label><textarea id="textoCondicoes" rows="6"></textarea></div>
-      <div class="field" style="margin-bottom:14px"><label>Políticas de Cancelamento</label><textarea id="textoCancelamento" rows="7"></textarea></div>
-      <button class="btn-primary" id="btnSalvarTextos">Salvar Textos</button>
-    </div>
-    <div class="card">
-      <h2 class="card-title">Mensagens Rápidas (Observações)</h2>
-      <p class="hint">Escreva frases rápidas para observações de cada categoria (uma por linha) para preenchimento com um clique.</p>
-      <div class="field" style="margin-bottom:14px"><label>Mensagens Rápidas para Tours</label><textarea id="sugestoesTours" rows="4" placeholder="Ex: Guia brasileiro incluso · transporte público não incluso"></textarea></div>
-      <div class="field" style="margin-bottom:14px"><label>Mensagens Rápidas para Transportes</label><textarea id="sugestoesTransportes" rows="4" placeholder="Ex: Apenas reserva do assento. Tarifa básica paga na hora."></textarea></div>
-      <div class="field" style="margin-bottom:14px"><label>Mensagens Rápidas para Experiências</label><textarea id="sugestoesExperiencias" rows="4" placeholder="Ex: Ingresso emitido eletronicamente. Não reembolsável."></textarea></div>
-      <button class="btn-primary" id="btnSalvarSugestoes">Salvar Mensagens Rápidas</button>
-    </div>
-    
-  </div>
-
-  <!-- ── LIXEIRA ──────────────────────────────────────────────────────────── -->
-  <div id="page-lixeira" class="page">
-    <div class="page-header">
-      <h1 style="display:inline-flex; align-items:center; gap:8px;"><svg class="v-icon v-icon-lg" style="stroke:var(--crimson);"><use href="#icon-trash"></use></svg> Lixeira do Sistema</h1>
-    </div>
-    <div class="card">
-      <p class="hint" style="margin-bottom:12px">Gerencie cotações e roteiros excluídos. Você pode restaurá-los ou apagá-los definitivamente.</p>
-      <div id="lixeiraListContainer" style="max-height: 500px; overflow-y: auto; background:#fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
-        <div style="color:var(--ink-lt); padding:20px; text-align:center; font-size:13px;">Carregando lixeira...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── CALENDÁRIO ───────────────────────────────────────────────────────── -->
-  <div id="page-calendario" class="page">
-    <div class="page-header">
-      <h1>Calendário de Tours & Serviços</h1>
-    </div>
-    
-    <div class="calendar-wrapper">
-      <div class="calendar-top-bar">
-        <div class="calendar-title-nav">
-          <button class="calendar-nav-btn" id="calendarPrevMonthBtn" style="display:inline-flex; align-items:center; justify-content:center;"><svg class="v-icon no-margin" style="width:1.2em; height:1.2em;"><use href="#icon-arrow-left"></use></svg></button>
-          <span class="calendar-month-title" id="calendarMonthYearTitle">Janeiro 2026</span>
-          <button class="calendar-nav-btn" id="calendarNextMonthBtn" style="display:inline-flex; align-items:center; justify-content:center;"><svg class="v-icon no-margin" style="width:1.2em; height:1.2em;"><use href="#icon-arrow-right"></use></svg></button>
-        </div>
-        
-        <div class="calendar-filters" style="display:flex; align-items:center;">
-          <!-- Alternância de Visualização -->
-          <div style="display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#fff; margin-right:12px;">
-            <button class="btn-view-toggle active" id="btnCalViewGrid" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--crimson); outline:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-calendar"></use></svg> Grade</button>
-            <button class="btn-view-toggle" id="btnCalViewList" style="background:none; border:none; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-mid); border-left:1px solid var(--border); outline:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg> Lista</button>
-          </div>
-
-          <select id="calendarFilterCliente" class="calendar-filter-select" style="margin-right:12px;">
-            <option value="">Todos os Clientes</option>
-          </select>
-          <button class="btn-primary" id="btnRefreshCalendario" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px">
-            ↻ Atualizar
-          </button>
-          <button class="btn-secondary" id="btnSyncNotionCalendario" onclick="sincronizarCalendarioDoNotion()" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background: var(--warm-white); border: 1px solid var(--border); margin-left: 8px; font-weight: 600;">
-            <svg class="v-icon"><use href="#icon-globe"></use></svg> Sincronizar do Notion
-          </button>
-          <button class="btn-primary" id="btnAdicionarEventoCalendario" onclick="abrirModalCriarEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:13px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background: var(--crimson); color: white; margin-left: 8px; font-weight: 600;">
-            <svg class="v-icon" style="stroke:#fff; margin-right:2px;"><use href="#icon-edit"></use></svg> Novo Evento
-          </button>
-        </div>
-      </div>
-      
-      <!-- Visualização em Grade -->
-      <div class="calendar-grid-container" id="calendarioGridWrapper">
-        <div class="calendar-weekday-header">Dom</div>
-        <div class="calendar-weekday-header">Seg</div>
-        <div class="calendar-weekday-header">Ter</div>
-        <div class="calendar-weekday-header">Qua</div>
-        <div class="calendar-weekday-header">Qui</div>
-        <div class="calendar-weekday-header">Sex</div>
-        <div class="calendar-weekday-header">Sáb</div>
-        
-        <div id="calendarioGrid" style="display: contents;"></div>
-      </div>
-
-      <!-- Visualização em Lista (oculta por padrão) -->
-      <div id="calendarioListaWrapper" style="display:none; flex-direction:column; gap:20px;">
-      </div>
-    </div>
-  </div>
-
-  <!-- ── COLABORADORES ────────────────────────────────────────────────────── -->
-  <div id="page-colaboradores" class="page pane-layout">
-    <!-- Painel Esquerdo: Lista de Colaboradores -->
-    <div class="pane-sidebar" style="flex: 0 0 300px; max-width: 300px;">
-      <div class="pane-sidebar-header" style="padding: 24px 24px 16px 24px; border-bottom: 1px solid var(--border);">
-        <h2 style="font-family: var(--ff-display); font-size: 24px; font-weight: 400; color: var(--crimson); margin: 0;">Colaboradores</h2>
-      </div>
-      <div class="pane-sidebar-search" style="padding: 16px 24px; border-bottom: 1px solid var(--border);">
-        <input type="text" id="pesquisaColaboradoresList" class="search-input-modern" style="width: 100%; box-sizing: border-box;" placeholder="Pesquisar colaborador..." onkeyup="renderColaboradoresTabela()">
-      </div>
-      <div class="pane-list-content" id="tabelaColaboradoresList" style="flex: 1; overflow-y: auto;">
-        <!-- Injetado via JS -->
-      </div>
-    </div>
-    
-    <!-- Painel Direito: Dashboard do Colaborador -->
-    <div class="pane-content" id="colaboradoresPaneContent">
-      <div class="pane-content-inner" id="colaboradoresContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
-        <!-- Empty State -->
-        <div id="colaboradoresEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
-          <span style="display:block; margin-bottom: 16px; color: var(--gold-dk); opacity:0.3;"><svg class="v-icon v-icon-lg" style="width: 48px; height: 48px; stroke-width: 1.5; margin-right:0;"><use href="#icon-user"></use></svg></span>
-          <h3>Selecione um Colaborador</h3>
-          <p class="hint">Escolha um guia na barra lateral para ver o seu dashboard de tours e pagamentos.</p>
-        </div>
-        
-        <!-- Wrapper de Detalhes / Dashboard -->
-        <div id="colaboradoresDetailWrapper" style="display:none; width: 100%; padding: 40px; box-sizing: border-box;">
-          <!-- Header do Colaborador - Estilo Perfil Premium -->
-          <div class="colab-dashboard-profile-card" style="background: linear-gradient(135deg, #fdfbf7 0%, #f7f3eb 100%); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px;">
-            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-              <div id="colabDashAvatar" style="width: 64px; height: 64px; border-radius: 50%; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; font-family: var(--ff-display); box-shadow: 0 4px 10px rgba(139, 0, 0, 0.15);">
-                T
-              </div>
-              <div>
-                <h1 id="colabDashNome" style="margin: 0; font-family: var(--ff-display); font-size: 26px; color: var(--crimson); line-height: 1.2;">Nome do Colaborador</h1>
-                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 13px;">
-                  <a id="colabDashEmailLink" href="#" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='var(--crimson)'" onmouseout="this.style.color='var(--ink-mid)'">
-                    <span id="colabDashEmail">Email: -</span>
-                  </a>
-                  <a id="colabDashWhatsappLink" href="#" target="_blank" style="color: var(--ink-mid); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='#25D366'" onmouseout="this.style.color='var(--ink-mid)'">
-                    <span id="colabDashWhatsapp">WhatsApp: -</span>
-                  </a>
-                  <span style="color: var(--ink-lt);">|</span>
-                  <span style="color: var(--ink-mid); display: inline-flex; align-items: center; gap: 4px;">
-                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-dollar"></use></svg> <span id="colabDashRate">Taxa Padrão: ¥ -</span>
-                  </span>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 6px; font-size: 12px; color: var(--ink-mid);">
-                  <span style="display: inline-flex; align-items: center; gap: 4px;">
-                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-hotel"></use></svg> <span id="colabDashResidencia">Residência: -</span>
-                  </span>
-                  <span style="display: inline-flex; align-items: center; gap: 4px;">
-                    <svg class="v-icon" style="stroke:var(--gold-dk);"><use href="#icon-map-pin"></use></svg> <span id="colabDashLocais">Atuação: -</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-lt); font-weight: 600;">Período de Análise</span>
-              <!-- Filtro de Mês/Ano -->
-              <select id="colabDashFiltroPeriodo" class="search-input-modern" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; min-width: 180px;" onchange="filtrarDashColaborador()">
-                <option value="all">Todo o período</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Tabs de Sub-Abas do Dashboard -->
-          <div style="display:flex; gap:8px; border-bottom:1px solid var(--border); margin-bottom:24px; padding-bottom:0;">
-            <button id="btnColabTabEscala" class="btn-view-toggle active" style="padding: 8px 16px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="mudarSubAbaColab('escala')"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-file"></use></svg>Escala de Trabalho</button>
-            <button id="btnColabTabFinanceiro" class="btn-view-toggle" style="padding: 8px 16px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" onclick="mudarSubAbaColab('financeiro')"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-dollar"></use></svg>Controle Financeiro (Diárias)</button>
-          </div>
-
-          <!-- SUB-ABA 1: ESCALA DE TRABALHO -->
-          <div id="colabSubWrapperEscala">
-            <h3 style="font-family:var(--ff-display); font-size:18px; color:var(--ink-dk); margin-bottom:16px;">Agenda & Serviços Designados (Consulta)</h3>
-            <div style="background:#ffffff; border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
-              <table class="modern-table" id="colabEscalaTable" style="width:100%; border-collapse:collapse; min-width:800px;">
-                <thead>
-                  <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
-                    <th onclick="alternarOrdemDataColab()" style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); cursor:pointer; user-select:none;">Data <span id="colabOrdemDataIcon">▼</span></th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Encontro</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Local</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); text-align:right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="colabEscalaTableBody">
-                  <!-- Injetado via JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SUB-ABA 2: CONTROLE FINANCEIRO (DIÁRIAS DE TOURS APENAS) -->
-          <div id="colabSubWrapperFinanceiro" style="display:none;">
-            <!-- Grid de KPIs / Cards de Resumo -->
-            <div class="kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:32px;">
-              <!-- Tours Realizados -->
-              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
-                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Serviços no Período</div>
-                <div id="kpiColabToursCount" style="font-size:28px; font-weight:700; color:var(--ink-dk); margin-top:6px;">0</div>
-              </div>
-              <!-- Total a Receber -->
-              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
-                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Total Devido (JPY)</div>
-                <div id="kpiColabTotalDevido" style="font-size:28px; font-weight:700; color:var(--crimson); margin-top:6px;">¥ 0</div>
-              </div>
-              <!-- Pago -->
-              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
-                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Total Pago (JPY)</div>
-                <div id="kpiColabTotalPago" style="font-size:28px; font-weight:700; color:#2f855a; margin-top:6px;">¥ 0</div>
-              </div>
-              <!-- Saldo Pendente -->
-              <div class="kpi-card" style="background:#ffffff; border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01);">
-                <div style="font-size:10px; color:var(--ink-lt); text-transform:uppercase; font-weight:600;">Pendente (JPY)</div>
-                <div id="kpiColabTotalPendente" style="font-size:28px; font-weight:700; color:#c05621; margin-top:6px;">¥ 0</div>
-              </div>
-            </div>
-
-            <h3 style="font-family:var(--ff-display); font-size:18px; color:var(--ink-dk); margin-bottom:16px;">Serviços & Diárias a Pagar</h3>
-            <div style="background:#ffffff; border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
-              <table class="modern-table" id="colabToursTable" style="width:100%; border-collapse:collapse; min-width:600px;">
-                <thead>
-                  <tr style="background:var(--warm-white); border-bottom:1px solid var(--border); text-align:left;">
-                    <th onclick="alternarOrdemDataColab()" style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); cursor:pointer; user-select:none;">Data <span id="colabOrdemDataIconFin">▼</span></th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Cliente</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Serviço</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Valor Diária (JPY)</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid);">Status Pagamento</th>
-                    <th style="padding:12px 16px; font-size:12px; font-weight:600; color:var(--ink-mid); text-align:right;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="colabToursTableBody">
-                  <!-- Injetado via JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<!-- ── MODAL ──────────────────────────────────────────────────────────────── -->
-<div id="modalOverlay" class="modal-overlay hidden">
-  <div id="modalBox" class="modal-box">
-    <button class="modal-close" id="modalClose">✕</button>
-    <div id="modalContent"></div>
-  </div>
-</div>
-
-<!-- ── PREVIEW ────────────────────────────────────────────────────────────── -->
-<div id="previewOverlay" class="preview-overlay hidden">
-  <div class="preview-toolbar">
-    <span>HEIAN TOUR &nbsp;·&nbsp; Pré-visualização</span>
-    <div style="display:flex; gap: 10px;">
-      <button id="btnEditFromPreview" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
-      <button id="btnExcluirCotacaoModal" class="btn-secondary" style="color:#ff8888; border-color:rgba(255,136,136,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#ff8888;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
-      <button id="btnPrintFromPreview" class="btn-secondary" style="color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.4); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>Imprimir / PDF</button>
-      <button id="btnClosePreview" class="btn-secondary" onclick="document.getElementById('previewOverlay').classList.add('hidden'); document.body.style.overflow=''; const t = document.getElementById('btnTogglePreviewView'); if(t) t.style.display='none';" style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25)">✕ Fechar</button>
-    </div>
-  </div>
-  <div id="previewContainer" class="preview-container"></div>
-</div>
-
-<!-- ── MODAL DE DETALHES DO EVENTO DO CALENDÁRIO ─────────────────────────── -->
-<div id="calendarioEventModal" class="event-modal-backdrop">
-  <div class="event-modal-card">
-    <div class="event-modal-header">
-      <div>
-        <h3 class="event-modal-title" id="calEventModalTitle">Disney Sea</h3>
-        <span class="compact-card-status" id="calEventModalTypeBadge" style="font-size:10px;">Experiência</span>
-      </div>
-      <button class="event-modal-close" onclick="fecharCalendarioEventModal()">✕</button>
-    </div>
-    
-    <div style="margin-bottom:20px;">
-      <div class="event-detail-row">
-        <strong>Data:</strong>
-        <span id="calEventModalData">17/06/2026</span>
-      </div>
-      <div class="event-detail-row">
-        <strong>Cliente:</strong>
-        <span id="calEventModalCliente">Carregando...</span>
-      </div>
-      
-      <!-- Container para as Especificações de Roteiro e Transportes -->
-      <div id="calEventModalEspecificacoesContainer" style="margin-top:14px; padding-top:14px; border-top:1px dashed var(--border); display:none; max-height:220px; overflow-y:auto;">
-      </div>
-    </div>
-    
-    <div style="border-top:1px solid var(--border); padding-top:20px;">
-      <label style="display:block; font-weight:600; font-size:12px; margin-bottom:12px; color:var(--ink-mid);">DESIGNAR GUIAS / COLABORADORES:</label>
-      <div id="calEventModalAssigneesContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:10px; max-height:120px; overflow-y:auto; padding:8px; border:1px solid var(--border); border-radius:6px; background:#fafafa;">
-        <!-- Injetado via JS -->
-      </div>
-    </div>
-    
-    <!-- Controles de Finanças / Diária Customizada -->
-    <div id="calEventModalFinancasContainer" style="border-top:1px dashed var(--border); padding-top:16px; margin-top:16px; display:none;">
-      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:12px; color:var(--ink-mid); cursor:pointer; margin-bottom: 8px;">
-        <input type="checkbox" id="calEventModalGeraPagamento" onchange="toggleCalEventModalValorDiaria()" style="width:16px; height:16px; margin:0;">
-        <span>Este serviço gera diária para o guia</span>
-      </label>
-      <div id="calEventModalValorDiariaWrapper" style="margin-top:12px; display:none; align-items:center; gap:8px;">
-        <span style="font-size:12px; color:var(--ink-mid);">Valor da Diária (¥):</span>
-        <input type="number" id="calEventModalValorDiaria" class="search-input-modern" style="width:130px; padding:4px 8px; font-size:12px; margin:0;" placeholder="35000">
-      </div>
-    </div>
-    
-    <div style="margin-top:24px; display:flex; justify-content:space-between; gap:8px;">
-      <button class="btn-secondary" id="calEventModalDeleteBtn" style="margin-top:0; padding:8px 16px; font-size:12px; border-color:#e53e3e; color:#e53e3e; background:#fff5f5;" onclick="deletarEventoCalendario()">Excluir Evento</button>
-      <div style="display:flex; gap:8px;">
-        <button class="btn-secondary" onclick="fecharCalendarioEventModal()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-        <button class="btn-primary" id="calEventModalSaveBtn" style="margin-top:0; padding:8px 16px; font-size:12px;">Salvar Alteração</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL DE PAGAMENTO DE DIÁRIA DE GUIA ──────────────────────────────── -->
-<div id="modalPagarGuia" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-card" style="max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.25);">
-    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Confirmar Pagamento de Diária</h3>
-        <span id="modalPagarGuiaServicoInfo" style="font-size: 11px; color: var(--ink-lt);">Serviço: -</span>
-      </div>
-      <button class="event-modal-close" onclick="fecharModalPagarGuia()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
-    </div>
-    
-    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Colaborador / Guia</label>
-        <input type="text" id="modalPagarGuiaColab" class="search-input-modern" style="width:100%; padding:8px 12px; background:#f5f5f5; border:1px solid var(--border); border-radius:6px; font-size:13px;" readonly>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Moeda</label>
-          <select id="modalPagarGuiaMoeda" class="search-input-modern" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px;" onchange="onChangeMoedaPagarGuia()">
-            <option value="JPY">JPY (Iene)</option>
-            <option value="BRL">BRL (Real)</option>
-            <option value="USD">USD (Dólar)</option>
-          </select>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <label id="labelValorOriginal" style="font-weight:600; font-size:12px; color:var(--ink-mid);">Valor Original</label>
-          <input type="number" id="modalPagarGuiaValor" class="search-input-modern" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px;" placeholder="0">
-        </div>
-      </div>
-
-      <!-- Preview de conversão se a moeda não for JPY -->
-      <div id="modalPagarGuiaPreviewJPYWrapper" style="display:none; background:rgba(230,175,46,0.08); padding:10px 14px; border-radius:6px; border:1px solid rgba(230,175,46,0.25); font-size:12px; color:var(--gold-dk);">
-        <span>Estimativa Convertida: </span><strong id="modalPagarGuiaPreviewJPY">¥ 0</strong>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <label style="font-weight:600; font-size:12px; color:var(--ink-mid);">Conta Pagadora (Notion)</label>
-        <select id="modalPagarGuiaConta" class="search-input-modern" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-          <option value="">Carregando contas...</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:8px;">
-      <button class="btn-secondary" onclick="fecharModalPagarGuia()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="btnConfirmarPagarGuia" style="margin-top:0; padding:8px 16px; font-size:12px;">Confirmar Pagamento</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL DE VISÃO GERAL DE CONTA ────────────────────────────────────── -->
-<div id="modalVisaoGeralConta" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-card" style="max-width: 850px; width: 95%; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 90vh; display: flex; flex-direction: column;">
-    
-    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
-      <div>
-        <h3 class="event-modal-title" id="modalVisaoGeralContaTitulo" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Extrato da Conta: -</h3>
-        <span style="font-size: 11px; color: var(--ink-lt);">Histórico de entradas e saídas do Notion</span>
-      </div>
-      <div style="display:flex; align-items:center; gap: 12px;">
-        <a id="modalVisaoGeralContaEditarLink" href="#" target="_blank" class="btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--warm-white);">
-          <svg class="v-icon" style="stroke:var(--ink-mid); margin-right:2px;"><use href="#icon-edit"></use></svg> Editar Conta no Notion
-        </a>
-        <button class="event-modal-close" onclick="fecharModalVisaoGeralConta()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt); padding: 0; line-height: 1;">✕</button>
-      </div>
-    </div>
-
-    <!-- Filtros e Balanço -->
-    <div style="display: flex; gap: 15px; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.02); padding: 12px 18px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; flex-shrink: 0;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 12px; font-weight: 600; color: var(--ink-mid);">Filtro por Período:</span>
-        <select id="modalVisaoGeralContaMesFiltro" class="search-input-modern" style="padding: 6px 12px; font-size: 12px; min-width: 150px; border-radius: 6px; border: 1px solid var(--border);" onchange="onFiltroMesVisaoGeralConta()">
-          <option value="">Todos os meses</option>
-        </select>
-      </div>
-      <div id="modalVisaoGeralContaBalancoWrapper" style="display: flex; gap: 14px; font-size: 12px;">
-        <!-- Balanço por Moeda Injetado via JS -->
-      </div>
-    </div>
-
-    <!-- Tabela de Movimentações -->
-    <div style="flex: 1; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 8px; background: white;">
-      <table class="data-table" id="tableModalVisaoGeralConta" style="width: 100%; border-collapse: collapse;">
-        <thead style="position: sticky; top: 0; background: var(--warm-white); z-index: 1;">
-          <tr>
-            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Data</th>
-            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Tipo</th>
-            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Descrição</th>
-            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Cliente</th>
-            <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Guia/Colab</th>
-            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Valor Original</th>
-            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Valor (JPY)</th>
-            <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: var(--ink-mid); border-bottom: 1px solid var(--border);">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Injetado via JS -->
-        </tbody>
-      </table>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 12px;">
-      <button class="btn-primary" onclick="fecharModalVisaoGeralConta()" style="margin-top:0; padding:8px 16px; font-size:12px;">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL DE REGISTRAR ENTRADA ──────────────────────────────────────── -->
-<div id="modalRegistrarEntrada" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-card" style="max-width: 450px; width: 95%;">
-    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
-      <div>
-        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Registrar Recebimento</h3>
-        <span style="font-size: 11px; color: var(--ink-lt);">Criar lançamento de Entrada no Notion</span>
-      </div>
-      <button class="event-modal-close" onclick="fecharModalRegistrarEntrada()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
-    </div>
-    
-    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Descrição da Entrada</label>
-        <input type="text" id="modalRegistrarEntradaDesc" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Pagamento da Entrada, Parcela 2, etc.">
-      </div>
-      
-      <div id="modalRegistrarEntradaClienteWrapper">
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Cliente Vinculado</label>
-        <select id="modalRegistrarEntradaCliente" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-          <option value="">Selecione o cliente...</option>
-        </select>
-      </div>
-      
-      <div style="display:flex; gap:12px;">
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Moeda</label>
-          <select id="modalRegistrarEntradaMoeda" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" onchange="onMoedaChangeRegistrarEntrada()">
-            <option value="JPY">JPY (¥)</option>
-            <option value="BRL">BRL (R$)</option>
-            <option value="USD">USD ($)</option>
-          </select>
-        </div>
-        
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor Original</label>
-          <input type="number" id="modalRegistrarEntradaValor" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="0.00" onkeyup="onValorChangeRegistrarEntrada()" onchange="onValorChangeRegistrarEntrada()">
-        </div>
-      </div>
-
-      <!-- Preview de Conversão para JPY -->
-      <div id="modalRegistrarEntradaPreviewJPYWrapper" style="display: none; background: rgba(46, 204, 113, 0.08); border: 1px solid rgba(46, 204, 113, 0.2); padding: 10px 14px; border-radius: 6px; font-size: 12px; justify-content:space-between; align-items:center;">
-        <span style="color: var(--ink-mid); font-weight: 500;">Estimativa em JPY:</span>
-        <strong id="modalRegistrarEntradaPreviewJPY" style="color: #2ecc71; font-family: var(--ff-num); font-size: 14px;">¥ 0</strong>
-      </div>
-
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Conta Receptora</label>
-        <select id="modalRegistrarEntradaConta" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-          <option value="">Carregando contas...</option>
-        </select>
-      </div>
-
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data do Pagamento</label>
-        <input type="date" id="modalRegistrarEntradaData" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-      </div>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
-      <button class="btn-secondary" onclick="fecharModalRegistrarEntrada()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="btnConfirmarRegistrarEntrada" style="margin-top:0; padding:8px 16px; font-size:12px;">Confirmar Recebimento</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL DE REGISTRAR SAÍDA ───────────────────────────────────────── -->
-<div id="modalRegistrarSaida" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-card" style="max-width: 450px; width: 95%;">
-    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
-      <div>
-        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Registrar Pagamento / Despesa</h3>
-        <span style="font-size: 11px; color: var(--ink-lt);">Criar lançamento de Saída no Notion</span>
-      </div>
-      <button class="event-modal-close" onclick="fecharModalRegistrarSaida()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
-    </div>
-    
-    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
-      <input type="hidden" id="modalRegistrarSaidaEventoId" value="">
-      
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Descrição da Saída</label>
-        <input type="text" id="modalRegistrarSaidaDesc" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Pagamento Guia, Jantar com Cliente, Ticket Shinkansen, etc.">
-      </div>
-      
-      <div style="display:flex; gap:12px;">
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Moeda</label>
-          <select id="modalRegistrarSaidaMoeda" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" onchange="onMoedaChangeRegistrarSaida()">
-            <option value="JPY">JPY (¥)</option>
-            <option value="BRL">BRL (R$)</option>
-            <option value="USD">USD ($)</option>
-          </select>
-        </div>
-        
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor Original</label>
-          <input type="number" id="modalRegistrarSaidaValor" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="0.00" onkeyup="onValorChangeRegistrarSaida()" onchange="onValorChangeRegistrarSaida()">
-        </div>
-      </div>
-
-      <!-- Preview de Conversão para JPY -->
-      <div id="modalRegistrarSaidaPreviewJPYWrapper" style="display: none; background: rgba(231, 76, 60, 0.08); border: 1px solid rgba(231, 76, 60, 0.2); padding: 10px 14px; border-radius: 6px; font-size: 12px; justify-content:space-between; align-items:center;">
-        <span style="color: var(--ink-mid); font-weight: 500;">Estimativa em JPY:</span>
-        <strong id="modalRegistrarSaidaPreviewJPY" style="color: #e74c3c; font-family: var(--ff-num); font-size: 14px;">¥ 0</strong>
-      </div>
-
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Conta Debitada</label>
-        <select id="modalRegistrarSaidaConta" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-          <option value="">Carregando contas...</option>
-        </select>
-      </div>
-
-      <div style="display:flex; gap:12px;">
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data do Pagamento</label>
-          <input type="date" id="modalRegistrarSaidaData" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-        </div>
-      </div>
-
-      <div style="display:flex; gap:12px;">
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Cliente Vinculado (Opcional)</label>
-          <select id="modalRegistrarSaidaCliente" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-            <option value="">Nenhum</option>
-          </select>
-        </div>
-        
-        <div style="flex:1;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Colaborador/Guia (Opcional)</label>
-          <select id="modalRegistrarSaidaColab" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-            <option value="">Nenhum</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="margin-top:12px;">
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Vincular ao Serviço/Transfer (Opcional)</label>
-        <select id="modalRegistrarSaidaTask" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-          <option value="">Selecione um cliente primeiro...</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
-      <button class="btn-secondary" onclick="fecharModalRegistrarSaida()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="btnConfirmarRegistrarSaida" style="margin-top:0; padding:8px 16px; font-size:12px; background-color: #e74c3c; border-color: #c0392b;">Confirmar Pagamento</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL DE CADASTRAR NOVO EVENTO NO CALENDÁRIO ─────────────────────── -->
-<div id="modalAdicionarEventoCalendario" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-card" style="max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;">
-    <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
-      <div>
-        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Novo Evento no Calendário</h3>
-        <span style="font-size: 11px; color: var(--ink-lt);">Criar evento local e sincronizar com o Notion</span>
-      </div>
-      <button class="event-modal-close" onclick="fecharModalCriarEventoCalendario()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
-    </div>
-    
-    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
-      <!-- Campos Comuns -->
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Título do Evento / OS *</label>
-          <input type="text" id="modalCriarEvTitulo" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Tokyo Clássica, Shinkansen Tokyo-Kyoto, etc." required>
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Tipo de Serviço *</label>
-          <select id="modalCriarEvTipoServico" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" onchange="onTipoServicoCriarChange()">
-            <option value="Roteiro">Tour / Roteiro</option>
-            <option value="Transporte">Transporte</option>
-            <option value="Experiência">Experiência</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data do Serviço *</label>
-          <input type="date" id="modalCriarEvData" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" required>
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Cliente Vinculado</label>
-          <select id="modalCriarEvCliente" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-            <option value="cliente_desconhecido">Nenhum / Cliente Avulso</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Cidade</label>
-        <input type="text" id="modalCriarEvCidade" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Tokyo, Kyoto, Osaka">
-      </div>
-
-      <!-- PAINEL DINÂMICO: TOUR / ROTEIRO -->
-      <div id="modalCriarEvPainelTour" style="display:block; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px;">
-        <h4 style="font-size:13px; color:var(--crimson); font-weight:700; margin:0 0 12px 0;">Detalhes do Tour</h4>
-        
-        <div style="margin-bottom:12px;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Designar Guias / Colaboradores</label>
-          <div id="modalCriarEvGuiasContainer" style="display:flex; flex-wrap:wrap; gap:12px; background:#fafafa; border:1px solid var(--border); padding:10px; border-radius:6px;">
-            <!-- Injetado via JS -->
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor Diária Guia (¥ JPY)</label>
-            <input type="number" id="modalCriarEvValorDiaria" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="35000">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Horário de Encontro</label>
-            <input type="text" id="modalCriarEvTourHora" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 09:00">
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Local de Encontro</label>
-            <input type="text" id="modalCriarEvTourLocal" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Lobby do Hotel">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Duração</label>
-            <input type="text" id="modalCriarEvTourDuracao" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 8 horas">
-          </div>
-        </div>
-      </div>
-
-      <!-- PAINEL DINÂMICO: TRANSPORTE -->
-      <div id="modalCriarEvPainelTransporte" style="display:none; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px;">
-        <h4 style="font-size:13px; color:var(--gold-dk); font-weight:700; margin:0 0 12px 0;">Detalhes do Transporte</h4>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Tipo de Transporte</label>
-            <select id="modalCriarEvTranspTipo" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-              <option value="Shinkansen">Shinkansen</option>
-              <option value="Romancecar">Romancecar</option>
-              <option value="Trem">Trem</option>
-              <option value="Ônibus">Ônibus</option>
-              <option value="Transfer">Transfer</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Horário de Partida</label>
-            <input type="text" id="modalCriarEvTranspHora" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 10:30">
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Origem</label>
-            <input type="text" id="modalCriarEvTranspOrigem" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Tokyo">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Destino</label>
-            <input type="text" id="modalCriarEvTranspDestino" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Kyoto">
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Linha / Trem nº</label>
-            <input type="text" id="modalCriarEvTranspLinha" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Nozomi 23">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Assento / Categoria</label>
-            <input type="text" id="modalCriarEvTranspCategoria" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Green Car, Carro 5 Assento 12-A">
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Tempo de Viagem / Duração</label>
-            <input type="text" id="modalCriarEvTranspTempo" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 2h15m">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Emissão de Bilhete</label>
-            <div style="display:flex; gap:14px; align-items:center; height:40px;">
-              <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="sim" checked onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
-                <span>Emitido por Heian</span>
-              </label>
-              <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvTranspCompradoHeian" value="nao" onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
-                <span>Emitido pelo Cliente</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PAINEL DINÂMICO: EXPERIÊNCIA -->
-      <div id="modalCriarEvPainelExperiencia" style="display:none; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px;">
-        <h4 style="font-size:13px; color:#a3522b; font-weight:700; margin:0 0 12px 0;">Detalhes da Experiência / Tickets</h4>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Nome da Atração / Ticket</label>
-            <input type="text" id="modalCriarEvExpNome" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Ingressos Disney Sea">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Horário de Entrada / Partida</label>
-            <input type="text" id="modalCriarEvExpHora" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 14:00">
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Ponto de Encontro / Resgate</label>
-            <input type="text" id="modalCriarEvExpLocalEncontro" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Entrada principal da Estação">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Emissão de Voucher</label>
-            <div style="display:flex; gap:14px; align-items:center; height:40px;">
-              <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvExpCompradoHeian" value="sim" checked onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
-                <span>Emitido por Heian</span>
-              </label>
-              <label style="font-size:12px; font-weight:500; color:var(--ink-mid); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
-                <input type="radio" name="modalCriarEvExpCompradoHeian" value="nao" onchange="atualizarVisibilidadeSecaoContabil()" style="width:15px; height:15px; cursor:pointer;">
-                <span>Emitido pelo Cliente</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Observações Gerais e Passageiros (Comum a Todos) -->
-      <div style="display:grid; grid-template-columns: 120px 1fr; gap:12px; border-top:1px dashed var(--border); padding-top:14px;">
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Passageiros *</label>
-          <input type="number" id="modalCriarEvPassageiros" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" value="2" min="1">
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Observações Gerais / Descrição do Serviço</label>
-          <textarea id="modalCriarEvObservacoes" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 8px 10px; height:60px; font-family:var(--ff-body); resize:vertical;" placeholder="Instruções extras, observações importantes do bilhete ou do tour..."></textarea>
-        </div>
-      </div>
-
-      <!-- Seção Contábil Dinâmica (Apenas para Transporte/Experiência emitidos pela Heian) -->
-      <div id="modalCriarEvSecaoContabil" style="display:none; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px;">
-        <h4 style="font-size:13px; color:var(--crimson); font-weight:700; margin:0 0 12px 0;">Contabilidade & Despesa (Emissão Heian)</h4>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Valor do Custo (¥ JPY)</label>
-            <input type="number" id="modalCriarEvCustoValor" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: 15000">
-          </div>
-          <div style="display:flex; align-items:center; height:60px; padding-top:10px;">
-            <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
-              <input type="checkbox" id="modalCriarEvLancarFinanceiro" onchange="onLancarFinanceiroChange()" style="width:16px; height:16px; cursor:pointer;">
-              <span>Lançar como Saída no Notion</span>
-            </label>
-          </div>
-        </div>
-        <div id="modalCriarEvContaWrapper" style="display:none;">
-          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Conta de Origem (Débito)</label>
-          <select id="modalCriarEvConta" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;">
-            <option value="">Carregando contas...</option>
-          </select>
-        </div>
-      </div>
-
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
-      <button class="btn-secondary" onclick="fecharModalCriarEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="btnConfirmarCriarEvento" onclick="salvarNovoEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:12px; background-color: var(--crimson); border-color: var(--crimson-dk);">Salvar Evento</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Gerador de Roteiros com IA (Gemini) -->
-<style>
-  @keyframes ia-spin {
-    to { transform: rotate(360deg); }
-  }
-  .ia-spinner-animation {
-    animation: ia-spin 1s linear infinite;
-    border: 2px solid #6d28d9;
-    border-top-color: transparent;
-    border-radius: 50%;
-  }
-</style>
-<div id="modalPromptIA" class="event-modal-backdrop hidden" style="display:none; justify-content:center; align-items:center; z-index: 2000;">
-  <div class="event-modal-box" style="width:100%; max-width:550px; background:#fff; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:16px;">
-    
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px;">
-      <h3 style="color: #6d28d9; font-size: 18px; font-weight: 700; margin: 0; display:flex; align-items:center; gap:8px;">
-        <span>🪄</span> Planejar Roteiro com IA
-      </h3>
-      <button onclick="window.fecharModalPromptIA()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
-    </div>
-
-    <!-- Briefing Carregado (Somente Leitura) -->
-    <div class="field" style="margin:0;">
-      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Briefing do Cliente (Notion)</label>
-      <textarea id="iaBriefingCliente" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:80px; font-family:var(--ff-body); background:#f8fafc; color:var(--text-sec); cursor:not-allowed;" readonly placeholder="Nenhum briefing carregado do Notion para este cliente."></textarea>
-    </div>
-
-    <!-- Data de Início da Viagem -->
-    <div class="field" style="margin:0;">
-      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Data de Início da Viagem (Opcional)</label>
-      <input type="date" id="iaDataInicio" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px;">
-    </div>
-
-    <!-- Instruções Especiais / Prompt Livre -->
-    <div class="field" style="margin:0;">
-      <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Instruções de Personalização para a IA</label>
-      <textarea id="iaInstrucoesPrompt" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:100px; font-family:var(--ff-body); resize:vertical;" placeholder="Ex: Casal de 30 anos. Focar em animes/games em Tóquio, templos históricos em Quioto e ryokan tradicional com onsen em Hakone. Viagem com ritmo moderado."></textarea>
-    </div>
-
-    <!-- Loading Indicator -->
-    <div id="iaLoadingSpinner" style="display:none; text-align:center; padding:10px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; color:#6d28d9; font-weight:600; font-size:13px; align-items:center; justify-content:center; gap:8px;">
-      <span class="ia-spinner-animation" style="display:inline-block; width:16px; height:16px;"></span>
-      <span>O Gemini está estruturando o seu roteiro... Isso pode levar alguns segundos.</span>
-    </div>
-
-    <!-- Botões -->
-    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px; margin-top:4px;">
-      <button class="btn-secondary" onclick="window.fecharModalPromptIA()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
-      <button class="btn-primary" id="btnConfirmarGerarIA" onclick="window.gerarRoteiroComIA()" style="margin-top:0; padding:8px 16px; font-size:12px; background-color:#6d28d9; border-color:#5b21b6; font-weight:600;">🪄 Gerar Roteiro</button>
-    </div>
-
-  </div>
-</div>
-
-<!-- DRAWER LATERAL DE PERFIL DO CLIENTE -->
-<div id="drawerPerfilCliente" style="position: fixed; top: 0; left: -450px; width: 450px; max-width: 90vw; height: 100vh; background: var(--warm-white); border-right: 1px solid var(--border); box-shadow: 5px 0 25px rgba(0,0,0,0.15); z-index: 10000; transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; box-sizing: border-box;">
-  <!-- Header do Drawer -->
-  <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff;">
-    <h3 style="margin: 0; color: var(--gold-dk); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
-      <svg class="v-icon" style="width:1.2em; height:1.2em; margin:0;"><use href="#icon-user"></use></svg> Ficha de Preferências do Viajante
-    </h3>
-    <button onclick="window.fecharDrawerPerfilCliente()" style="background: transparent; border: none; font-size: 24px; color: var(--ink-lt); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; line-height: 1;">&times;</button>
-  </div>
-  <!-- Conteúdo do Drawer -->
-  <div id="drawerPerfilClienteContent" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 20px;">
-    <!-- Dados carregados via AJAX -->
-  </div>
-</div>
-
-<script src="js/roteiros.js?v=20260612_v2"></script>
-<script src="js/app.js?v=20260613_v1"></script>
-<script src="js/sync_roteiro_cotacao.js?v=20260612_v2"></script>
-<script src="js/sync_clientes.js?v=20260612_v2"></script>
-
-<!-- Scripts Adicionais -->
-<script src="js/dashboard.js?v=20260613_v1"></script>
-
-<!-- PWA Service Worker Registration -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
-        .catch(err => console.error('Falha ao registrar Service Worker:', err));
-    });
-  }
-</script>
-</body></html>
+  <footer>
+    &copy; <span id="year"></span> Heian Tour · Todos os direitos reservados ·
+    <a href="/admin">Área restrita</a>
+  </footer>
+
+  <script>
+    // Ano no rodapé
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Countdown — altere a data de lançamento aqui
+    const LAUNCH_DATE = new Date('2025-09-01T00:00:00');
+
+    function updateCountdown() {
+      const now = new Date();
+      const diff = LAUNCH_DATE - now;
+
+      if (diff <= 0) {
+        document.getElementById('countdown').style.display = 'none';
+        return;
+      }
+
+      const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      document.getElementById('days').textContent    = String(days).padStart(2, '0');
+      document.getElementById('hours').textContent   = String(hours).padStart(2, '0');
+      document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+      document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // Pétalas de Sakura
+    const container = document.getElementById('sakuraContainer');
+    const totalPetals = 18;
+
+    for (let i = 0; i < totalPetals; i++) {
+      const petal = document.createElement('div');
+      petal.className = 'petal';
+      const size = Math.random() * 8 + 6;
+      petal.style.cssText = `
+        left: ${Math.random() * 100}%;
+        width: ${size}px;
+        height: ${size}px;
+        animation-duration: ${Math.random() * 8 + 7}s;
+        animation-delay: ${Math.random() * 10}s;
+        opacity: ${Math.random() * 0.5 + 0.3};
+      `;
+      container.appendChild(petal);
+    }
+  </script>
+</body>
+</html>

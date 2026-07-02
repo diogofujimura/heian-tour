@@ -35,13 +35,13 @@ function doPost(e) {
       },
       'atracoes': {
         keys: ['Nome da Atração'],
-        // Coluna G é a 7ª coluna (índice 6). Colunas A até G.
-        columns: ['Cidade', 'Bairro', 'Nome da Atração', 'Descrição Detalhada', 'Preço (Ingresso)', 'Origem', 'id']
+        // Colunas de A até L correspondentes a Cidade, Bairro, Nome da Atração, Descrição Detalhada, Preço (Ingresso), diasFechados, id, manutencaoInicio, manutencaoFim, manutencaoMotivo, Origem, Foto (URL)
+        columns: ['Cidade', 'Bairro', 'Nome da Atração', 'Descrição Detalhada', 'Preço (Ingresso)', 'diasFechados', 'id', 'manutencaoInicio', 'manutencaoFim', 'manutencaoMotivo', 'Origem', 'Foto (URL)']
       },
       'rotas': {
         keys: ['nomeDaRota'],
-        // Coluna O é a 15ª coluna (índice 14). Colunas A até O.
-        columns: ['nomeDaRota', 'dias', '', '', '', '', '', '', '', '', '', '', '', '', 'id']
+        // Colunas A até D correspondentes a cidade, nomeDaRota, atracoesDoDia, id
+        columns: ['cidade', 'nomeDaRota', 'atracoesDoDia', 'id']
       }
     };
     
@@ -136,6 +136,20 @@ function doPost(e) {
         }
         if (prop === 'dias' && typeof val === 'object') {
             val = JSON.stringify(val);
+        }
+        if (prop === 'atracoesDoDia' && typeof val === 'object') {
+            if (Array.isArray(val)) {
+                val = val.join(', ');
+            } else {
+                val = JSON.stringify(val);
+            }
+        }
+        if (prop === 'diasFechados' && typeof val === 'object') {
+            if (Array.isArray(val)) {
+                val = val.join(', ');
+            } else {
+                val = JSON.stringify(val);
+            }
         }
         rowData.push(val);
       }

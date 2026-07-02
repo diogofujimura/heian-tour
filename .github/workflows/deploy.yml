@@ -28,11 +28,12 @@ jobs:
           **/.git*/**
           **/node_modules/**
           **/scratch/**
+          **/_BACKUP_*/**
           .env
           database.json
           *.zip
           *.bat
-          walkthrough.md
-          task.md
+          *.md
           *log*.txt
-          heian-tour-prod.zip
+          patch*.js
+          pa
