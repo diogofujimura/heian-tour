@@ -2681,3 +2681,197 @@ window.iniciarPagamentoGuiaDeContabilidade = async function(eventoId, colaborado
 window.selecionarClienteDashboard = selecionarClienteDashboard;
 window.carregarSaldosContas = carregarSaldosContas;
 window.renderDashboard = renderDashboard;
+
+window.currentResumoMensalTipo = null;
+window.currentResumoMensalTransacoes = null;
+
+window.abrirResumoMensal = function(tipo) {
+  window.currentResumoMensalTipo = tipo;
+
+  // Preencher Título
+  const tituloEl = document.getElementById('modalResumoMensalTitulo');
+  if (tituloEl) {
+    tituloEl.textContent = tipo === 'entrada' 
+      ? 'Histórico Mensal: Recebimentos' 
+      : 'Histórico Mensal: Pagamentos / Despesas';
+  }
+
+  // Coletar todas as transações daquele tipo (entradas ou saídas) de TODAS as contas
+  const transacoes = [];
+  const periodosUnicos = new Set();
+
+  (window.notionSaldosContas || []).forEach(conta => {
+    (conta.movimentacoes || []).forEach(m => {
+      if (m.tipo === tipo) {
+        // Enriquecer a transação com o nome da conta para a tabela
+        transacoes.push({
+          ...m,
+          contaNome: conta.nome
+        });
+        if (m.data && m.data.length >= 7) {
+          periodosUnicos.add(m.data.substring(0, 7)); // yyyy-mm
+        }
+      }
+    });
+  });
+
+  // Salvar a lista consolidada globalmente no modal
+  window.currentResumoMensalTransacoes = transacoes;
+
+  // Ordenar transações por data decrescente
+  transacoes.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+  // Preencher select de meses/anos
+  const selectFiltro = document.getElementById('modalResumoMensalMesFiltro');
+  if (selectFiltro) {
+    selectFiltro.innerHTML = '';
+
+    const periodosSorted = Array.from(periodosUnicos).sort().reverse();
+    const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    // Descobrir qual é o período padrão (mês atual)
+    const hoje = new Date();
+    const anoMesAtual = hoje.toISOString().substring(0, 7); // "yyyy-mm"
+
+    let selecionouAlgum = false;
+    periodosSorted.forEach(p => {
+      const parts = p.split('-');
+      const ano = parts[0];
+      const mesIndex = parseInt(parts[1]) - 1;
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = `${mesesNomes[mesIndex]} / ${ano}`;
+      
+      // Deixar selecionado o mês atual por padrão se ele existir
+      if (p === anoMesAtual) {
+        opt.selected = true;
+        selecionouAlgum = true;
+      }
+      
+      selectFiltro.appendChild(opt);
+    });
+
+    // Se o mês atual não tem transações, seleciona o mês mais recente disponível
+    if (!selecionouAlgum && periodosSorted.length > 0) {
+      selectFiltro.value = periodosSorted[0];
+    }
+  }
+
+  // Chamar filtro
+  window.onFiltroMesResumoMensal();
+
+  // Exibir modal
+  const modal = document.getElementById('modalResumoMensal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
+  }
+};
+
+window.fecharModalResumoMensal = function() {
+  const modal = document.getElementById('modalResumoMensal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+  }
+  window.currentResumoMensalTipo = null;
+  window.currentResumoMensalTransacoes = null;
+};
+
+window.onFiltroMesResumoMensal = function() {
+  const selectFiltro = document.getElementById('modalResumoMensalMesFiltro');
+  if (!selectFiltro) return;
+  const periodo = selectFiltro.value;
+  const transacoes = window.currentResumoMensalTransacoes || [];
+
+  const filtradas = periodo
+    ? transacoes.filter(m => m.data && m.data.startsWith(periodo))
+    : transacoes;
+
+  // Calcular totais
+  const balanco = { JPY: 0, BRL: 0, USD: 0 };
+  filtradas.forEach(m => {
+    const moeda = m.moedaOriginal || 'JPY';
+    const val = Number(m.valorOriginal) || 0;
+    if (balanco[moeda] !== undefined) {
+      balanco[moeda] += val;
+    }
+  });
+
+  // Renderizar Balanço no display
+  const balancoWrapper = document.getElementById('modalResumoMensalBalancoWrapper');
+  if (balancoWrapper) {
+    balancoWrapper.innerHTML = '';
+
+    const moedasAtivas = Object.keys(balanco).filter(moeda => balanco[moeda] !== 0);
+
+    if (moedasAtivas.length === 0) {
+      balancoWrapper.innerHTML = '<span style="color:var(--ink-lt); font-style:italic;">Sem movimentações no período.</span>';
+    } else {
+      const spans = moedasAtivas.map(moeda => {
+        let symb = '¥';
+        let format = (v) => Math.round(v).toLocaleString('en-US');
+        if (moeda === 'BRL') {
+          symb = 'R$';
+          format = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else if (moeda === 'USD') {
+          symb = '$';
+          format = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        const label = window.currentResumoMensalTipo === 'entrada' ? 'Recebido' : 'Pago';
+        const color = window.currentResumoMensalTipo === 'entrada' ? '#2ecc71' : '#e74c3c';
+        return `<span style="color:${color}; font-weight:700;">Total ${label}: ${symb}${format(balanco[moeda])}</span>`;
+      });
+      balancoWrapper.innerHTML = spans.join(' | ');
+    }
+  }
+
+  // Preencher Tabela
+  const tbody = document.querySelector('#tableModalResumoMensal tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+
+    if (filtradas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#888; font-style:italic;">Nenhuma movimentação para o período.</td></tr>';
+      return;
+    }
+
+    filtradas.forEach(m => {
+      const tr = document.createElement('tr');
+      
+      // Formatar data
+      let dateStr = '-';
+      if (m.data) {
+        const parts = m.data.split('-');
+        if (parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      let valorOrigStr = '';
+      if (m.moedaOriginal === 'BRL') valorOrigStr = `R$ ${m.valorOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      else if (m.moedaOriginal === 'USD') valorOrigStr = `$ ${m.valorOriginal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      else valorOrigStr = `¥ ${Math.round(m.valorOriginal).toLocaleString('en-US')}`;
+
+      const valorJPYStr = `¥ ${Math.round(m.valorJPY || 0).toLocaleString('en-US')}`;
+
+      const clientName = m.clienteNome || '-';
+      const colabName = m.colaboradorNome || '-';
+
+      const notionPageUrl = `https://notion.so/${m.id.replace(/-/g, '')}`;
+      const btnAcao = `<a href="${notionPageUrl}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border);"><svg class="v-icon no-margin" style="stroke:var(--ink-mid); width:1.1em; height:1.1em;"><use href="#icon-edit"></use></svg> Editar no Notion</a>`;
+
+      tr.innerHTML = `
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${dateStr}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); font-weight:600; color:var(--ink-mid);">${m.contaNome || '-'}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); font-weight:500;" title="${m.descricao || ''}">${m.descricao || '-'}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); color:var(--crimson); font-weight:500;">${clientName}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04);">${colabName}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); text-align:right; font-weight:600; font-family:var(--ff-num); color:${window.currentResumoMensalTipo === 'entrada' ? '#2ecc71' : '#e74c3c'};">${valorOrigStr}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); text-align:right; font-weight:600; font-family:var(--ff-num); color:${window.currentResumoMensalTipo === 'entrada' ? '#2ecc71' : '#e74c3c'};">${valorJPYStr}</td>
+        <td style="padding: 10px 12px; font-size: 12px; border-bottom:1px solid rgba(0,0,0,0.04); text-align:center;">${btnAcao}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+};
