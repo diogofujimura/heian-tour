@@ -1086,6 +1086,10 @@ if (process.env.APP_PASS) {
     if (rotasPublicas.some(r => req.path === r || req.path.startsWith(r + '/'))) {
       return next();
     }
+    // Libera a consulta pública de atrações para os tooltips na Área do Cliente (somente GET)
+    if (req.path === '/api/atracoes' && req.method === 'GET') {
+      return next();
+    }
     // 1º: cookie de sessão válido
     if (sessaoValida(req)) return next();
     // 2º: navegação em página HTML sem sessão → tela de login amigável
