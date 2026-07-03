@@ -963,6 +963,7 @@ app.post('/api/public/cadastro', async (req, res) => {
         id: String(cliId),
         data: {
           id: cliId,
+          nome: nome,
           estadias: currentEditingEstadias,
           viajantes: currentEditingViajantes,
           emails: currentEditingEmails,
@@ -1074,7 +1075,13 @@ if (process.env.APP_PASS) {
       '/cliente.html',
       '/api/public/client-data',
       '/login',
-      '/api/login'
+      '/api/login',
+      // Estáticos inofensivos referenciados pelas páginas públicas — sem isso,
+      // o 401 deles faz o navegador do CLIENTE exibir o prompt de senha
+      '/manifest.json',
+      '/manifest-admin.json',
+      '/service-worker.js',
+      '/favicon.ico'
     ];
     if (rotasPublicas.some(r => req.path === r || req.path.startsWith(r + '/'))) {
       return next();
@@ -3194,6 +3201,7 @@ app.post('/api/clientes', async (req, res) => {
     // 2. Criar localmente no Supabase
     if (localPayload) {
       localPayload.id = cliId; // Garante o ID correto gerado pelo Notion
+      localPayload.nome = notionPayload.nome || localPayload.nome;
       const { error: localErr } = await supabase.from('clientes_locais').upsert({ id: cliId, data: localPayload });
       if (localErr) throw localErr;
     }
@@ -3268,7 +3276,14 @@ app.patch('/api/clientes/:id', async (req, res) => {
     // 2. Atualizar localmente no Supabase
     if (localPayload) {
       localPayload.id = id;
-      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id, data: localPayload });
+      const { data: existingRow } = await supabase.from('clientes_locais').select('data').eq('id', id).maybeSingle();
+      const existingData = existingRow ? existingRow.data : {};
+      const mergedData = {
+        ...existingData,
+        ...localPayload,
+        nome: notionPayload.nome || localPayload.nome || existingData.nome
+      };
+      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id, data: mergedData });
       if (localErr) throw localErr;
     }
 
@@ -5340,6 +5355,59 @@ async function reconstruirCacheSlugs() {
   return newCache;
 }
 
+// Rotina de auto-cura para preencher o nome de clientes locais que ficaram sem nome no Supabase
+async function corrigirNomesClientesSemNome() {
+  try {
+    const { data: clients, error } = await supabase.from('clientes_locais').select('*');
+    if (error) throw error;
+
+    const semNome = (clients || []).filter(c => {
+      const d = c.data || {};
+      return !d.nome || d.nome.trim() === '';
+    });
+
+    if (semNome.length === 0) {
+      console.log('[Self-Heal] Todos os clientes locais possuem nome.');
+      return;
+    }
+
+    console.log(`[Self-Heal] Encontrados ${semNome.length} clientes sem nome cadastrado localmente no Supabase. Corrigindo...`);
+
+    for (const c of semNome) {
+      try {
+        const response = await fetch(`https://api.notion.com/v1/pages/${c.id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${NOTION_TOKEN}`,
+            'Notion-Version': '2022-06-28'
+          }
+        });
+        if (!response.ok) {
+          console.error(`[Self-Heal] Erro ao buscar cliente ${c.id} no Notion: status ${response.status}`);
+          continue;
+        }
+        const clientPage = await response.json();
+        const cp = clientPage.properties;
+        const nomeProp = cp['Nome do Cliente'] || cp['Nome'];
+        const nome = nomeProp?.title?.map(t => t.plain_text).join('') || '';
+        
+        if (nome) {
+          const updatedData = { ...c.data, nome };
+          const { error: updateErr } = await supabase.from('clientes_locais').update({ data: updatedData }).eq('id', c.id);
+          if (updateErr) throw updateErr;
+          console.log(`[Self-Heal] Nome do cliente ${c.id} corrigido para "${nome}"`);
+        } else {
+          console.warn(`[Self-Heal] Cliente ${c.id} não possui nome no Notion.`);
+        }
+      } catch (e) {
+        console.error(`[Self-Heal] Erro ao corrigir cliente ${c.id}:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error('[Self-Heal] Erro na rotina de autocorreção de nomes:', err.message);
+  }
+}
+
 async function getClientDataHelper(clientId) {
   const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
   const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
@@ -5918,6 +5986,8 @@ app.listen(PORT, () => {
   setTimeout(() => {
     reconstruirCacheSlugs().then(() => {
       console.log('[Portal] Cache de slugs da Área do Cliente aquecido.');
+      // Executa a auto-cura logo após o aquecimento do cache
+      corrigirNomesClientesSemNome().catch(err => console.error('[Self-Heal] Falha na varredura de autocorreção:', err.message));
     }).catch(err => console.error('[Portal] Falha ao aquecer cache de slugs:', err.message));
   }, 3000);
 

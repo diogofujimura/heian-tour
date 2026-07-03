@@ -188,6 +188,16 @@ function saveOrcamentos() {
   // Função legada mantida vazia para compatibilidade caso seja chamada em outro lugar
 }
 
+// Alterna a página Clientes entre a vista Lista (padrão) e o Quadro por etapas
+window.setClientesVista = function(v, silencioso) {
+  const pg = document.getElementById('page-clientes');
+  if (!pg) return;
+  const quadro = v === 'quadro';
+  pg.classList.toggle('modo-quadro', quadro);
+  try { localStorage.setItem('heian_clientes_vista', v); } catch (e) {}
+  if (quadro && typeof renderKanban === 'function') renderKanban();
+};
+
 // Encontra a chave de exibição no dbRotas a partir do ID imutável (rot_...)
 window.chaveRoteiroPorId = function(rid) {
   if (!rid || typeof dbRotas === 'undefined') return null;
@@ -612,6 +622,18 @@ function navToPage(pg) {
     if (buscaCli && buscaCli.value) {
       buscaCli.value = '';
       if (typeof renderClientesTabela === 'function') renderClientesTabela();
+    }
+    // Aplica a vista escolhida (lista ou quadro por etapas)
+    let vista = 'lista';
+    try { vista = localStorage.getItem('heian_clientes_vista') || 'lista'; } catch (e) {}
+    if (typeof window.setClientesVista === 'function') window.setClientesVista(vista, true);
+  }
+
+  // Calendário no celular abre direto na vista Lista (a grade mensal não cabe)
+  if (targetPg === 'calendario' && window.innerWidth <= 768) {
+    const btnLista = document.getElementById('btnCalViewList');
+    if (btnLista && !btnLista.classList.contains('active')) {
+      setTimeout(() => btnLista.click(), 60);
     }
   }
 
@@ -3880,6 +3902,7 @@ async function salvarClienteNotion() {
       body: JSON.stringify({
         notionPayload: payload,
         localPayload: {
+          nome: payload.nome,
           estadias: currentEditingEstadias,
           viajantes: currentEditingViajantes,
           emails: currentEditingEmails,
