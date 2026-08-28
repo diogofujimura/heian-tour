@@ -4,13 +4,15 @@
   <title>Heian Tour — Orçamentos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260702">
-  <link rel="stylesheet" href="css/redesign-light.css?v=20260702">
-  <link rel="stylesheet" href="css/pdf-redesign.css?v=20260701">
+  <link rel="stylesheet" href="css/style.css?v=20260731_03">
+  <link rel="stylesheet" href="css/redesign-light.css?v=20260705">
+  <link rel="stylesheet" href="css/pdf-redesign.css?v=20260731_05">
+  <link rel="stylesheet" href="css/mobile-app.css?v=20260731_02">
   
   <!-- Configurações PWA -->
   <link rel="manifest" href="/manifest-admin.json">
   <meta name="theme-color" content="#8e1c1c">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Heian Tour">
@@ -28,42 +30,62 @@ if (window.location.href.includes('@') && (window.location.href.includes('http:/
     console.error('Erro ao limpar URL:', err);
   }
 }
-window.addEventListener('error', function(e) {
-  let errBox = document.getElementById('debugErrorBox');
-  if (!errBox) {
-    errBox = document.createElement('div');
-    errBox.id = 'debugErrorBox';
-    errBox.style.position = 'fixed';
-    errBox.style.bottom = '10px';
-    errBox.style.right = '10px';
-    errBox.style.backgroundColor = 'red';
-    errBox.style.color = 'white';
-    errBox.style.padding = '10px';
-    errBox.style.zIndex = '999999';
-    errBox.style.maxWidth = '400px';
-    errBox.style.fontSize = '12px';
-    document.body.appendChild(errBox);
+// Detector de erros do app — avisa em caso de problema REAL do Heian, mas:
+//  (1) ignora erros vindos de EXTENSÃO do navegador (chrome-extension://…) — não é do app;
+//  (2) não repete a mesma mensagem (mostra 1x com contador);
+//  (3) é fechável e discreto.
+(function () {
+  var vistos = {};
+  var box = null;
+  function ehExterno(txt) {
+    return /chrome-extension:\/\/|moz-extension:\/\/|safari-web-extension:\/\/|extensions\//i.test(txt || '');
   }
-  errBox.innerHTML += '<p>' + e.message + ' at ' + e.filename + ':' + e.lineno + '</p>';
-});
-window.addEventListener('unhandledrejection', function(e) {
-  let errBox = document.getElementById('debugErrorBox');
-  if (!errBox) {
-    errBox = document.createElement('div');
-    errBox.id = 'debugErrorBox';
-    errBox.style.position = 'fixed';
-    errBox.style.bottom = '10px';
-    errBox.style.right = '10px';
-    errBox.style.backgroundColor = 'red';
-    errBox.style.color = 'white';
-    errBox.style.padding = '10px';
-    errBox.style.zIndex = '999999';
-    errBox.style.maxWidth = '400px';
-    errBox.style.fontSize = '12px';
-    document.body.appendChild(errBox);
+  function garantirBox() {
+    if (box) return box;
+    box = document.createElement('div');
+    box.id = 'debugErrorBox';
+    box.style.cssText = 'position:fixed;bottom:12px;right:12px;max-width:360px;max-height:40vh;overflow-y:auto;background:#8e1c1c;color:#fff;padding:12px 14px;border-radius:12px;z-index:999999;font-size:12px;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,0.3)';
+    var fechar = document.createElement('button');
+    fechar.textContent = '×';
+    fechar.setAttribute('aria-label', 'Fechar');
+    fechar.style.cssText = 'position:absolute;top:6px;right:9px;background:none;border:none;color:#fff;font-size:18px;line-height:1;cursor:pointer';
+    fechar.onclick = function () { if (box) box.remove(); box = null; vistos = {}; };
+    var titulo = document.createElement('div');
+    titulo.textContent = 'Aviso do app — possível problema';
+    titulo.style.cssText = 'font-weight:700;margin:0 22px 6px 0';
+    box.appendChild(fechar);
+    box.appendChild(titulo);
+    document.body.appendChild(box);
+    return box;
   }
-  errBox.innerHTML += '<p>Unhandled Promise: ' + e.reason + '</p>';
-});
+  function mostrar(msg) {
+    if (!msg) return;
+    if (vistos[msg]) {
+      vistos[msg].n++;
+      if (vistos[msg].el) vistos[msg].el.textContent = '(' + vistos[msg].n + 'x) ' + msg;
+      return;
+    }
+    var b = garantirBox();
+    var p = document.createElement('p');
+    p.style.cssText = 'margin:6px 0 0;border-top:1px solid rgba(255,255,255,0.2);padding-top:6px';
+    p.textContent = msg;
+    b.appendChild(p);
+    vistos[msg] = { n: 1, el: p };
+    var itens = b.querySelectorAll('p');
+    if (itens.length > 6) itens[0].remove(); // não deixa crescer sem fim
+  }
+  window.addEventListener('error', function (e) {
+    var origem = e.filename || (e.error && e.error.stack) || '';
+    if (ehExterno(origem)) return;
+    mostrar(e.message + (e.filename ? (' — ' + e.filename.split('/').pop() + ':' + e.lineno) : ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    var stack = (r && r.stack) || String(r || '');
+    if (ehExterno(stack)) return;
+    mostrar('Promessa não tratada: ' + ((r && r.message) ? r.message : String(r)));
+  });
+})();
 </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Quill.js for Rich Text Editing -->
@@ -198,7 +220,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </symbol>
     <!-- Mapa (Geral) -->
-    <symbol id="icon-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol><symbol id="icon-map" viewBox="0 0 24 24">
+    <symbol id="icon-bnav-hoje" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></symbol><symbol id="icon-bnav-clientes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><circle cx="16.5" cy="9" r="2.4"/><path d="M16.2 14.6c2.2.3 3.7 1.7 4.3 4"/></symbol><symbol id="icon-bnav-agenda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M8 3.5v4M16 3.5v4M4 10.5h16"/><circle cx="9" cy="14.8" r="1.4" fill="currentColor" stroke="none"/></symbol><symbol id="icon-bnav-caixa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9 7.5l3 4.2 3-4.2M12 11.7V17M9.6 13.3h4.8M9.6 15.4h4.8"/></symbol><symbol id="icon-bnav-mais" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol><symbol id="icon-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol><symbol id="icon-map" viewBox="0 0 24 24">
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
     </symbol>
     <!-- Lâmpada -->
@@ -216,11 +238,13 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 5px 20px;">Gestão & Vendas</div>
     <a class="nav-item active" data-page="dashboard"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>&nbsp;Painel Geral</a>
     <a class="nav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-users"></use></svg>&nbsp;Clientes</a>
+    <a class="nav-item" data-page="mensagens"><svg class="v-icon"><use href="#icon-file"></use></svg>&nbsp;Mensagens <span id="navMsgBadge" style="display:none; margin-left:auto; background:var(--crimson); color:#fff; border-radius:99px; font-size:10px; padding:1px 7px;">0</span></a>
     <a class="nav-item" data-page="roteiros"><svg class="v-icon"><use href="#icon-map"></use></svg>&nbsp;Roteiros</a>
     <a class="nav-item" data-page="meus"><svg class="v-icon"><use href="#icon-file"></use></svg>&nbsp;Cotações</a>
     <a class="nav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-calendar"></use></svg>&nbsp;Calendário</a>
     <a class="nav-item" data-page="colaboradores"><svg class="v-icon"><use href="#icon-user"></use></svg>&nbsp;Colaboradores</a>
     <a class="nav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-dollar"></use></svg>&nbsp;Contabilidade</a>
+    <a class="nav-item" data-page="solicitacoes"><svg class="v-icon"><use href="#icon-briefcase"></use></svg>&nbsp;Solicitações</a>
     
     <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin: 25px 0 5px 20px;">Sistema & Dados</div>
     <a class="nav-item" data-page="base"><svg class="v-icon"><use href="#icon-database"></use></svg>&nbsp;Base de Dados</a>
@@ -256,7 +280,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
  
   <div class="sidebar-sync">
-    <button id="btnSync" class="btn-sync" style="display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-undo"></use></svg>Sincronizar Sheets</button>
+    <button id="btnSync" class="btn-sync" style="display:inline-flex; align-items:center; justify-content:center; gap:4px;"><svg class="v-icon" style="stroke-width:2.5;"><use href="#icon-undo"></use></svg>Atualizar Sheets pelo App</button>
     <p id="syncStatus" class="sync-status"></p>
   </div>
 </aside>
@@ -280,7 +304,6 @@ window.addEventListener('unhandledrejection', function(e) {
         <button class="btn-secondary" onclick="window.desfazerAcaoCotacao()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:8px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
         <span id="autoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0.4;margin-right:8px;align-self:center;letter-spacing:0.04em">Salvo automaticamente</span>
         <button id="btnIrParaRoteiro" class="btn-secondary" style="display:none; color:var(--crimson); border-color:rgba(180,30,40,0.3)">Ir para Roteiro ➔</button>
-        <button class="btn-secondary" onclick="cotacaoParaRoteiro(state.orcamento)" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-zap"></use></svg>Exportar para Roteiro</button>
         <button id="btnPreview" class="btn-secondary">Visualizar PDF</button>
         <button id="btnPrint" class="btn-primary">Exportar PDF</button>
       </div>
@@ -371,25 +394,27 @@ window.addEventListener('unhandledrejection', function(e) {
     <div class="card">
       <h2 class="card-title">Tours</h2>
       <div id="toursList"></div>
-      <button class="btn-add" id="btnAddTour">+ Adicionar Tour</button>
+      <button class="btn-add" id="btnAddTour" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg> Adicionar Tour</button>
     </div>
 
     <div class="card">
       <h2 class="card-title">Transportes</h2>
       <div id="transportesList"></div>
-      <button class="btn-add" id="btnAddTransporte">+ Adicionar Transporte</button>
+      <button class="btn-add" id="btnAddTransporte" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path></svg> Adicionar Transporte</button>
     </div>
 
     <div class="card">
       <h2 class="card-title">Experiências <span class="optional-badge">opcional</span></h2>
       <div id="experienciasList"></div>
-      <button class="btn-add" id="btnAddExperiencia">+ Adicionar Experiência</button>
+      <button class="btn-add" id="btnAddItemAdicional" style="display:none;"></button> <!-- manter id para retrocompatibilidade se necessario -->
+      <button class="btn-add" id="btnAddExperiencia" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path></svg> Adicionar Experiência</button>
     </div>
 
     <div class="card">
       <h2 class="card-title">Itens Adicionais <span class="optional-badge">opcional</span></h2>
       <div id="itensAdicionaisList"></div>
-      <button class="btn-add" id="btnAddItemAdicional">+ Adicionar Item Adicional</button>
+      <button class="btn-add" id="btnAddItemAdicionalActual" style="display:none;"></button>
+      <button class="btn-add" id="btnAddItemAdicionalReal" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="document.getElementById('btnAddItemAdicional').click();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path></svg> Adicionar Item Adicional</button>
     </div>
 
 
@@ -455,7 +480,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <svg class="v-icon" style="margin-right:4px;"><use href="#icon-arrow-left"></use></svg>Voltar para Lista
       </button>
       <div class="pane-content-inner" id="roteirosContentInner" style="display:flex; flex-direction:column; padding:0; min-height: 90vh;">
-        
+
         <div id="roteirosEmptyState" style="text-align:center; padding: 120px 20px; opacity:0.6;">
            <img src="assets/logo.png" style="width: 80px; opacity:0.2; margin-bottom: 20px; filter: grayscale(1);">
            <p style="font-size:18px; font-family: var(--ff-display);">Selecione um roteiro na lista lateral<br>ou crie um novo.</p>
@@ -468,7 +493,7 @@ window.addEventListener('unhandledrejection', function(e) {
                  <input type="checkbox" id="chkIncluirDescricoesPdf" style="margin-right:6px; accent-color:var(--crimson)">
                  Incluir descrições no PDF
                </label>
-               <button id="btnGerarRoteiro" class="btn-secondary" style="font-size:13px; display:inline-flex; align-items:center; gap:4px;" disabled=""><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
+               <button id="btnGerarRoteiro" style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: 1px solid #e2e8f0; background: white; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" disabled=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> PDF</button>
              </div>
           </div>
           
@@ -476,34 +501,38 @@ window.addEventListener('unhandledrejection', function(e) {
             <div id="roteiroPreviewHeader" style="display:none; margin-bottom: 20px; align-items: center; justify-content: space-between;">
               <div style="display:flex; align-items:center; gap: 15px;">
                  <h2 id="roteiroPreviewTitle" style="margin:0; color: var(--gold-dk); font-size: 24px;"></h2>
-                 <button id="btnEditarRoteiro" class="btn-primary" style="padding: 6px 16px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-edit"></use></svg>Editar Roteiro</button>
-                 <button id="btnExcluirRoteiro" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); padding: 5px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Roteiro</button>
+                 <button id="btnEditarRoteiro" style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: none; background: var(--crimson); color: white; box-shadow: 0 2px 6px rgba(142,28,28,0.15); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> Editar Roteiro</button>
+                 <button id="btnExcluirRoteiro" style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: 1px solid #e2e8f0; background: white; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="#e06666" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir Roteiro</button>
               </div>
             </div>
             <div class="roteiro-timeline" id="roteiroTimeline"></div>
             
             <div class="roteiro-edit-container" id="roteiroEditContainer" style="display:none; margin-top: 20px;">
-               <div id="roteiroEditHeaderDisplay" style="text-align: center; margin-bottom: 24px; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                 <h2 id="roteiroEditTitle" style="margin: 0; color: var(--gold-dk); font-size: 22px; font-weight: 600;">Roteiro em Edição</h2>
-                 <p id="roteiroEditSubtitle" style="margin: 6px 0 0 0; color: var(--text-sec); font-size: 15px; font-weight: 500;">Cliente: - | Viagem: -</p>
-               </div>
-               <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; margin-bottom: 24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-                 <div class="field" style="margin:0; width:100%; max-width:300px">
-                   <label>Nome do Roteiro (Salvo na Base)</label>
-                   <input type="text" id="editRoteiroNome" placeholder="Ex: Roteiro do Cliente">
-                 </div>
-                 <div id="roteiroEditorAcoes" style="margin-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center;">
-                   <div style="flex:1"></div>
-                   <div id="roteiroEditorBotoes" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
-                     <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:10px"></span>
-                     <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-                     <button id="btnVerPerfilClienteRoteiro" class="btn-secondary" style="background:rgba(196,163,90,0.06); border-color:rgba(196,163,90,0.25); color:var(--gold-dk); font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirDrawerPerfilCliente()"><svg class="v-icon" style="margin-right:2px; stroke:var(--gold-dk);"><use href="#icon-user"></use></svg>Ver Perfil do Cliente</button>
-                     <button id="btnEnviarEmailRoteiro" class="btn-secondary" style="background:rgba(142,28,28,0.06); border-color:rgba(142,28,28,0.25); color:var(--crimson); font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalEnviarEmail()"><svg class="v-icon" style="margin-right:2px; stroke:var(--crimson);"><use href="#icon-file"></use></svg>Enviar por E-mail</button>
-                     <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-right:4px;" onclick="window.abrirModalGeradorIA()"><svg class="v-icon" style="margin-right:2px; stroke:#6d28d9;"><use href="#icon-sparkles"></use></svg>Gerar com IA</button>
-                     <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="margin-right:4px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-undo"></use></svg>Desfazer</button>
-                     <button id="btnSalvarVisualizarRoteiro" class="btn-secondary">Pré-visualizar (Salva)</button>
-                     <button id="btnSalvarEdicaoRoteiro" class="btn-primary">Salvar Roteiro</button>
-                     <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent">Cancelar</button>
+               <!-- FASE UX: cabeçalho compacto e FIXO (sticky). O "Dados do Cliente" e os dias abaixo rolam normal. -->
+               <div id="roteiroEditHeaderDisplay" style="position:relative; z-index:30; background:#ffffff; border:1px solid var(--border); border-bottom:2px solid rgba(196,163,90,0.35); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,0.14); padding:12px 16px; margin-bottom:20px;">
+                 <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px;">
+                   <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; min-width:0;">
+                     <div style="min-width:0;">
+                       <h2 id="roteiroEditTitle" style="margin:0; color:var(--gold-dk); font-size:17px; font-weight:700; line-height:1.15;">Roteiro em Edição</h2>
+                       <p id="roteiroEditSubtitle" style="margin:2px 0 0 0; color:var(--text-sec); font-size:12px; font-weight:500;">Cliente: - | Viagem: -</p>
+                     </div>
+                     <div class="field" style="margin:0; width:210px;">
+                       <input type="text" id="editRoteiroNome" placeholder="Nome do roteiro" title="Nome do Roteiro (salvo na base)" style="font-size:13px; padding:6px 10px;">
+                     </div>
+                   </div>
+                   <div id="roteiroEditorAcoes" style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; align-items:center;">
+                     <div id="roteiroEditorBotoes" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end">
+                       <span id="roteiroAutoSaveIndicator" style="font-size:11px;color:var(--ink-lt);opacity:0;transition:opacity 0.3s;letter-spacing:0.04em; margin-right:4px"></span>
+                       <div id="roteiroCotacaoActions" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                       <button id="btnVoltarClientesRoteiro" class="btn-secondary" style="font-size:12px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px;" onclick="window.voltarParaClientesDeRoteiro()"><svg class="v-icon" style="margin-right:1px;"><use href="#icon-arrow-left"></use></svg>Voltar para Clientes</button>
+                       <button id="btnVerPerfilClienteRoteiro" class="btn-secondary" style="background:rgba(196,163,90,0.06); border-color:rgba(196,163,90,0.25); color:var(--gold-dk); font-weight:600; font-size:12px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px;" onclick="window.abrirDrawerPerfilCliente()"><svg class="v-icon" style="margin-right:1px; stroke:var(--gold-dk);"><use href="#icon-user"></use></svg>Perfil</button>
+                       <button id="btnEnviarEmailRoteiro" class="btn-secondary" style="background:rgba(142,28,28,0.06); border-color:rgba(142,28,28,0.25); color:var(--crimson); font-weight:600; font-size:12px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px;" onclick="window.abrirModalEnviarEmail()"><svg class="v-icon" style="margin-right:1px; stroke:var(--crimson);"><use href="#icon-file"></use></svg>E-mail</button>
+                       <button id="btnGerarRoteiroIA" class="btn-secondary" style="background:#f5f3ff; border-color:#ddd6fe; color:#6d28d9; font-weight:600; font-size:12px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px;" onclick="window.abrirModalGeradorIA()"><svg class="v-icon" style="margin-right:1px; stroke:#6d28d9;"><use href="#icon-sparkles"></use></svg>Gerar IA</button>
+                       <button id="btnDesfazerEdicaoRoteiro" class="btn-secondary" onclick="window.desfazerAcaoRoteiro()" title="Desfazer alteração (Ctrl+Z)" style="font-size:12px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:1px;"><use href="#icon-undo"></use></svg>Desfazer</button>
+                       <button id="btnSalvarVisualizarRoteiro" class="btn-secondary" style="font-size:12px; padding:5px 10px;">Pré-visualizar</button>
+                       <button id="btnSalvarEdicaoRoteiro" class="btn-primary" style="font-size:12px; padding:5px 12px;">Salvar Roteiro</button>
+                       <button id="btnCancelarEdicaoRoteiro" class="btn-secondary" style="border-color:transparent; background:transparent; font-size:12px; padding:5px 8px;">Cancelar</button>
+                     </div>
                    </div>
                  </div>
                </div>
@@ -522,13 +551,13 @@ window.addEventListener('unhandledrejection', function(e) {
                    </select>
                  </div>
                  <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr">
-                   <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" ></div>
-                   <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" ></div>
-                   <div class="field"><label>Crianças</label><input type="number" id="rotClienteCriancas" value="0" min="0" ></div>
+                   <div class="field"><label>Nome do Cliente</label><input type="text" id="rotClienteNome" onchange="updRotCliente('nome', this.value)"></div>
+                   <div class="field"><label>Adultos</label><input type="number" id="rotClienteAdultos" value="2" min="1" onchange="updRotCliente('adultos', this.value)"></div>
+                   <div class="field"><label>Crianças</label><input type="number" id="rotClienteCriancas" value="0" min="0" onchange="updRotCliente('criancas', this.value)"></div>
                  </div>
                  <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
-                   <div class="field"><label>Data de Início</label><input type="date" id="rotClienteData" ></div>
-                   <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" ></div>
+                   <div class="field"><label>Data de Início</label><input type="date" id="rotClienteData" onchange="updRotCliente('dataInicio', this.value)"></div>
+                   <div class="field"><label>Data Final</label><input type="date" id="rotClienteDataFim" onchange="updRotCliente('dataFim', this.value)"></div>
                  </div>
                  <div class="form-grid" style="margin-top:12px; grid-template-columns: 1fr 1fr">
                    <div class="field"><label>Voo Chegada</label><input type="text" id="rotClienteVooChegada" placeholder="Ex: JL01 10/10 14:00" onchange="updRotCliente('vooChegada', this.value)"></div>
@@ -547,7 +576,7 @@ window.addEventListener('unhandledrejection', function(e) {
                 </div>
 
                <div id="editRoteiroDiasList"></div>
-               <button class="btn-add" id="btnAddDiaRoteiro" style="margin-top:12px">+ Adicionar Dia</button>
+               <button class="btn-add" id="btnAddDiaInicioRoteiro" style="margin-top:12px; margin-right:8px">+ Dia no início</button><button class="btn-add" id="btnAddDiaRoteiro" style="margin-top:12px">+ Adicionar Dia (fim)</button>
             </div>
             
           </div>
@@ -587,9 +616,9 @@ window.addEventListener('unhandledrejection', function(e) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; border-bottom:1px solid var(--border); padding-bottom:20px;">
                 <h3 id="orcamentosPreviewTitle" style="font-family: var(--ff-display); font-size: 24px; color: var(--crimson);">Pré-visualização</h3>
                 <div style="display:flex; gap: 10px;">
-                    <button id="btnEditFromPreview2" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
-                    <button id="btnExcluirCotacaoInline" class="btn-secondary" style="color:#e06666; border-color:rgba(224,102,102,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#e06666;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
-                    <button class="btn-secondary" onclick="document.getElementById('btnPrintFromPreview').click()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>PDF</button>
+                    <button id="btnEditFromPreview2" onclick="editarCotacaoAtual()" style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: none; background: var(--crimson); color: white; box-shadow: 0 2px 6px rgba(142,28,28,0.15); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> Editar Cotação</button>
+                    <button id="btnExcluirCotacaoInline" style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: 1px solid #e2e8f0; background: white; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" onclick="excluirCotacaoAtual()"><svg viewBox="0 0 24 24" fill="none" stroke="#e06666" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Excluir Cotação</button>
+                    <button style="border-radius: 24px; padding: 7px 18px; font-size: 13px; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif; border: 1px solid #e2e8f0; background: white; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" onclick="document.getElementById('btnPrintFromPreview').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> PDF</button>
                 </div>
             </div>
             <div id="previewContainerInline" style="max-width:800px; margin:0 auto;"></div>
@@ -649,16 +678,7 @@ window.addEventListener('unhandledrejection', function(e) {
         </div>
       </div>
 
-      <!-- Kanban de Clientes -->
-      <div class="dashboard-kanban-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
-        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
-          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-users"></use></svg> <span>Quadro de Clientes (Status Notion)</span>
-        </h3>
-        
-        <div id="kanbanBoard" class="kanban-board-scroll">
-          <div style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando Kanban...</div>
-        </div>
-      </div>
+      <!-- Kanban de Clientes movido para a página Clientes (vista Quadro) -->
 
     </div>
 
@@ -750,7 +770,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div id="cli-entradas-tab" class="tab-content active" style="padding-top:0">
           <div class="table-wrapper">
             <table class="data-table" id="tableCliEntradas">
-              <thead><tr><th>Data</th><th>Descrição</th><th>Tipo Pagamento</th><th style="text-align:right">Valor ¥</th></tr></thead>
+              <thead><tr><th>Data</th><th>Descrição</th><th>Tipo Pagamento</th><th style="text-align:right">Valor ¥</th><th style="text-align:center">Ações</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -759,7 +779,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div id="cli-saidas-tab" class="tab-content" style="padding-top:0; display:none">
           <div class="table-wrapper">
             <table class="data-table" id="tableCliSaidas">
-              <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo Serviço</th><th style="text-align:right">Valor ¥</th></tr></thead>
+              <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo Serviço</th><th style="text-align:right">Valor ¥</th><th style="text-align:center">Ações</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -853,11 +873,30 @@ window.addEventListener('unhandledrejection', function(e) {
 
   <!-- ── CLIENTES ──────────────────────────────────────────────────────── -->
   <div id="page-clientes" class="page pane-layout">
+    <!-- Vista QUADRO (kanban por etapas) — alternável com a lista -->
+    <div id="clientesKanbanWrap">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 4px 0;">
+        <h2 style="font-family: var(--ff-display); font-size: 26px; font-weight: 400; color: var(--crimson); margin: 0;">Clientes — Quadro</h2>
+        <button class="btn-secondary" onclick="setClientesVista('lista')" style="padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">≡ Ver como lista</button>
+      </div>
+      <!-- Kanban de Clientes -->
+      <div class="dashboard-kanban-card" style="background: var(--warm-white); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 30px;">
+        <h3 style="font-size: 16px; color: var(--crimson); font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid rgba(107,31,42,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px">
+          <svg class="v-icon" style="stroke:var(--crimson);"><use href="#icon-users"></use></svg> <span>Quadro de Clientes (Status Notion)</span>
+        </h3>
+
+        <div id="kanbanBoard" class="kanban-board-scroll">
+          <div style="color:var(--ink-lt); font-size:12px; font-style:italic; padding:10px 0;">Carregando Kanban...</div>
+        </div>
+      </div>
+    </div>
+
     <div class="pane-list">
       <div class="pane-list-header" style="flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="font-family: var(--ff-display); font-size: 26px; font-weight: 400; color: var(--crimson); margin: 0;">Clientes</h2>
           <div style="display:flex; gap:8px">
+            <button class="btn-secondary" id="btnVistaQuadro" style="padding: 10px 12px; border-radius:8px;" title="Ver quadro por etapas" onclick="setClientesVista('quadro')">▦ Quadro</button>
             <button class="btn-secondary" id="btnRefreshClientes" style="padding: 10px; border-radius:8px;" title="Sincronizar Notion">↻</button>
             <button class="btn-primary" id="btnNovoCliente" style="padding: 10px 14px; border-radius:8px;" title="Novo Cliente">+</button>
           </div>
@@ -919,7 +958,7 @@ window.addEventListener('unhandledrejection', function(e) {
                         <input type="file" id="mcFotoPerfilFile" accept="image/*" style="display:none;" onchange="previewEditFotoPerfil(this)">
                         <button type="button" class="btn-secondary" onclick="document.getElementById('mcFotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
                         <button type="button" id="mcBtnRemoverFoto" class="btn-secondary" onclick="removerEditFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
-                        <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem quadrada de até 250KB.</p>
+                        <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Sua foto será otimizada automaticamente (aceita qualquer tamanho do celular).</p>
                       </div>
                     </div>
                   </div>
@@ -973,7 +1012,7 @@ window.addEventListener('unhandledrejection', function(e) {
                   </div>
                   <div class="modal-actions" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
                     <button class="btn-secondary" onclick="closeClienteModal()">Cancelar</button>
-                    <button class="btn-primary" id="btnSalvarClienteModal">Salvar no Notion</button>
+                    <button type="button" class="btn-primary" id="btnSalvarClienteModal">Salvar alterações</button>
                   </div>
               </div>
            </div>
@@ -993,6 +1032,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="tab" data-tab="atracoes-tab">Atrações (Roteiros)</button>
       <button class="tab" data-tab="rotas-tab">Rotas (Sequências)</button>
       <button class="tab" data-tab="hoteis-tab">Hotéis</button>
+      <button class="tab" data-tab="indicacoes-tab">Indicações</button>
     </div>
     <div id="transportes-tab" class="tab-content active">
       <div class="table-header">
@@ -1054,9 +1094,45 @@ window.addEventListener('unhandledrejection', function(e) {
         </table>
       </div>
     </div>
+    <div id="indicacoes-tab" class="tab-content">
+      <div class="table-header">
+        <input type="text" id="searchIndicacao" placeholder="Buscar indicação (nome, cidade, categoria)..." class="search-input">
+        <button class="btn-primary" id="btnNovaIndicacao">+ Nova Indicação</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabelaIndicacoes" class="data-table">
+          <thead><tr><th>Cidade</th><th>Nome</th><th>Estrelas</th><th>Categoria</th><th>Descrição</th><th>Links</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ── CONFIGURAÇÕES ──────────────────────────────────────────────────── -->
+  <div id="page-solicitacoes" class="page">
+    <div class="solic-head">
+      <div>
+        <h1>Solicitações Internas</h1>
+        <p class="solic-sub">O que precisa ser feito, por quem, pra quando — entre você e a Deborah.</p>
+      </div>
+      <div class="solic-actions">
+        <div class="solic-toggle">
+          <button id="solicBtnKanban" class="on" onclick="setSolicView('kanban')"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>Kanban</button>
+          <button id="solicBtnLista" onclick="setSolicView('lista')"><svg class="v-icon"><use href="#icon-file"></use></svg>Lista</button>
+        </div>
+        <button class="btn-primary" onclick="abrirModalSolic(null)">+ Nova solicitação</button>
+      </div>
+    </div>
+    <div id="solicFiltros" class="solic-filtros" style="display:none;">
+      <select id="solicFiltroResp" onchange="renderSolicitacoes()"><option value="">Responsável: todos</option><option>Diogo</option><option>Deborah</option><option>Os dois</option></select>
+      <select id="solicFiltroTipo" onchange="renderSolicitacoes()"><option value="">Tipo: todos</option><option>Pesquisa</option><option>Pagamento</option><option>Reserva</option><option>Contato</option><option>Outro</option></select>
+      <select id="solicFiltroStatus" onchange="renderSolicitacoes()"><option value="">Status: todos</option><option>A fazer</option><option>Fazendo</option><option>Aguardando</option><option>Feito</option></select>
+      <input type="text" id="solicBusca" placeholder="Buscar..." oninput="renderSolicitacoes()">
+    </div>
+    <div id="solicKanban" class="solic-kanban"></div>
+    <div id="solicLista" class="solic-lista" style="display:none;"></div>
+  </div>
+
   <div id="page-config" class="page">
     <div class="page-header"><h1>Configurações</h1></div>
     <div class="card">
@@ -1118,6 +1194,29 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- ── CALENDÁRIO ───────────────────────────────────────────────────────── -->
+  <!-- ── CENTRAL DE MENSAGENS ── -->
+  <div id="page-mensagens" class="page">
+    <div class="page-header">
+      <h1>Central de Mensagens</h1>
+    </div>
+    <div id="msgShell" style="display:grid; grid-template-columns:320px 1fr; gap:16px; min-height:70vh;">
+      <div style="background:#fff; border:1px solid var(--border); border-radius:12px; overflow-y:auto; max-height:76vh;" id="msgListaConversas">
+        <p style="padding:20px; color:var(--ink-lt); font-size:13px;">Carregando conversas...</p>
+      </div>
+      <div style="background:#fff; border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; max-height:76vh;">
+        <div id="msgCabecalho" style="padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; color:var(--crimson);">Selecione uma conversa</div>
+        <div id="msgCorpo" style="flex:1; overflow-y:auto; padding:16px 14px; display:flex; flex-direction:column; gap:10px; background:var(--warm-white);"></div>
+        <div id="msgAnexoPrev" style="display:none; padding:6px 14px; font-size:12px; color:var(--crimson); border-top:1px solid var(--border);"></div>
+        <div style="display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--border); align-items:flex-end;">
+          <button id="msgAnexar" class="btn-secondary" title="Anexar arquivo" style="width:42px; padding:8px;">📎</button>
+          <input type="file" id="msgArquivo" style="display:none">
+          <textarea id="msgTexto" rows="1" placeholder="Responder ao cliente..." style="flex:1; resize:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit;"></textarea>
+          <button id="msgEnviar" class="btn-primary" style="padding:10px 18px;">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="page-calendario" class="page">
     <div class="page-header">
       <h1>Calendário de Tours & Serviços</h1>
@@ -1337,7 +1436,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <button id="btnEditFromPreview" class="btn-primary" onclick="editarCotacaoAtual()" style="display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px; stroke:#fff;"><use href="#icon-edit"></use></svg>Editar Cotação</button>
       <button id="btnExcluirCotacaoModal" class="btn-secondary" style="color:#ff8888; border-color:rgba(255,136,136,0.3); display:inline-flex; align-items:center; gap:4px;" onclick="excluirCotacaoAtual()"><svg class="v-icon" style="margin-right:2px; stroke:#ff8888;"><use href="#icon-trash"></use></svg>Excluir Cotação</button>
       <button id="btnPrintFromPreview" class="btn-secondary" style="color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.4); display:inline-flex; align-items:center; gap:4px;"><svg class="v-icon" style="margin-right:2px;"><use href="#icon-printer"></use></svg>Imprimir / PDF</button>
-      <button id="btnClosePreview" class="btn-secondary" onclick="document.getElementById('previewOverlay').classList.add('hidden'); document.body.style.overflow=''; const t = document.getElementById('btnTogglePreviewView'); if(t) t.style.display='none';" style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25)">✕ Fechar</button>
+      <button id="btnClosePreview" class="btn-secondary" onclick="document.getElementById('previewOverlay').classList.add('hidden'); document.body.style.overflow=''; const t = document.getElementById('btnTogglePreviewView'); if(t) t.style.display='none'; setTimeout(function(){ try{ if(window.__previewScrollY!=null) window.scrollTo(0, window.__previewScrollY); (window.__previewScrollEls||[]).forEach(function(pp){ try{ pp[0].scrollTop = pp[1]; }catch(e){} }); }catch(e){} }, 0);" style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25)">✕ Fechar</button>
     </div>
   </div>
   <div id="previewContainer" class="preview-container"></div>
@@ -1392,6 +1491,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <button class="btn-secondary" id="calEventModalDeleteBtn" style="margin-top:0; padding:8px 16px; font-size:12px; border-color:#e53e3e; color:#e53e3e; background:#fff5f5;" onclick="deletarEventoCalendario()">Excluir Evento</button>
       <div style="display:flex; gap:8px;">
         <button class="btn-secondary" onclick="fecharCalendarioEventModal()" style="margin-top:0; padding:8px 16px; font-size:12px;">Cancelar</button>
+        <button class="btn-secondary" id="calEventModalEditBtn" onclick="editarEventoCalendario()" style="margin-top:0; padding:8px 16px; font-size:12px; border-color:var(--crimson); color:var(--crimson);">Editar evento</button>
         <button class="btn-primary" id="calEventModalSaveBtn" style="margin-top:0; padding:8px 16px; font-size:12px;">Salvar Alteração</button>
       </div>
     </div>
@@ -1571,6 +1671,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     
     <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
+      <input type="hidden" id="modalRegistrarEntradaEditId" value="">
       <div>
         <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Descrição da Entrada</label>
         <input type="text" id="modalRegistrarEntradaDesc" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="Ex: Pagamento da Entrada, Parcela 2, etc.">
@@ -1599,10 +1700,24 @@ window.addEventListener('unhandledrejection', function(e) {
         </div>
       </div>
 
-      <!-- Preview de Conversão para JPY -->
+      <!-- Câmbio turismo + ¥ que quita (só p/ BRL/USD; um preenche o outro) -->
+      <div id="modalRegistrarEntradaConvWrapper" style="display:none; gap:12px;">
+        <div style="flex:1;">
+          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Câmbio turismo <span id="modalRegistrarEntradaCambioUnidade" style="font-weight:400; color:var(--ink-lt);">(ienes por real)</span></label>
+          <input type="number" step="0.01" id="modalRegistrarEntradaCambio" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="29" oninput="syncEntradaFromCambio()">
+          <span style="font-size:11px; color:var(--ink-lt); margin-top:4px;">Ex.: 1 real = 29 ienes.</span>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">¥ que este pagamento quita</label>
+          <input type="number" step="1" id="modalRegistrarEntradaValorJPY" class="search-input-modern" style="width:100%; box-sizing:border-box; padding: 10px;" placeholder="0" oninput="syncEntradaFromJPY()">
+          <span style="font-size:11px; color:var(--ink-lt); margin-top:4px;">É o que abate do saldo.</span>
+        </div>
+      </div>
+
+      <!-- Resumo do crédito -->
       <div id="modalRegistrarEntradaPreviewJPYWrapper" style="display: none; background: rgba(46, 204, 113, 0.08); border: 1px solid rgba(46, 204, 113, 0.2); padding: 10px 14px; border-radius: 6px; font-size: 12px; justify-content:space-between; align-items:center;">
-        <span style="color: var(--ink-mid); font-weight: 500;">Estimativa em JPY:</span>
-        <strong id="modalRegistrarEntradaPreviewJPY" style="color: #2ecc71; font-family: var(--ff-num); font-size: 14px;">¥ 0</strong>
+        <span style="color: var(--ink-mid); font-weight: 500;">Resumo:</span>
+        <strong id="modalRegistrarEntradaPreviewJPY" style="color: #2ecc71; font-family: var(--ff-num); font-size: 14px;">—</strong>
       </div>
 
       <div>
@@ -1638,6 +1753,7 @@ window.addEventListener('unhandledrejection', function(e) {
     
     <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
       <input type="hidden" id="modalRegistrarSaidaEventoId" value="">
+      <input type="hidden" id="modalRegistrarSaidaEditId" value="">
       
       <div>
         <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Descrição da Saída</label>
@@ -1716,7 +1832,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="event-modal-card" style="max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;">
     <div class="event-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
       <div>
-        <h3 class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Novo Evento no Calendário</h3>
+        <h3 id="modalCriarEvHeaderTitle" class="event-modal-title" style="color: var(--crimson); font-size: 18px; font-weight: 700; margin: 0;">Novo Evento no Calendário</h3>
         <span style="font-size: 11px; color: var(--ink-lt);">Criar evento local e sincronizar com o Notion</span>
       </div>
       <button class="event-modal-close" onclick="fecharModalCriarEventoCalendario()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-lt);">✕</button>
@@ -1972,7 +2088,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <!-- Instruções Especiais / Prompt Livre -->
     <div class="field" style="margin:0;">
       <label style="font-size:12px; font-weight:600; color:var(--ink-mid); display:block; margin-bottom:6px;">Instruções de Personalização para a IA</label>
-      <textarea id="iaInstrucoesPrompt" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:100px; font-family:var(--ff-body); resize:vertical;" placeholder="Ex: Casal de 30 anos. Focar em animes/games em Tóquio, templos históricos em Quioto e ryokan tradicional com onsen em Hakone. Viagem com ritmo moderado."></textarea>
+      <textarea id="iaInstrucoesPrompt" class="search-input-modern" style="width:100%; box-sizing:border-box; padding:10px; height:100px; font-family:var(--ff-body); resize:vertical;" placeholder="Ex: Casal de 30 anos. Focar em animes/games em Tokyo, templos históricos em Kyoto e ryokan tradicional com onsen em Hakone. Viagem com ritmo moderado."></textarea>
     </div>
 
     <!-- Loading Indicator -->
@@ -2061,17 +2177,18 @@ window.addEventListener('unhandledrejection', function(e) {
 
 <!-- ── Navegação inferior (aparece só no celular; ver PACOTE MOBILE no style.css) ── -->
 <nav class="bottom-nav" aria-label="Navegação principal">
-  <button class="bnav-item" data-page="dashboard"><svg class="v-icon"><use href="#icon-dashboard"></use></svg>Hoje</button>
-  <button class="bnav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-users"></use></svg>Clientes</button>
-  <button class="bnav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-calendar"></use></svg>Agenda</button>
-  <button class="bnav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-dollar"></use></svg>Caixa</button>
-  <button class="bnav-item" id="bnavMais"><svg class="v-icon"><use href="#icon-menu"></use></svg>Mais</button>
+  <button class="bnav-item" data-page="dashboard"><svg class="v-icon"><use href="#icon-bnav-hoje"></use></svg>Hoje</button>
+  <button class="bnav-item" data-page="clientes"><svg class="v-icon"><use href="#icon-bnav-clientes"></use></svg>Clientes</button>
+  <button class="bnav-item" data-page="calendario"><svg class="v-icon"><use href="#icon-bnav-agenda"></use></svg>Agenda</button>
+  <button class="bnav-item" data-page="contabilidade"><svg class="v-icon"><use href="#icon-bnav-caixa"></use></svg>Caixa</button>
+  <button class="bnav-item" id="bnavMais"><svg class="v-icon"><use href="#icon-bnav-mais"></use></svg>Mais</button>
 </nav>
 
 <div class="mob-sheet-overlay" id="mobSheetMais" style="display:none;">
   <div class="mob-sheet">
     <div class="sheet-grab"></div>
     <h4>Produção</h4>
+    <button class="mob-sheet-item" data-page="mensagens"><svg class="v-icon"><use href="#icon-file"></use></svg>Mensagens</button>
     <button class="mob-sheet-item" data-page="roteiros"><svg class="v-icon"><use href="#icon-map"></use></svg>Roteiros</button>
     <button class="mob-sheet-item" data-page="meus"><svg class="v-icon"><use href="#icon-file"></use></svg>Cotações</button>
     <h4>Sistema</h4>
@@ -2090,31 +2207,39 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
-<script src="js/roteiros.js?v=20260701"></script>
-<script src="js/app.js?v=20260701"></script>
-<script src="js/sync_roteiro_cotacao.js?v=20260701"></script>
-<script src="js/sync_clientes.js?v=20260701"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="js/heian-dragdrop.js?v=20260826_01"></script>
+    <script src="js/roteiros.js?v=20260827_02"></script>
+<script src="js/heian-datepicker.js?v=20260826_03"></script>
+<script src="js/app.js?v=20260827_02"></script>
+<script src="js/app-eventos.js?v=20260728_01"></script>
+<script src="js/app-calendario.js?v=20260728_01"></script>
+<script src="js/app-colaboradores.js?v=20260728_01"></script>
+<script src="js/sync-base.js?v=20260728_01"></script>
+<script src="js/hoteis-indicacoes.js?v=20260729_02"></script>
+<script src="js/solicitacoes.js?v=20260825_01"></script>
+<script src="js/app-cliente.js?v=20260731_03"></script>
+<script src="js/app-cotacao.js?v=20260826_02"></script>
+<script src="js/app-emails.js?v=20260730_04"></script>
+<script src="js/sync_roteiro_cotacao.js?v=20260731_01"></script>
+<script src="js/sync_clientes.js?v=20260722_3"></script>
 
 <!-- Scripts Adicionais -->
-<script src="js/dashboard.js?v=20260701"></script>
-<script src="js/builder-enhance.js?v=20260701"></script>
-<script src="js/pdf-export.js?v=20260701"></script>
-<script src="js/cotacao-enhance.js?v=20260701"></script>
-<script src="js/provisoes.js?v=20260701"></script>
-<script src="js/cadastro-form-seed.js?v=20260701"></script>
-<script src="js/cliente-perfil.js?v=20260701"></script>
-<script src="js/roteiro-cliente-autosave.js?v=20260701"></script>
-<script src="js/mobile-nav.js?v=20260702"></script>
+<script src="js/dashboard.js?v=20260728_01"></script>
+<script src="js/builder-enhance.js?v=20260826_01"></script>
+<script src="js/pdf-export.js?v=20260705"></script>
+<script src="js/cotacao-enhance.js?v=20260724"></script>
+<script src="js/provisoes.js?v=20260724"></script>
+<script src="js/cadastro-form-seed.js?v=20260705"></script>
+<script src="js/cliente-perfil.js?v=20260705"></script>
+<script src="js/roteiro-cliente-autosave.js?v=20260705"></script>
+<script src="js/mobile-nav.js?v=20260705"></script>
+<script src="js/mobile-app-enhance.js?v=20260731_01"></script>
+<script src="js/chat-admin.js?v=20260705"></script>
 
 <!-- PWA Service Worker Registration -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('service-worker.js')
-        .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
-        .catch(err => console.error('Falha ao registrar Service Worker:', err));
-    });
-  }
-</script>
-</body>
-</html>
+        .then(reg => console.log('Service Worker registrado com sucesso:', reg.scop

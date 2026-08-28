@@ -2,597 +2,369 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heian Tour — Viagens de Luxo e Roteiros Personalizados para o Japão</title>
-  <meta name="description" content="Planeje sua imersão exclusiva pelo Japão. Roteiros de luxo totalmente personalizados, ryokans tradicionais, gastronomia estrelada e guias dedicados em português.">
-  
-  <!-- SEO Open Graph -->
-  <meta property="og:title" content="Heian Tour — Japão Sob Medida & Experiências VIP">
-  <meta property="og:description" content="Roteiros personalizados e experiências exclusivas pelo Japão para viajantes exigentes.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Heian Tour — O Japão desenhado à mão para a sua família</title>
+  <meta name="description" content="Atelier de viagens ao Japão para famílias brasileiras: roteiro 100% autoral, casal guia brasileiro vivendo no Japão, condução privada e portal exclusivo do viajante.">
+  <meta property="og:title" content="Heian Tour — O Japão desenhado à mão">
+  <meta property="og:description" content="Roteiros autorais, condução privada e hospitalidade Omotenashi. Poucas famílias por mês, atenção integral.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/heian_portal_hero.png">
-  
-  <link rel="icon" type="image/png" href="assets/logo.png">
-  
-  <!-- Google Fonts -->
+  <meta property="og:image" content="/assets/heian_portal_hero.png">
+  <link rel="icon" href="/assets/logo-192.png">
+  <link rel="apple-touch-icon" href="/assets/logo-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- CSS do Portal -->
-  <link rel="stylesheet" href="css/portal.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=Noto+Serif+JP:wght@300;500&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --vinho:#6B1F2A; --vinho-dk:#4A141D; --ouro:#C4A35A; --ouro-dk:#9A7B33;
+      --areia:#F8F3EB; --areia-2:#F2EADC; --tinta:#2C1A1D; --tinta-2:#6b5a52;
+      --branco:#FFFDFA; --ff-d:'Playfair Display',serif; --ff-t:'Inter',sans-serif; --ff-jp:'Noto Serif JP',serif;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--ff-t);color:var(--tinta);background:var(--areia);line-height:1.7;-webkit-font-smoothing:antialiased}
+    img{max-width:100%;display:block}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+    .kicker{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--ouro-dk);margin-bottom:14px}
+    .titulo{font-family:var(--ff-d);font-weight:500;font-size:clamp(30px,4.2vw,46px);line-height:1.15;color:var(--vinho)}
+    .sub{font-size:16.5px;color:var(--tinta-2);max-width:640px;margin-top:16px}
+    section{padding:96px 0}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:16px 30px;border-radius:999px;font-weight:600;font-size:14px;letter-spacing:.04em;transition:all .25s ease;cursor:pointer;border:1px solid transparent}
+    .btn-p{background:var(--vinho);color:#fff;box-shadow:0 10px 28px rgba(107,31,42,.28)}
+    .btn-p:hover{background:var(--vinho-dk);transform:translateY(-2px)}
+    .btn-g{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+    .btn-g:hover{background:rgba(255,255,255,.12)}
+    .btn-o{background:transparent;color:var(--vinho);border-color:rgba(107,31,42,.35)}
+    .btn-o:hover{background:rgba(107,31,42,.06)}
+
+    /* Navegação */
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:all .3s ease;padding:18px 0}
+    .nav.rolou{background:rgba(252,248,241,.92);backdrop-filter:blur(14px);box-shadow:0 2px 24px rgba(60,30,30,.08);padding:10px 0}
+    .nav-in{display:flex;align-items:center;justify-content:space-between}
+    .nav img{height:44px;transition:filter .3s}
+    .nav:not(.rolou) img{filter:brightness(0) invert(1)}
+    .nav-links{display:flex;gap:30px;font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+    .nav:not(.rolou) .nav-links a{color:rgba(255,255,255,.85)}
+    .nav.rolou .nav-links a{color:var(--tinta-2)}
+    .nav-links a:hover{color:var(--ouro)}
+    .nav .btn{padding:11px 22px;font-size:12.5px}
+    @media(max-width:900px){.nav-links{display:none}}
+
+    /* Hero */
+    .hero{position:relative;min-height:100svh;display:flex;align-items:center;color:#fff;
+      background:linear-gradient(rgba(28,12,15,.45),rgba(28,12,15,.62)),url('/assets/heian_portal_hero.png') center 30%/cover no-repeat}
+    .hero-in{position:relative;width:100%;padding:120px 0 90px}
+    .hero .selo{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(196,163,90,.55);color:#EBD9AE;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:8px 18px;border-radius:999px;margin-bottom:26px;background:rgba(0,0,0,.18)}
+    .hero h1{font-family:var(--ff-d);font-weight:500;font-size:clamp(38px,6vw,68px);line-height:1.1;max-width:750px}
+    .hero h1 em{font-style:italic;color:#EBD9AE}
+    .hero p{margin:26px 0 38px;font-size:18px;font-weight:300;max-width:560px;color:rgba(255,255,255,.88)}
+    .hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
+    .kanji-v{position:absolute;right:4vw;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;font-family:var(--ff-jp);font-weight:300;font-size:64px;color:rgba(255,255,255,.85);letter-spacing:.35em;border:1px solid rgba(255,255,255,.28);padding:28px 14px;border-radius:60px;background:rgba(0,0,0,.15);backdrop-filter:blur(3px)}
+    .kanji-v small{font-size:11px;font-family:var(--ff-t);letter-spacing:.3em;color:rgba(255,255,255,.6)}
+    @media(max-width:900px){.kanji-v{display:none}}
+
+    /* Essência */
+    .ess{background:var(--vinho);color:#fff;padding:38px 0}
+    .ess-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:26px;text-align:center}
+    .ess b{display:block;font-family:var(--ff-d);font-size:17px;font-weight:500;color:#EBD9AE;margin-bottom:4px}
+    .ess span{font-size:13px;color:rgba(255,255,255,.75)}
+
+    /* Jornada */
+    .jornada{background:var(--branco)}
+    .atos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;margin-top:54px}
+    .ato{position:relative;background:var(--areia);border:1px solid rgba(196,163,90,.25);border-radius:16px;padding:34px 26px 28px}
+    .ato .num{font-family:var(--ff-d);font-size:44px;color:rgba(196,163,90,.45);line-height:1}
+    .ato h3{font-family:var(--ff-d);font-weight:500;font-size:20px;color:var(--vinho);margin:14px 0 10px}
+    .ato p{font-size:14px;color:var(--tinta-2)}
+    .ato .jp{position:absolute;top:22px;right:22px;font-family:var(--ff-jp);font-size:22px;color:rgba(107,31,42,.18)}
+
+    /* Portal do viajante */
+    .portal{background:linear-gradient(170deg,var(--vinho) 0%,var(--vinho-dk) 100%);color:#fff;overflow:hidden}
+    .portal-in{display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center}
+    @media(max-width:900px){.portal-in{grid-template-columns:1fr}}
+    .portal .titulo{color:#fff}
+    .portal .kicker{color:#EBD9AE}
+    .portal li{list-style:none;display:flex;gap:14px;margin-top:18px;font-size:15px;color:rgba(255,255,255,.9)}
+    .portal li b{color:#EBD9AE;font-weight:600}
+    .p-ico{flex:none;width:38px;height:38px;border-radius:10px;background:rgba(235,217,174,.14);border:1px solid rgba(235,217,174,.3);display:flex;align-items:center;justify-content:center;font-family:var(--ff-jp);color:#EBD9AE;font-size:16px}
+    .fone{width:290px;margin:0 auto;background:#111;border-radius:38px;padding:10px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+    .fone-tela{background:var(--areia);border-radius:30px;overflow:hidden;color:var(--tinta)}
+    .fs-hero{background:linear-gradient(rgba(40,18,22,.55),rgba(40,18,22,.75)),url('/assets/heian_social_1.png') center/cover;color:#fff;padding:26px 18px 18px}
+    .fs-hero small{font-size:9px;letter-spacing:.2em;color:#EBD9AE}
+    .fs-hero b{display:block;font-family:var(--ff-d);font-size:18px;font-weight:500;margin-top:2px}
+    .fs-hero span{font-size:10px;color:rgba(255,255,255,.85)}
+    .fs-dia{background:#fff;margin:10px 12px;border-radius:12px;padding:12px 14px;box-shadow:0 3px 12px rgba(60,30,30,.07)}
+    .fs-dia b{font-size:11.5px;color:var(--vinho)}
+    .fs-dia p{font-size:10px;color:var(--tinta-2);margin-top:3px}
+    .fs-dia .tag{display:inline-block;font-size:8.5px;font-weight:600;letter-spacing:.08em;background:rgba(196,163,90,.15);color:var(--ouro-dk);border-radius:99px;padding:2px 8px;margin-top:6px}
+    .fs-nav{display:flex;justify-content:space-around;background:#fff;border-top:1px solid rgba(0,0,0,.06);padding:8px 4px 12px;font-size:8px;color:#a99e93;text-align:center}
+    .fs-nav b{display:block;font-size:13px;line-height:1.2}
+    .fs-nav .on{color:var(--vinho)}
+
+    /* Curadoria */
+    .rotas{background:var(--areia)}
+    .rot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:54px}
+    .rota{position:relative;border-radius:18px;overflow:hidden;min-height:400px;display:flex;align-items:flex-end;color:#fff;
+      background:linear-gradient(160deg,#3d1119 0%,var(--vinho) 55%,#8a3a2a 130%)}
+    .rota::after{content:"";position:absolute;inset:0;background:url('/assets/heian-art.png') center/cover;opacity:.14;mix-blend-mode:luminosity}
+    .rota .jp{position:absolute;top:26px;right:24px;font-family:var(--ff-jp);font-size:56px;line-height:1.15;writing-mode:vertical-rl;color:rgba(235,217,174,.5);z-index:1}
+    .rota-info{position:relative;z-index:2;padding:28px 26px;width:100%;background:linear-gradient(transparent,rgba(20,8,10,.72))}
+    .rota-info small{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#EBD9AE}
+    .rota-info h3{font-family:var(--ff-d);font-weight:500;font-size:23px;margin:6px 0 8px}
+    .rota-info p{font-size:13px;color:rgba(255,255,255,.82)}
+    .rota-info .dias{display:inline-block;margin-top:12px;font-size:11px;letter-spacing:.1em;border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:5px 12px}
+
+    /* Depoimentos */
+    .depo{background:var(--branco)}
+    .depo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:24px;margin-top:54px}
+    .depo-card{background:var(--areia);border:1px solid rgba(196,163,90,.22);border-radius:16px;padding:30px 26px;display:flex;flex-direction:column}
+    .depo-card .aspas{font-family:var(--ff-d);font-size:52px;color:rgba(196,163,90,.5);line-height:.6;margin-bottom:16px}
+    .depo-card p{font-size:14.5px;color:var(--tinta-2);font-style:italic;flex:1}
+    .depo-quem{display:flex;align-items:center;gap:12px;margin-top:22px}
+    .depo-quem .foto{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--ouro),var(--vinho));display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--ff-d);font-size:16px}
+    .depo-quem b{display:block;font-size:14px;color:var(--vinho)}
+    .depo-quem span{font-size:12px;color:var(--tinta-2)}
+
+    /* Casal */
+    .casal{background:var(--areia-2)}
+    .casal-in{display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:center}
+    @media(max-width:900px){.casal-in{grid-template-columns:1fr}}
+    .casal-foto{position:relative;border-radius:18px;overflow:hidden;min-height:420px;background:url('/assets/heian_social_2.png') center/cover}
+    .casal-foto::after{content:"平安";position:absolute;bottom:18px;right:20px;font-family:var(--ff-jp);font-size:40px;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.4)}
+    .casal p{margin-top:16px;color:var(--tinta-2);font-size:15.5px}
+    .casal .assin{margin-top:26px;font-family:var(--ff-d);font-style:italic;font-size:19px;color:var(--vinho)}
+
+    /* FAQ */
+    .faq{background:var(--branco)}
+    .faq-list{max-width:820px;margin:44px auto 0}
+    .faq-item{border-bottom:1px solid rgba(107,31,42,.12)}
+    .faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 4px;background:none;border:none;cursor:pointer;text-align:left;font-family:var(--ff-d);font-size:18px;color:var(--vinho)}
+    .faq-q span{font-size:22px;color:var(--ouro);transition:transform .25s}
+    .faq-item.aberto .faq-q span{transform:rotate(45deg)}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}
+    .faq-a p{padding:0 4px 22px;font-size:14.5px;color:var(--tinta-2)}
+
+    /* CTA final */
+    .cta-fim{position:relative;background:linear-gradient(rgba(28,12,15,.55),rgba(28,12,15,.72)),url('/assets/heian_cta_fim.png') center/cover fixed;color:#fff;text-align:center;padding:120px 0}
+    .cta-fim h2{font-family:var(--ff-d);font-weight:500;font-size:clamp(30px,4.5vw,50px);max-width:760px;margin:0 auto}
+    .cta-fim p{margin:20px auto 40px;max-width:520px;color:rgba(255,255,255,.85)}
+
+    footer{background:var(--vinho-dk);color:rgba(255,255,255,.75);padding:54px 0 90px;font-size:13.5px}
+    .foot-in{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;align-items:center}
+    footer img{height:52px;filter:brightness(0) invert(1);opacity:.9}
+    footer a:hover{color:#EBD9AE}
+    .foot-links{display:flex;gap:26px;flex-wrap:wrap}
+
+    /* WhatsApp */
+    .zap{position:fixed;right:20px;bottom:20px;z-index:90;display:inline-flex;align-items:center;gap:10px;background:#22c15e;color:#fff;font-weight:600;font-size:14px;padding:14px 22px;border-radius:999px;box-shadow:0 12px 32px rgba(20,120,60,.4);transition:transform .2s}
+    .zap:hover{transform:translateY(-2px)}
+    .zap svg{width:20px;height:20px;fill:#fff}
+
+    /* Revelação ao rolar */
+    .rev{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+    .rev.on{opacity:1;transform:none}
+    @media(prefers-reduced-motion:reduce){.rev{opacity:1;transform:none;transition:none}}
+    @media(max-width:768px){section{padding:68px 0}.hero p{font-size:16px}}
+  </style>
 </head>
 <body>
 
-  <!-- SVG Sprite de Ícones de Linha Fina (Lucide/VIP) -->
-  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-    <symbol id="icon-compass" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-    </symbol>
-    <symbol id="icon-briefcase" viewBox="0 0 24 24">
-      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-    </symbol>
-    <symbol id="icon-hotel" viewBox="0 0 24 24">
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
-    </symbol>
-    <symbol id="icon-map" viewBox="0 0 24 24">
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line>
-    </symbol>
-    <symbol id="icon-x" viewBox="0 0 24 24">
-      <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-    </symbol>
-    <symbol id="icon-search" viewBox="0 0 24 24">
-      <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </symbol>
-    <symbol id="icon-calendar" viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
-    </symbol>
-    <symbol id="icon-plus" viewBox="0 0 24 24">
-      <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-    </symbol>
-  </svg>
+  <nav class="nav" id="nav">
+    <div class="wrap nav-in">
+      <a href="#"><img src="/assets/logo.png" alt="Heian Tour"></a>
+      <div class="nav-links">
+        <a href="#conceito">Conceito</a>
+        <a href="#jornada">A Jornada</a>
+        <a href="#portal">Portal do Viajante</a>
+        <a href="#rotas">Curadoria</a>
+        <a href="#depoimentos">Famílias</a>
+        <a href="#faq">Dúvidas</a>
+      </div>
+      <a class="btn btn-p" href="/cadastro">Planejar minha viagem</a>
+    </div>
+  </nav>
 
-  <!-- CABEÇALHO -->
-  <header class="site-header">
-    <a href="#" class="site-logo">
-      <img src="assets/logo.png" alt="Heian Tour">
-    </a>
-    <nav class="nav-menu">
-      <a href="#conceito" class="nav-link">O Conceito</a>
-      <a href="#servicos" class="nav-link">Serviços VIP</a>
-      <a href="#inspiração" class="nav-link">Roteiros</a>
-      <a href="#memorias" class="nav-link">Memórias</a>
-      <a href="#solicitar" class="nav-link">Planejar</a>
-      <button class="btn-vip-access" onclick="abrirModalAcesso()">Área do Viajante</button>
-    </nav>
+  <header class="hero">
+    <div class="wrap hero-in">
+      <span class="selo">Agenda dedicada · poucas famílias por mês</span>
+      <h1>O Japão, <em>desenhado à mão</em> para a sua família.</h1>
+      <p>Nada de pacotes. Um casal brasileiro que vive o Japão desenha cada dia da sua viagem — e conduz você por ela, do aeroporto ao último brinde.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-p" href="/cadastro">Planejar minha viagem</a>
+        <a class="btn btn-g" href="#jornada">Conhecer a jornada</a>
+      </div>
+    </div>
+    <div class="kanji-v">平安<small>H E I A N</small></div>
   </header>
 
-  <!-- HERO SECTION -->
-  <section class="hero-section">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <div class="hero-badge">
-        <svg class="v-icon" style="width: 1.2em; height: 1.2em; stroke: currentColor;"><use href="#icon-compass"></use></svg>
-        Japão Boutique & Exclusivo
-      </div>
-      <h1>A arte de vivenciar o Japão de forma <span>VIP e sob medida.</span></h1>
-      <p>Desenhamos jornadas personalizadas de alto padrão, combinando sofisticação, curadoria de luxo e suporte completo em português para viajantes exigentes.</p>
-      <div class="hero-buttons">
-        <a href="#solicitar" class="btn-primary">Solicitar Roteiro VIP</a>
-        <button class="btn-secondary" onclick="abrirModalAcesso()">Consultar Minha Viagem</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- O CONCEITO / FILOSOFIA -->
-  <section id="conceito" class="philosophy-section">
-    <span class="section-label">A Filosofia Heian</span>
-    <h2 class="section-title">Omotenashi — A Arte da Hospitalidade Sincera</h2>
-    <div class="philosophy-text-wrapper">
-      <p class="philosophy-highlight">"Inspirados no refinamento estético e na harmonia do período clássico japonês (Heian), nós antecipamos cada necessidade da sua viagem antes mesmo que você a sinta."</p>
-      <p class="philosophy-body">
-        Não acreditamos em roteiros prontos, excursões impessoais ou horários engessados. A Heian Tour opera sob um modelo boutique de altíssima curadoria. Cada rota é desenhada artesanalmente para se ajustar ao seu ritmo de vida, preferências e paixões. Cuidamos de toda a complexidade logística, reservas nos ryokans mais exclusivos e de difícil acesso do país, e oferecemos acompanhamento de guias em português altamente instruídos para que você vivencie a alma do Japão com total tranquilidade.
-      </p>
-    </div>
-  </section>
-
-  <!-- SERVIÇOS VIP -->
-  <section id="servicos" class="services-section">
-    <div style="text-align: center; margin-bottom: 20px;">
-      <span class="section-label">Curadoria Heian</span>
-      <h2 class="section-title" style="margin-bottom: 0;">Serviços Exclusivos & VIP</h2>
-    </div>
-    
-    <div class="services-grid">
-      <!-- Card 1 -->
-      <div class="service-card">
-        <div class="service-icon-box">
-          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-compass"></use></svg>
-        </div>
-        <h3>Roteiros Sob Medida</h3>
-        <p>Itinerários totalmente adaptados aos seus interesses, equilibrando noites em metrópoles tecnológicas, caminhadas contemplativas por florestas sagradas e visitas a ateliês de artesãos tradicionais.</p>
-      </div>
-      
-      <!-- Card 2 -->
-      <div class="service-card">
-        <div class="service-icon-box">
-          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-hotel"></use></svg>
-        </div>
-        <h3>Ryokans & Onsens</h3>
-        <p>Acesso e curadoria nas estadias mais prestigiadas. Reservamos vilas de luxo e Ryokans tradicionais centenários com águas termais privativas e serviço impecável de mordomia Kaiseki.</p>
-      </div>
-      
-      <!-- Card 3 -->
-      <div class="service-card">
-        <div class="service-icon-box">
-          <svg class="v-icon-lg" style="stroke: currentColor;"><use href="#icon-map"></use></svg>
-        </div>
-        <h3>Experiências Exclusivas</h3>
-        <p>Reservas em restaurantes com estrelas Michelin de acesso restrito, cerimônia do chá particular conduzida por mestres budistas e transfers privativos em veículos executivos de alto padrão.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- JORNADAS DE INSPIRAÇÃO (ROTEIROS CONCEITO) -->
-  <section id="inspiração" class="itineraries-section">
-    <div style="text-align: center;">
-      <span class="section-label">Roteiros de Inspiração</span>
-      <h2 class="section-title">Nossas Rotas de Alta Curadoria</h2>
-      <p style="font-size: 14.5px; color: var(--ink-muted); max-width: 600px; margin: 0 auto; font-weight: 300;">
-        Conheça alguns dos conceitos que desenhamos para nossos clientes. Cada um desses roteiros serve como base inspiracional e é inteiramente customizado para a sua viagem.
-      </p>
-    </div>
-
-    <div class="itineraries-grid">
-      <!-- Roteiro 1 -->
-      <div class="itinerary-card">
-        <div class="itinerary-img-box">
-          <span class="itinerary-badge">Clássico & Luxo</span>
-          <img src="assets/heian_portal_hero.png" alt="O Japão Imperial">
-        </div>
-        <div class="itinerary-info">
-          <div>
-            <h3>O Japão Imperial & Hakone</h3>
-            <p>Uma imersão refinada conectando Tóquio moderna, uma estadia dos sonhos em Ryokan de luxo com vista para o Monte Fuji em Hakone, finalizando nos templos e distritos de gueixas em Kyoto.</p>
-          </div>
-          <div class="itinerary-meta">
-            <span>Duração: 12 Dias</span>
-            <span>Estilo: VIP Class</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Roteiro 2 -->
-      <div class="itinerary-card">
-        <div class="itinerary-img-box">
-          <span class="itinerary-badge">Cultural & Profundo</span>
-          <img src="assets/heian_social_2.png" alt="Tradições Ocultas">
-        </div>
-        <div class="itinerary-info">
-          <div>
-            <h3>Tradições Ocultas dos Alpes Japoneses</h3>
-            <p>Explore as históricas casas de palha em Shirakawa-go, caminhe pelas ruas preservadas do período Edo em Takayama, hospede-se em templos sagrados em Koyasan e faça rituais termais em Kinosaki Onsen.</p>
-          </div>
-          <div class="itinerary-meta">
-            <span>Duração: 15 Dias</span>
-            <span>Estilo: Imersivo</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Roteiro 3 -->
-      <div class="itinerary-card">
-        <div class="itinerary-img-box">
-          <span class="itinerary-badge">Gastronomia & Design</span>
-          <img src="assets/heian_social_1.png" alt="Sabores e Arte">
-        </div>
-        <div class="itinerary-info">
-          <div>
-            <h3>Sabores Centenários & Arte Moderna</h3>
-            <p>Uma jornada que mescla os sabores mais exclusivos de mercados e restaurantes de Tóquio e Osaka, jantares com a verdadeira carne de Kobe, e a visita à espetacular ilha de arte contemporânea de Naoshima.</p>
-          </div>
-          <div class="itinerary-meta">
-            <span>Duração: 10 Dias</span>
-            <span>Estilo: Boutique</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DIÁRIOS DE BORDO & PROVA SOCIAL -->
-  <section id="memorias" class="testimonials-section">
-    <span class="section-label">Prova Social</span>
-    <h2 class="section-title">Diários de Bordo e Experiências Reais</h2>
-    <p style="font-size: 14.5px; color: var(--ink-muted); max-width: 600px; margin: 0 auto 50px; font-weight: 300;">
-      A satisfação de quem viajou sob os cuidados da Heian Tour. Nossos clientes vivenciam momentos únicos planejados exclusivamente para eles.
-    </p>
-
-    <div class="testimonials-grid">
-      <!-- Depoimento 1 -->
-      <div class="testimonial-card">
-        <div class="testimonial-quote">
-          "Nossa lua de mel foi absolutamente impecável. A Heian Tour organizou tudo, desde os assentos na classe executiva do trem bala até as reservas em restaurantes que normalmente exigem meses de antecedência e contatos locais em Kyoto. O suporte 24h em português nos deu uma segurança inestimável."
-        </div>
-        <div class="testimonial-author">
-          <img src="assets/heian_social_1.png" alt="Roberto e Carla" class="author-img">
-          <div class="author-info">
-            <h4>Roberto & Carla Silva</h4>
-            <span>São Paulo / SP &nbsp;·&nbsp; Viagem em Outubro/2025</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Depoimento 2 -->
-      <div class="testimonial-card">
-        <div class="testimonial-quote">
-          "Viajar em família com crianças pequenas para um país com cultura tão diferente parecia um desafio. Mas a Heian organizou tudo no nosso ritmo, com transfers privativos, hotéis espaçosos e guias brasileiros carinhosos que engajaram as crianças em cada atividade. A cerimônia do chá foi maravilhosa."
-        </div>
-        <div class="testimonial-author">
-          <img src="assets/heian_social_2.png" alt="Mariana Souza" class="author-img">
-          <div class="author-info">
-            <h4>Família Souza</h4>
-            <span>Rio de Janeiro / RJ &nbsp;·&nbsp; Viagem em Abril/2026</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Galeria de Fotos Clientes -->
-    <div class="social-gallery-wrapper">
-      <h3>Momentos Compartilhados</h3>
-      <div class="social-gallery">
-        <div class="gallery-item">
-          <img src="assets/heian_portal_hero.png" alt="Templo em Kyoto">
-          <div class="gallery-overlay">
-            <div>
-              <span>Kyoto</span>
-              <h4>Paz e Contemplação em Kinkaku-ji</h4>
-            </div>
-          </div>
-        </div>
-        <div class="gallery-item">
-          <img src="assets/heian_social_2.png" alt="Família na Cerimônia de Chá">
-          <div class="gallery-overlay">
-            <div>
-              <span>Kanazawa</span>
-              <h4>Cerimônia Tradicional do Chá Matcha</h4>
-            </div>
-          </div>
-        </div>
-        <div class="gallery-item">
-          <img src="assets/heian_social_1.png" alt="Casal em Kyoto">
-          <div class="gallery-overlay">
-            <div>
-              <span>Kyoto</span>
-              <h4>Outono nos Templos Clássicos</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ SECTION (ACCORDION INTERATIVO) -->
-  <section class="faq-section">
-    <span class="section-label">Perguntas Frequentes</span>
-    <h2 class="section-title">Esclareça Suas Dúvidas Sobre o Japão</h2>
-    
-    <div class="faq-container">
-      <!-- FAQ 1 -->
-      <div class="faq-item">
-        <div class="faq-question" onclick="toggleFaq(this)">
-          Como funciona a criação de roteiros personalizados?
-          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
-        </div>
-        <div class="faq-answer">
-          Iniciamos com uma call de alinhamento para entender seu estilo, interesses, orçamento e datas. Com base nisso, nossa equipe boutique elabora um roteiro inicial dia a dia. Você analisa e ajustamos cada detalhe (hospedagens, atrações, guias) até que fique perfeito e de acordo com o que você deseja.
-        </div>
-      </div>
-
-      <!-- FAQ 2 -->
-      <div class="faq-item">
-        <div class="faq-question" onclick="toggleFaq(this)">
-          Os guias acompanham durante toda a viagem?
-          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
-        </div>
-        <div class="faq-answer">
-          Os guias acompanham você nas cidades e atividades selecionadas conforme o roteiro aprovado (por exemplo, passeios de dia inteiro em Kyoto ou Tóquio). Nos momentos livres, você tem total flexibilidade para explorar o país, contando sempre com o nosso suporte 24h via chat/WhatsApp para qualquer imprevisto ou necessidade.
-        </div>
-      </div>
-
-      <!-- FAQ 3 -->
-      <div class="faq-item">
-        <div class="faq-question" onclick="toggleFaq(this)">
-          A Heian Tour cuida das passagens aéreas internacionais?
-          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
-        </div>
-        <div class="faq-answer">
-          Nosso foco de especialização é a curadoria e operação local de luxo no Japão (hospedagem, transporte terrestre, ingressos de experiências e guias). Nós não vendemos passagens aéreas internacionais diretamente, mas auxiliamos na emissão indicando as melhores rotas e horários para sincronizar perfeitamente com o seu roteiro terrestre.
-        </div>
-      </div>
-      
-      <!-- FAQ 4 -->
-      <div class="faq-item">
-        <div class="faq-question" onclick="toggleFaq(this)">
-          Qual é a melhor época para visitar o Japão?
-          <svg class="faq-icon" style="fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><use href="#icon-plus"></use></svg>
-        </div>
-        <div class="faq-answer">
-          A primavera (final de março a meados de abril) é famosa pelas flores de cerejeira (Sakura). O outono (novembro) traz as cores deslumbrantes das folhas avermelhadas (Momiji) e clima ameno. O inverno é perfeito para esportes de neve em Hokkaido e banhos em fontes termais, enquanto o verão oferece belos festivais tradicionais (Matsuri). Cada estação tem sua magia única.
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SOLICITAÇÃO VIP (FORMULÁRIO DE CONTATO CONCIERGE INTERATIVO) -->
-  <section id="solicitar" class="request-section">
-    <div class="form-container">
-      <div class="form-header">
-        <h2>Desenhe Sua Viagem VIP</h2>
-        <p>Forneça as preferências de viagem iniciais abaixo. Nosso concierge de luxo usará esses dados para desenhar o conceito inicial da sua jornada no Japão.</p>
-      </div>
-      
-      <form id="solicitacaoForm" class="vip-form" onsubmit="enviarSolicitacao(event)">
-        <!-- Dados Pessoais -->
-        <div class="form-group">
-          <label for="formNome">Nome Completo</label>
-          <input type="text" id="formNome" placeholder="Ex: Roberto Silva" required>
-        </div>
-        <div class="form-group">
-          <label for="formEmail">E-mail de Contato</label>
-          <input type="email" id="formEmail" placeholder="roberto@email.com" required>
-        </div>
-        
-        <!-- Participantes -->
-        <div class="form-group">
-          <label for="formAdultos">Qtd. Adultos</label>
-          <input type="number" id="formAdultos" min="1" value="2" required>
-        </div>
-        <div class="form-group">
-          <label for="formCriancas">Qtd. Crianças</label>
-          <input type="number" id="formCriancas" min="0" value="0">
-        </div>
-        
-        <!-- Datas -->
-        <div class="form-group">
-          <label for="formDataInicio">Data Estimada de Início</label>
-          <input type="date" id="formDataInicio">
-        </div>
-        <div class="form-group">
-          <label for="formDataFim">Data Estimada de Fim</label>
-          <input type="date" id="formDataFim">
-        </div>
-
-        <!-- Seleção de Chips Interativos: Estilo de Hospedagem -->
-        <div class="form-group full-width">
-          <label>Estilo de Estadia Preferido</label>
-          <div class="concierge-chips-grid" id="gridHospedagem">
-            <div class="concierge-chip active" onclick="selectChip('gridHospedagem', this)" data-value="Ryokan Tradicional de Luxo">Ryokan Tradicional (Onsen)</div>
-            <div class="concierge-chip" onclick="selectChip('gridHospedagem', this)" data-value="Hotel Boutique 5 Estrelas">Hotel Boutique 5★</div>
-            <div class="concierge-chip" onclick="selectChip('gridHospedagem', this)" data-value="Mesclado (Metrópole contemporânea e vilas tradicionais)">Mesclado (Ambos)</div>
-          </div>
-        </div>
-
-        <!-- Seleção de Chips Interativos: Ritmo -->
-        <div class="form-group full-width">
-          <label>Ritmo Desejado da Viagem</label>
-          <div class="concierge-chips-grid" id="gridRitmo">
-            <div class="concierge-chip active" onclick="selectChip('gridRitmo', this)" data-value="Contemplativo (Foco em bem-estar e pausas)">Contemplativo (Sem pressa)</div>
-            <div class="concierge-chip" onclick="selectChip('gridRitmo', this)" data-value="Equilibrado (Mistura passeios e tempo livre)">Equilibrado</div>
-            <div class="concierge-chip" onclick="selectChip('gridRitmo', this)" data-value="Explorador (Aproveitar o máximo possível de locais)">Explorador (Completo)</div>
-          </div>
-        </div>
-
-        <!-- Campo Texto livre -->
-        <div class="form-group full-width">
-          <label for="formObservacoes">Observações ou Desejos Especiais</label>
-          <textarea id="formObservacoes" placeholder="Ex: Gostaríamos de incluir reservas em restaurantes Kaiseki estrelados e passeios guiados focados em fotografia tradicional..."></textarea>
-        </div>
-        
-        <button type="submit" id="btnSubmitForm" class="btn-form-submit">Enviar Solicitação VIP</button>
-      </form>
-    </div>
-  </section>
-
-  <!-- MODAL BUSCA CLIENTE (ÁREA VIP) -->
-  <div id="modalAcesso" class="modal-overlay">
-    <div class="modal-content">
-      <button class="modal-close-btn" onclick="fecharModalAcesso()">
-        <svg class="v-icon no-margin" style="stroke: currentColor; width: 1.2em; height: 1.2em;"><use href="#icon-x"></use></svg>
-      </button>
-      <h3>Área do Viajante VIP</h3>
-      <p>Insira seu código exclusivo ou nome de viajante para acessar seu roteiro interativo e vouchers.</p>
-      
-      <form class="client-search-form" onsubmit="buscarViagemCliente(event)">
-        <input type="text" id="inputCodCliente" placeholder="Digite seu código ou nome" required>
-        <button type="submit" class="btn-search-submit">Acessar Meu Roteiro</button>
-        <div id="msgErroBusca" class="search-error">Nenhum roteiro ativo encontrado para este código.</div>
-      </form>
+  <div class="ess">
+    <div class="wrap ess-in">
+      <div><b>100% autoral</b><span>nenhum roteiro é igual a outro</span></div>
+      <div><b>Casal guia brasileiro</b><span>vivendo o Japão, ao seu lado</span></div>
+      <div><b>Condução privada</b><span>porta a porta, sem filas nem apuros</span></div>
+      <div><b>Portal do Viajante</b><span>sua viagem inteira na palma da mão</span></div>
     </div>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    <div class="footer-logo">
-      <img src="assets/logo.png" alt="Heian Tour">
-    </div>
-    <div class="footer-links">
-      <a href="#conceito">O Conceito</a>
-      <a href="#servicos">Serviços VIP</a>
-      <a href="#inspiração">Roteiros</a>
-      <a href="#memorias">Memórias</a>
-      <a href="#solicitar">Planejar</a>
-    </div>
-    <div class="footer-copy">
-      <p>&copy; 2026 Heian Tour. Todos os direitos reservados. Experiências exclusivas e roteiros sob medida.</p>
-      <div style="margin-top: 10px;">
-        <a href="/admin" target="_blank" style="opacity: 0.15; font-size: 10.5px; color: inherit; text-decoration: none; transition: opacity 0.25s; letter-spacing: 0.05em;" onmouseover="this.style.opacity='0.65'" onmouseout="this.style.opacity='0.15'">ÁREA RESTRITA</a>
+  <section id="conceito" class="jornada">
+    <div class="wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center" id="conceitoGrid">
+      <div class="rev">
+        <span class="kicker">おもてなし · O conceito</span>
+        <h2 class="titulo">Omotenashi: a hospitalidade que antecipa o que você nem sabia que queria</h2>
+        <p class="sub">No Japão, servir é uma arte silenciosa. Aplicamos esse princípio a cada detalhe: a mesa reservada antes de você sentir fome, o trem certo antes da estação lotar, o onsen com vista para o Fuji na única manhã de céu limpo. É por isso que atendemos poucas famílias por vez — atenção integral não se divide.</p>
       </div>
+      <div class="rev" style="text-align:center">
+        <span style="font-family:var(--ff-jp);font-size:clamp(90px,12vw,150px);color:rgba(107,31,42,.14);line-height:1">おもてなし</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="jornada" style="background:var(--areia)">
+    <div class="wrap">
+      <div class="rev" style="text-align:center">
+        <span class="kicker">Como funciona</span>
+        <h2 class="titulo">Sua viagem em quatro atos</h2>
+      </div>
+      <div class="atos">
+        <div class="ato rev"><span class="jp">壱</span><div class="num">01</div><h3>Briefing concierge</h3><p>Um questionário elegante e uma conversa de verdade: ritmo, sabores, sonhos, o que não pode faltar — e o que não pode acontecer.</p></div>
+        <div class="ato rev"><span class="jp">弐</span><div class="num">02</div><h3>Roteiro autoral</h3><p>Cada dia desenhado à mão: hotéis e ryokans escolhidos a dedo, mesas reservadas, trens marcados, experiências que não estão no Google.</p></div>
+        <div class="ato rev"><span class="jp">参</span><div class="num">03</div><h3>A viagem, acompanhada</h3><p>Guia e motorista privados falando português, suporte em tempo real e a liberdade de mudar de ideia no meio do caminho.</p></div>
+        <div class="ato rev"><span class="jp">四</span><div class="num">04</div><h3>Portal do Viajante</h3><p>Roteiro dia a dia, vouchers, voos, hotéis e extrato — tudo num portal exclusivo da sua família, no seu celular.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="portal" class="portal">
+    <div class="wrap portal-in">
+      <div class="rev">
+        <span class="kicker">Exclusividade Heian</span>
+        <h2 class="titulo">Um portal só da sua viagem</h2>
+        <p style="margin-top:16px;color:rgba(255,255,255,.85);font-size:16px">Enquanto outras agências mandam PDF por e-mail, cada família Heian recebe um portal privado, vivo até o fim da viagem:</p>
+        <ul style="margin-top:10px">
+          <li><span class="p-ico">旅</span><span><b>Roteiro dia a dia</b> — horários, encontros com o guia e dicas de cada bairro</span></li>
+          <li><span class="p-ico">券</span><span><b>Ingressos e vouchers</b> — bilhetes do Shinkansen, museus e experiências, um toque</span></li>
+          <li><span class="p-ico">宿</span><span><b>Voos e hotéis</b> — confirmações e endereços sempre à mão</span></li>
+          <li><span class="p-ico">帳</span><span><b>Extrato transparente</b> — o que foi pago, o que falta, sem surpresas</span></li>
+        </ul>
+      </div>
+      <div class="rev">
+        <div class="fone">
+          <div class="fone-tela">
+            <div class="fs-hero"><small>BEM-VINDO(A)</small><b>Família Almeida</b><span>06/04 a 18/04 · Tokyo → Hakone → Kyoto</span></div>
+            <div class="fs-dia"><b>Dia 5 — Kyoto · 10/04</b><p>09:00 · Fushimi Inari antes das multidões, com a Deborah</p><span class="tag">TOUR GUIADO</span></div>
+            <div class="fs-dia"><b>Dia 6 — Kyoto · 11/04</b><p>Cerimônia do chá privada + Arashiyama ao entardecer</p><span class="tag">INGRESSO OK</span></div>
+            <div class="fs-nav"><span class="on"><b>◈</b>Roteiro</span><span><b>◇</b>Serviços</span><span><b>◇</b>Hotéis</span><span><b>◇</b>Extrato</span><span><b>◇</b>Guia</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="rotas" class="rotas">
+    <div class="wrap">
+      <div class="rev" style="text-align:center">
+        <span class="kicker">Inspiração · cada viagem nasce única</span>
+        <h2 class="titulo">Curadorias que já desenhamos</h2>
+        <p class="sub" style="margin:16px auto 0">Pontos de partida, nunca pacotes: o seu roteiro final será só seu.</p>
+      </div>
+      <div class="rot-grid">
+        <div class="rota rev"><span class="jp">京都</span><div class="rota-info"><small>Clássico</small><h3>O Japão Imperial</h3><p>Tokyo, Hakone e Kyoto: neon, onsen com vista para o Fuji e templos ao amanhecer.</p><span class="dias">10–14 dias</span></div></div>
+        <div class="rota rev"><span class="jp">飛騨</span><div class="rota-info"><small>Tradições</small><h3>Alpes &amp; Aldeias Ocultas</h3><p>Takayama, Shirakawa-go e ryokans centenários entre montanhas e vilarejos de gassho.</p><span class="dias">12–16 dias</span></div></div>
+        <div class="rota rev"><span class="jp">味覚</span><div class="rota-info"><small>Sabores &amp; Arte</small><h3>Mesas Centenárias</h3><p>Osaka, Nara e Naoshima: balcões de sushi de terceira geração e arte contemporânea no mar.</p><span class="dias">9–12 dias</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="depoimentos" class="depo">
+    <div class="wrap">
+      <div class="rev" style="text-align:center">
+        <span class="kicker">Quem já viveu</span>
+        <h2 class="titulo">Famílias que voltaram diferentes</h2>
+      </div>
+      <!-- ═══ TROQUE AQUI: 3 depoimentos reais (texto, nome da família, cidade/roteiro) ═══ -->
+      <div class="depo-grid">
+        <div class="depo-card rev"><div class="aspas">“</div><p>[Depoimento real da família — 2 a 4 frases sobre a experiência, algo específico e emocional. Substituir este texto.]</p><div class="depo-quem"><div class="foto">F</div><div><b>Família [Sobrenome]</b><span>[Cidade] · Japão Imperial, [ano]</span></div></div></div>
+        <div class="depo-card rev"><div class="aspas">“</div><p>[Depoimento real — ideal um que mencione o portal do viajante ou a condução privada. Substituir este texto.]</p><div class="depo-quem"><div class="foto">F</div><div><b>Família [Sobrenome]</b><span>[Cidade] · Alpes &amp; Tradições, [ano]</span></div></div></div>
+        <div class="depo-card rev"><div class="aspas">“</div><p>[Depoimento real — ideal um que fale da Deborah e do Diogo pelo nome. Substituir este texto.]</p><div class="depo-quem"><div class="foto">F</div><div><b>Família [Sobrenome]</b><span>[Cidade] · Sabores &amp; Arte, [ano]</span></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="casal" class="casal">
+    <div class="wrap casal-in">
+      <!-- ═══ TROQUE AQUI: foto real do casal (idealmente no Japão) ═══ -->
+      <div class="casal-foto rev"></div>
+      <div class="rev">
+        <span class="kicker">Quem conduz</span>
+        <h2 class="titulo">Deborah &amp; Diogo</h2>
+        <p>A Heian não é uma agência com atendentes: é um casal brasileiro que escolheu o Japão como casa. A Deborah desenha cada roteiro e recebe cada família como quem recebe amigos; o Diogo cuida da logística e conduz vocês por estradas, trens e vielas que só quem vive aqui conhece.</p>
+        <p>Heian (平安) é o nome da era que deu origem a Kyoto — e significa paz e tranquilidade. É exatamente isso que entregamos: você vive o Japão, a gente carrega o resto.</p>
+        <p class="assin">— Deborah &amp; Diogo, Heian Tour</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq">
+    <div class="wrap">
+      <div class="rev" style="text-align:center">
+        <span class="kicker">Antes de decolar</span>
+        <h2 class="titulo">Dúvidas frequentes</h2>
+      </div>
+      <div class="faq-list rev">
+        <div class="faq-item"><button class="faq-q">Por que vocês atendem poucas famílias por mês?<span>+</span></button><div class="faq-a"><p>Porque cada viagem recebe atenção integral do casal: do desenho do roteiro à condução no Japão. Qualidade nesse nível não se divide entre dezenas de grupos — e é isso que garante que a sua viagem seja tratada como única.</p></div></div>
+        <div class="faq-item"><button class="faq-q">Preciso falar inglês ou japonês?<span>+</span></button><div class="faq-a"><p>Não. Todo o atendimento, a condução e o suporte acontecem em português — do primeiro contato ao embarque de volta.</p></div></div>
+        <div class="faq-item"><button class="faq-q">Como funciona o orçamento?<span>+</span></button><div class="faq-a"><p>Após o briefing, você recebe uma cotação transparente, item a item: tours, transportes, experiências e hospedagens. Sem taxas escondidas — e o extrato fica disponível no seu portal durante toda a jornada.</p></div></div>
+        <div class="faq-item"><button class="faq-q">Vocês cuidam de passagens aéreas e hotéis?<span>+</span></button><div class="faq-a"><p>Orientamos a compra dos voos e desenhamos toda a hospedagem — de hotéis de luxo em Tokyo a ryokans históricos nos Alpes — com reservas acompanhadas de perto.</p></div></div>
+        <div class="faq-item"><button class="faq-q">Com quanta antecedência devo planejar?<span>+</span></button><div class="faq-a"><p>O ideal são 4 a 6 meses — especialmente para as temporadas de sakura (março–abril) e do outono (novembro), quando os melhores ryokans esgotam com meses de antecedência.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-fim">
+    <div class="wrap rev">
+      <span class="selo" style="display:inline-flex;border:1px solid rgba(196,163,90,.55);color:#EBD9AE;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:8px 18px;border-radius:999px;margin-bottom:26px">はじめましょう · Vamos começar</span>
+      <h2>A sua história com o Japão começa com uma conversa.</h2>
+      <p>Conte o que você sonha — a gente desenha o caminho.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-p" href="/cadastro">Planejar minha viagem</a>
+        <a class="btn btn-g" href="https://wa.me/818064713004" target="_blank" rel="noopener">Falar no WhatsApp</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap foot-in">
+      <img src="/assets/logo.png" alt="Heian Tour">
+      <div class="foot-links">
+        <a href="/cadastro">Planejar viagem</a>
+        <a href="#conceito">Conceito</a>
+        <a href="#faq">Dúvidas</a>
+        <a href="/cliente">Área do Viajante</a>
+      </div>
+      <span>© <span id="ano"></span> Heian Tour · Japão</span>
     </div>
   </footer>
 
-  <!-- SCRIPT DE INTERAÇÕES E APIS -->
+  <!-- ═══ TROQUE AQUI: número real do WhatsApp (formato 8181xxxxxxx) ═══ -->
+  <a class="zap" href="https://wa.me/818064713004" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.7-1.3 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-2.9-1.3-4.8-4.2-5-4.4-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5-.1.2-.1.3-.3.5l-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.7-.1.2-.2.8-.9 1-1.2.2-.3.4-.2.6-.1s1.7.8 2 .9c.3.2.5.2.5.4 0 .1 0 .7-.2 1.3z"/></svg>
+    Fale conosco
+  </a>
+
   <script>
-    // Controle do Modal
-    function abrirModalAcesso() {
-      const modal = document.getElementById('modalAcesso');
-      modal.classList.add('active');
-      document.getElementById('inputCodCliente').focus();
-    }
+    document.getElementById('ano').textContent = new Date().getFullYear();
+    const nav = document.getElementById('nav');
+    addEventListener('scroll', () => nav.classList.toggle('rolou', scrollY > 40), { passive: true });
 
-    function fecharModalAcesso() {
-      const modal = document.getElementById('modalAcesso');
-      modal.classList.remove('active');
-      document.getElementById('msgErroBusca').style.display = 'none';
-      document.getElementById('inputCodCliente').value = '';
-    }
+    document.querySelectorAll('.faq-q').forEach(q => q.addEventListener('click', () => {
+      const item = q.parentElement, aberto = item.classList.contains('aberto');
+      document.querySelectorAll('.faq-item.aberto').forEach(i => { i.classList.remove('aberto'); i.querySelector('.faq-a').style.maxHeight = 0; });
+      if (!aberto) { item.classList.add('aberto'); const a = item.querySelector('.faq-a'); a.style.maxHeight = a.scrollHeight + 'px'; }
+    }));
 
-    // Fecha modal clicando fora dele
-    window.addEventListener('click', function(e) {
-      const modal = document.getElementById('modalAcesso');
-      if (e.target === modal) {
-        fecharModalAcesso();
-      }
-    });
-
-    // Função de Accordion do FAQ
-    function toggleFaq(questionEl) {
-      const item = questionEl.closest('.faq-item');
-      const isActive = item.classList.contains('active');
-      
-      // Fecha todos os FAQs ativos
-      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
-      
-      // Se não estava ativo, abre
-      if (!isActive) {
-        item.classList.add('active');
-      }
-    }
-
-    // Seleção de Chips Interativos do Concierge
-    function selectChip(gridId, chipEl) {
-      const grid = document.getElementById(gridId);
-      grid.querySelectorAll('.concierge-chip').forEach(c => c.classList.remove('active'));
-      chipEl.classList.add('active');
-    }
-
-    // Função de Busca e Redirecionamento da Área do Cliente
-    async function buscarViagemCliente(e) {
-      e.preventDefault();
-      const query = document.getElementById('inputCodCliente').value.trim();
-      const errorEl = document.getElementById('msgErroBusca');
-      errorEl.style.display = 'none';
-
-      if (!query) return;
-
-      let slug = '';
-      let token = '';
-
-      // Tenta extrair o slug e token caso o cliente cole a URL completa
-      const urlMatch = query.match(/\/cliente\/([^\/\?#]+)/);
-      if (urlMatch) {
-        slug = urlMatch[1];
-        const tokenMatch = query.match(/[\?&]t=([^&]+)/);
-        if (tokenMatch) {
-          token = tokenMatch[1];
-        }
-      } else {
-        // Se digitou apenas o nome/slug comum
-        slug = query.toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/--+/g, '-')
-          .trim();
-      }
-
-      try {
-        const fetchUrl = `/api/public/client-data/slug/${slug}${token ? '?t=' + token : ''}`;
-        const res = await fetch(fetchUrl);
-        
-        if (res.status === 403) {
-          errorEl.textContent = 'Este roteiro exige um token de segurança. Cole o link completo enviado no seu WhatsApp ou E-mail.';
-          errorEl.style.display = 'block';
-          return;
-        }
-
-        if (!res.ok) throw new Error('Não encontrado');
-        
-        const data = await res.json();
-        if (data.success && data.clientInfo) {
-          // Redireciona mantendo o token se existir
-          window.location.href = `/cliente/${slug}${token ? '?t=' + token : ''}`;
-        } else {
-          errorEl.textContent = 'Nenhuma viagem ativa encontrada para este código ou nome.';
-          errorEl.style.display = 'block';
-        }
-      } catch (err) {
-        console.error(err);
-        errorEl.textContent = 'Erro ao buscar viagem. Verifique a grafia do seu nome ou código.';
-        errorEl.style.display = 'block';
-      }
-    }
-
-    // Envio do formulário de solicitação de Viagem VIP
-    async function enviarSolicitacao(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitForm');
-      const oldText = btn.textContent;
-
-      // Coletar valores dos chips ativos
-      const hospedagemAtiva = document.querySelector('#gridHospedagem .concierge-chip.active')?.dataset.value || '';
-      const ritmoAtivo = document.querySelector('#gridRitmo .concierge-chip.active')?.dataset.value || '';
-      
-      const obsTexto = document.getElementById('formObservacoes').value.trim();
-      
-      // Monta as observações agregando as preferências do Concierge
-      const observacoesCompletas = `Estilo de Estadia: ${hospedagemAtiva}\nRitmo de Viagem: ${ritmoAtivo}\n\nObservações Adicionais:\n${obsTexto || 'Nenhuma'}`;
-      
-      const payload = {
-        nome: document.getElementById('formNome').value.trim(),
-        email: document.getElementById('formEmail').value.trim(),
-        adultos: document.getElementById('formAdultos').value,
-        criancas: document.getElementById('formCriancas').value,
-        dataInicio: document.getElementById('formDataInicio').value || undefined,
-        dataFim: document.getElementById('formDataFim').value || undefined,
-        observacoes: observacoesCompletas
-      };
-
-      try {
-        btn.disabled = true;
-        btn.textContent = 'Enviando Solicitação...';
-        
-        const res = await fetch('/api/public/cadastro', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || 'Erro na requisição');
-        }
-
-        alert('Sua solicitação de roteiro VIP foi enviada com sucesso! Nossa equipe boutique entrará em contato em breve.');
-        document.getElementById('solicitacaoForm').reset();
-        
-        // Mantém ativo o primeiro chip padrão após o reset
-        document.querySelectorAll('.concierge-chips-grid').forEach(grid => {
-          grid.querySelectorAll('.concierge-chip').forEach(c => c.classList.remove('active'));
-          grid.querySelector('.concierge-chip').classList.add('active');
-        });
-
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao enviar solicitação: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = oldText;
-      }
-    }
+    const obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target); } }), { threshold: .12 });
+    document.querySelectorAll('.rev').forEach(el => obs.observe(el));
   </script>
 </body>
 </html>

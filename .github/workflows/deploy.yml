@@ -36,4 +36,27 @@ jobs:
           *.md
           *log*.txt
           patch*.js
-          pa
+          patch_*.js
+          temp*.js
+          scratch_*.js
+          fix*.js
+          test_*.js
+          update_*.js
+          print_*.js
+          inject_*.js
+          extract_*.js
+          add_error_box.js
+          check_render.js
+          find_original.js
+          fixSyntax.js
+          link_client_script.js
+          migrate.js
+          script.js
+          backup_dados.js
+          backups/**
+          chat_uploads_privado/**
+          old_index.html
+          page-base-clean.html
+          page-base-restored.html
+          public/portal-anterior.html
+          Roteiros/**

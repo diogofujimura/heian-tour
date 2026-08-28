@@ -1,14 +1,21 @@
-window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
-    if (!isNew) {
-        const existingCotacao = state.orcamentosDB.find(o =>
-            (roteiro && roteiro.id && o.roteiroId === roteiro.id) || o.orcRoteiroVinculado === nomeRoteiro
-        );
-        if (existingCotacao && state.orcamento.id !== existingCotacao.id) {
+window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true, opts = {}) {
+    // FASE 2 — UMA cotação por roteiro. Procura a existente vinculada (por roteiroId, e por
+    // nome/id como fallback). Se existe, REUSA sempre (nunca cria outra) — isto elimina a
+    // proliferação (cada "Gerar Cotação" ou save gerava uma nova). Se não existe, cria UMA só,
+    // com id determinístico `cot_<roteiroId>`, que converge com a criada automática no servidor.
+    const _rid = roteiro && roteiro.id;
+    const existingCotacao = state.orcamentosDB.find(o => o && o.id && !o.deletado && (
+        (_rid && o.roteiroId === _rid) ||
+        (_rid && o.orcRoteiroVinculado === _rid) ||
+        (nomeRoteiro && o.orcRoteiroVinculado === nomeRoteiro)
+    ));
+    if (existingCotacao) {
+        if (state.orcamento.id !== existingCotacao.id) {
             abrirOrcamento(existingCotacao.id);
         }
-    }
-    if (isNew && typeof novoOrcamento === 'function') {
+    } else if (typeof novoOrcamento === 'function') {
         novoOrcamento();
+        if (_rid) state.orcamento.id = 'cot_' + _rid;
     }
     if (!state.orcamento.tours) state.orcamento.tours = [];
     if (!state.orcamento.transportes) state.orcamento.transportes = [];
@@ -74,10 +81,10 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
             roteiroToursIds.push(dia.refId);
         }
         (dia.elementos || []).forEach(el => {
-            if (el.tipo === 'transporte' && el.compradoHeian !== false) {
+            if (el.tipo === 'transporte') {
                 el.refId = el.refId || Date.now() + Math.random().toString(36).substr(2, 5);
                 roteiroTransportesIds.push(el.refId);
-            } else if (el.tipo === 'experiencia' && el.compradoHeian !== false) {
+            } else if (el.tipo === 'experiencia') {
                 el.refId = el.refId || Date.now() + Math.random().toString(36).substr(2, 5);
                 roteiroExpIds.push(el.refId);
             }
@@ -108,12 +115,20 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                 if (el.tipo === 'sequencia' && el.atracoesDoDia) locais.push(...el.atracoesDoDia);
             });
             
+            let _tourValor = state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0;
+            let _tourDesc = 5, _tourDescAtivo = false;
+            if (dia.comercialTour) {
+                if (dia.comercialTour.valor !== undefined) _tourValor = dia.comercialTour.valor;
+                if (dia.comercialTour.desconto !== undefined) _tourDesc = dia.comercialTour.desconto;
+                if (dia.comercialTour.descontoAtivo !== undefined) _tourDescAtivo = dia.comercialTour.descontoAtivo;
+            }
             let foundT = state.orcamento.tours.find(t => t._roteiroRefId === dia.refId);
             if (foundT) {
                 foundT.data = diaData;
                 foundT.pontos = locais.join('\n');
                 foundT.duracao = duracao;
-                foundT.valor = state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0;
+                foundT.valor = _tourValor;
+                if (dia.comercialTour) { foundT.desconto = _tourDesc; foundT.descontoAtivo = _tourDescAtivo; }
             } else {
                 state.orcamento.tours.push({
                     id: Date.now() + Math.floor(Math.random() * 10000),
@@ -122,15 +137,15 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     descricao: 'Tour Dia ' + (i+1),
                     pontos: locais.join('\n'),
                     duracao: duracao,
-                    valor: state.orcamento.valoresTour ? (state.orcamento.valoresTour[duracao] || 0) : 0,
-                    desconto: 5, descontoAtivo: false, observacao: ''
+                    valor: _tourValor,
+                    desconto: _tourDesc, descontoAtivo: _tourDescAtivo, observacao: ''
                 });
             }
         }
         
         // TRANSPORTES E EXP
         dia.elementos.forEach(el => {
-            if (el.tipo === 'transporte' && el.compradoHeian !== false) {
+            if (el.tipo === 'transporte') {
                 let dbId = ''; let preco = el.precoManual || 0; let precoInfantil = el.precoManual || 0;
                 let ctg = el.categoria || 'Comum';
                 let desc = el.cidadeOrigem + ' ➔ ' + el.cidadeDestino + ' | ' + el.tipoTransporte + ' | ' + (el.linha || '') + ' | ' + ctg;
@@ -162,6 +177,15 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     }
                 }
                 
+                // FASE 2 — o item do roteiro é dono do próprio comercial: se migrado, ele manda.
+                let _taxaAtiva = false, _taxaTipo = 'grupo', _taxaValor = 3000;
+                if (el.comercial) {
+                    if (el.comercial.preco !== undefined) preco = el.comercial.preco;
+                    if (el.comercial.precoInfantil !== undefined) precoInfantil = el.comercial.precoInfantil;
+                    if (el.comercial.taxaAtiva !== undefined) _taxaAtiva = el.comercial.taxaAtiva;
+                    if (el.comercial.taxaTipo) _taxaTipo = el.comercial.taxaTipo;
+                    if (el.comercial.taxaValor !== undefined) _taxaValor = el.comercial.taxaValor;
+                }
                 let found = state.orcamento.transportes.find(t => t._roteiroRefId === el.refId);
                 if (found) {
                     found.data = diaData;
@@ -170,7 +194,8 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     found.descricao = desc;
                     found.preco = preco;
                     found.precoInfantil = precoInfantil;
-                    // Mantem adultos e crianças como o usuário editou na Cotação
+                    if (el.comercial) { found.taxaAtiva = _taxaAtiva; found.taxaTipo = _taxaTipo; found.taxaValor = _taxaValor; }
+                    found.compradoHeian = el.compradoHeian !== false;
                 } else {
                     const ad = el.adultos !== undefined ? el.adultos : fallbackAd;
                     const cr = el.criancas !== undefined ? el.criancas : fallbackCr;
@@ -179,13 +204,13 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                         _roteiroRefId: el.refId,
                         categoria: ctg, _dbId: dbId, data: diaData, descricao: desc,
                         preco: preco, precoInfantil: precoInfantil, adultos: ad, criancas: cr,
-                        taxaAtiva: false, taxaTipo: 'grupo', taxaValor: 3000,
-                        observacao: (el.horario ? 'Embarque às ' + el.horario : ''), compradoHeian: true
+                        taxaAtiva: _taxaAtiva, taxaTipo: _taxaTipo, taxaValor: _taxaValor,
+                        observacao: (el.horario ? 'Embarque às ' + el.horario : ''), compradoHeian: el.compradoHeian !== false
                     });
                 }
             }
             
-            if (el.tipo === 'experiencia' && el.compradoHeian !== false) {
+            if (el.tipo === 'experiencia') {
                 let dbId = ''; let preco = 0; let nomeExp = el.nomeExp;
                 if (state.experienciasDB) {
                     let edb = null;
@@ -194,6 +219,15 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     if (edb) { dbId = edb.id; preco = edb.preco_jpy || edb.precoAdulto || 0; nomeExp = edb.nome; }
                 }
                 
+                let _expPessoas, _expPrecoTipo, _expTaxaAtiva, _expTaxaTipo, _expTaxaValor;
+                if (el.comercial) {
+                    if (el.comercial.preco !== undefined) preco = el.comercial.preco;
+                    _expPessoas = el.comercial.pessoas;
+                    _expPrecoTipo = el.comercial.precoTipo;
+                    _expTaxaAtiva = el.comercial.taxaAtiva;
+                    _expTaxaTipo = el.comercial.taxaTipo;
+                    _expTaxaValor = el.comercial.taxaValor;
+                }
                 let found = state.orcamento.experiencias.find(ex => ex._roteiroRefId === el.refId);
                 if (found) {
                     found.data = diaData;
@@ -201,7 +235,14 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                     found.nome = nomeExp;
                     found.descricao = nomeExp;
                     found.preco = preco;
-                    // Mantem pessoas customizadas
+                    if (el.comercial) {
+                        if (_expPessoas !== undefined) found.pessoas = _expPessoas;
+                        if (_expPrecoTipo !== undefined) found.precoTipo = _expPrecoTipo;
+                        if (_expTaxaAtiva !== undefined) found.taxaAtiva = _expTaxaAtiva;
+                        if (_expTaxaTipo !== undefined) found.taxaTipo = _expTaxaTipo;
+                        if (_expTaxaValor !== undefined) found.taxaValor = _expTaxaValor;
+                    }
+                    found.compradoHeian = el.compradoHeian !== false;
                 } else {
                     const ad = el.adultos !== undefined ? el.adultos : fallbackAd;
                     const cr = el.criancas !== undefined ? el.criancas : fallbackCr;
@@ -209,7 +250,12 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
                         id: Date.now() + Math.floor(Math.random() * 10000),
                         _roteiroRefId: el.refId,
                         data: diaData, _dbId: dbId, nome: nomeExp, descricao: nomeExp, preco: preco,
-                        pessoas: ad + cr, observacao: (el.horaPartida ? 'Horário: ' + el.horaPartida : ''), compradoHeian: true
+                        pessoas: (_expPessoas !== undefined ? _expPessoas : ad + cr),
+                        precoTipo: (_expPrecoTipo !== undefined ? _expPrecoTipo : undefined),
+                        taxaAtiva: (_expTaxaAtiva !== undefined ? _expTaxaAtiva : false),
+                        taxaTipo: (_expTaxaTipo !== undefined ? _expTaxaTipo : 'grupo'),
+                        taxaValor: (_expTaxaValor !== undefined ? _expTaxaValor : 3000),
+                        observacao: (el.horaPartida ? 'Horário: ' + el.horaPartida : ''), compradoHeian: el.compradoHeian !== false
                     });
                 }
             }
@@ -221,191 +267,27 @@ window.roteiroParaCotacao = function(roteiro, nomeRoteiro, isNew = true) {
     if (typeof renderExperienciasForm === 'function') renderExperienciasForm();
     if (typeof renderEstadiasReadOnly === 'function') renderEstadiasReadOnly();
     if (typeof updateResumo === 'function') updateResumo();
-    if (typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
-    if (typeof salvarOrcamentoAtual === 'function') salvarOrcamentoAtual();
-    
-    alert('Cotação importada com sucesso do Roteiro!');
-    if (typeof navToPage === 'function') navToPage('orcamento');
-    
-    if (state.orcamento && state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
-        syncClienteAtivo(state.orcamento.notionClienteId);
+
+    // FASE 2: chamada silenciosa (auto-população ao ABRIR a cotação) NÃO salva, NÃO alerta e
+    // NÃO navega — abrir uma cotação não deve gravá-la nem interromper. Isso também alivia o
+    // "travamento ao abrir" (ex.: Haddad), que vinha do save+sync a cada abertura. O save real
+    // acontece pelo autosave normal quando o usuário edita de fato.
+    if (!opts || !opts.silent) {
+        if (typeof triggerRoteiroAutoSave === 'function') triggerRoteiroAutoSave();
+        if (typeof salvarOrcamentoAtual === 'function') salvarOrcamentoAtual();
+        alert('Cotação importada com sucesso do Roteiro!');
+        if (typeof navToPage === 'function') navToPage('orcamento');
+        if (state.orcamento && state.orcamento.notionClienteId && typeof syncClienteAtivo === 'function') {
+            syncClienteAtivo(state.orcamento.notionClienteId);
+        }
     }
 };
 
-window.cotacaoParaRoteiro = function(orcamento) {
-    if (!orcamento || !orcamento.tours) {
-        alert('Cotação inválida.');
-        return;
-    }
-    
-    // Prefere o vínculo por ID imutável (sobrevive a renomeações do roteiro)
-    let nome = orcamento.orcRoteiroVinculado || orcamento.nome || 'Roteiro Importado da Cotação';
-    if (orcamento.roteiroId && typeof window.chaveRoteiroPorId === 'function') {
-        const chavePorId = window.chaveRoteiroPorId(orcamento.roteiroId);
-        if (chavePorId) nome = chavePorId;
-    }
-    
-    if (typeof roteiroEmEdicao !== 'undefined') {
-        roteiroOriginalNome = nome;
-        roteiroEmEdicao.cliente = {
-            nome: orcamento.cliente?.nome || '',
-            adultos: orcamento.cliente?.adultos || '2',
-            criancas: orcamento.cliente?.criancas || '0',
-            dataOrcamento: orcamento.cliente?.dataOrcamento || '',
-            notionClienteId: orcamento.notionClienteId || ''
-        };
-        
-        roteiroEmEdicao.estadias = orcamento.estadias ? JSON.parse(JSON.stringify(orcamento.estadias)) : [];
-        if (!roteiroEmEdicao.dias) roteiroEmEdicao.dias = [];
-        
-        // Maps to quickly find existing items in Cotacao
-        const cotacaoToursIds = (orcamento.tours || []).map(t => t._roteiroRefId).filter(id => id);
-        const cotacaoTransportesIds = (orcamento.transportes || []).map(t => t._roteiroRefId).filter(id => id);
-        const cotacaoExpIds = (orcamento.experiencias || []).map(e => e._roteiroRefId).filter(id => id);
-        
-        // 1. DELETE items in Roteiro that are missing from Cotacao
-        // A. Tours (marked on the day)
-        roteiroEmEdicao.dias.forEach((dia) => {
-            if (dia.tourGuiado && dia.refId && !cotacaoToursIds.includes(dia.refId)) {
-                dia.tourGuiado = false;
-            }
-        });
-        
-        // B. Transportes and Experiencias
-        roteiroEmEdicao.dias.forEach((dia) => {
-            if (dia.elementos) {
-                dia.elementos = dia.elementos.filter(el => {
-                    if (el.tipo === 'transporte') {
-                        // Se tem refId e nao esta na cotacao, foi excluido
-                        if (el.refId && !cotacaoTransportesIds.includes(el.refId)) return false;
-                    } else if (el.tipo === 'experiencia') {
-                        if (el.refId && !cotacaoExpIds.includes(el.refId)) return false;
-                    }
-                    return true;
-                });
-            }
-        });
-
-        // Helper function to find or create day
-        const getOrCreateDia = (dateStr) => {
-            let dia = roteiroEmEdicao.dias.find(d => d.data === dateStr);
-            if (!dia) {
-                dia = { data: dateStr, tourGuiado: false, elementos: [], refId: Date.now() + Math.random().toString(36).substr(2, 5) };
-                roteiroEmEdicao.dias.push(dia);
-                roteiroEmEdicao.dias.sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-            }
-            if (!dia.elementos) dia.elementos = [];
-            return dia;
-        };
-
-        // Helper function to find element in Roteiro
-        const findElement = (refId) => {
-            if (!refId) return null;
-            for (let dia of roteiroEmEdicao.dias) {
-                if (dia.elementos) {
-                    let el = dia.elementos.find(e => e.refId === refId);
-                    if (el) return { dia, el };
-                }
-            }
-            return null;
-        };
-
-        // 2. UPSERT Tours
-        (orcamento.tours || []).forEach(t => {
-            let dia = roteiroEmEdicao.dias.find(d => d.refId === t._roteiroRefId);
-            if (!dia && t.data) dia = getOrCreateDia(t.data);
-            if (dia) {
-                dia.tourGuiado = true;
-                // find info block to update duration
-                let infoEl = dia.elementos.find(e => e.tipo === 'info');
-                if (infoEl) infoEl.duracaoTour = t.duracao || '8h';
-            }
-        });
-
-        // 3. UPSERT Transportes
-        (orcamento.transportes || []).forEach(t => {
-            let found = findElement(t._roteiroRefId);
-            const tdb = state.transportesDB ? state.transportesDB.find(db => db.id == t._dbId) : null;
-            if (found) {
-                found.el.adultos = t.adultos;
-                found.el.criancas = t.criancas;
-                found.el.categoria = t.categoria || 'Comum';
-                if (tdb) {
-                    found.el.cidadeOrigem = tdb.trecho.split('➔')[0]?.trim() || '';
-                    found.el.cidadeDestino = tdb.trecho.split('➔')[1]?.trim() || '';
-                    found.el.trechoId = tdb.id;
-                    found.el.tipoTransporte = tdb.tipo;
-                }
-            } else {
-                let dia = getOrCreateDia(t.data || '');
-                dia.elementos.push({
-                    tipo: 'transporte',
-                    cidadeOrigem: tdb ? tdb.trecho.split('➔')[0]?.trim() || '' : '',
-                    cidadeDestino: tdb ? tdb.trecho.split('➔')[1]?.trim() || '' : '',
-                    trechoId: tdb ? tdb.id : null,
-                    tipoTransporte: tdb ? tdb.tipo : 'Trem',
-                    categoria: t.categoria || 'Comum',
-                    compradoHeian: true,
-                    adultos: t.adultos || 2,
-                    criancas: t.criancas || 0,
-                    refId: t._roteiroRefId || Date.now() + Math.random().toString(36).substr(2, 5)
-                });
-            }
-        });
-
-        // 4. UPSERT Experiencias
-        (orcamento.experiencias || []).forEach(ex => {
-            let found = findElement(ex._roteiroRefId);
-            const edb = state.experienciasDB ? state.experienciasDB.find(db => db.id == ex._dbId) : null;
-            if (found) {
-                found.el.adultos = ex.adultos;
-                found.el.criancas = ex.criancas;
-                if (edb) {
-                    found.el.expId = edb.id;
-                    found.el.nomeExp = edb.nome;
-                }
-            } else {
-                let dia = getOrCreateDia(ex.data || '');
-                dia.elementos.push({
-                    tipo: 'experiencia',
-                    expId: edb ? edb.id : null,
-                    nomeExp: edb ? edb.nome : (ex.descricao || ex.nome || 'Experiência'),
-                    compradoHeian: true,
-                    adultos: ex.adultos || 2,
-                    criancas: ex.criancas || 0,
-                    refId: ex._roteiroRefId || Date.now() + Math.random().toString(36).substr(2, 5)
-                });
-            }
-        });
-
-        if (state.orcamentosDB && orcamento.id) {
-            let dbIdx = state.orcamentosDB.findIndex(o => o.id === orcamento.id);
-            if (dbIdx > -1) {
-                state.orcamentosDB[dbIdx].orcRoteiroVinculado = nome;
-                salvarOrcamentosDB();
-            }
-        }
-        
-        if (typeof abrirEditorRoteiro === 'function') {
-            abrirEditorRoteiro(nome);
-            if(typeof renderEditDias === 'function') renderEditDias();
-            navToPage('roteiros');
-            
-            setTimeout(() => {
-                const btnSave = document.getElementById('btnEditarRoteiro');
-                if (btnSave && btnSave.textContent.includes('Salvar')) {
-                    btnSave.click();
-                } else {
-                    document.getElementById('editRoteiroNome').value = nome;
-                    triggerRoteiroAutoSave();
-                }
-            }, 300);
-            
-            alert('Roteiro atuali➔ado cirurgicamente a partir da Cotação com sucesso!');
-        }
-    }
-    
-    if (roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId && typeof syncClienteAtivo === 'function') {
-        syncClienteAtivo(roteiroEmEdicao.cliente.notionClienteId);
-    }
+// FASE 2 — REMOVIDA: `cotacaoParaRoteiro` fazia resync reverso DESTRUTIVO (apagava do roteiro
+// os itens que não estivessem na cotação) — foi ela que apagou o roteiro do Yamada. Com a
+// unificação, o ROTEIRO é a fonte de verdade e a cotação deriva dele; exportar cotação->roteiro
+// não faz mais sentido. Mantida como no-op defensivo caso algum botão em cache ainda a chame.
+window.cotacaoParaRoteiro = function() {
+    console.warn('cotacaoParaRoteiro foi descontinuada (Fase 2): o roteiro é a fonte de verdade.');
+    if (typeof alert === 'function') alert('Função descontinuada: o roteiro já é a fonte de verdade — edite o roteiro diretamente.');
 };

@@ -129,38 +129,50 @@
   }
 
   function extrairTarefas(cliente, roteiros, orcamentos, bases) {
-    var tasks = [], seen = {};
+    var tasksMap = {};
     var clienteId = cliente.id, clienteNome = cliente.nome || 'Sem nome';
     var paxCliente = num(cliente.adultos) + num(cliente.criancas);
     bases = bases || {};
 
-    function add(t) {
-      t.clienteId = clienteId; t.clienteNome = clienteNome;
-      var k = chaveTarefa(t);
-      if (seen[k]) return; seen[k] = true;
-      t.chave = k;
-      tasks.push(t);
-    }
-
+    // 1. Processar Roteiros
     (roteiros || []).forEach(function (rot) {
       (rot.dias || []).forEach(function (dia) {
         var data = normalizeDate(dia.data);
         (dia.elementos || []).forEach(function (el) {
-          if (el.tipo === 'transporte' && el.compradoHeian !== false && (el.tipoTransporte || el.trechoId)) {
+          if (el.tipo === 'transporte' && (el.tipoTransporte || el.trechoId || el.cidadeOrigem)) {
             var baseT = el.trechoId && el.trechoId !== 'custom' ? findById(bases.transportes, el.trechoId) : null;
             var subtipo = (baseT && baseT.tipo ? detectTipoTransporte(baseT.tipo) : null) || detectTipoTransporte(el.tipoTransporte || el.linha) || 'transfer';
             var nome = el.cidadeDestino ? ((el.cidadeOrigem || '?') + ' → ' + el.cidadeDestino) : (el.tipoTransporte || 'Deslocamento');
             var regra = resolverRegra('transporte', subtipo, baseT);
-            add({ categoria: 'transporte', subtipo: subtipo, ident: nome, titulo: nome, data: data, pessoas: (num(el.adultos) + num(el.criancas)) || paxCliente, regra: regra, origem: 'roteiro' });
-          } else if (el.tipo === 'experiencia' && el.compradoHeian !== false && (el.nomeExp || el.expId)) {
+            var refId = el.refId;
+            var key = refId ? ('ref:' + refId) : ('tr:' + clienteId + ':' + (data || '') + ':' + norm(nome).replace(/[^a-z0-9]/g, ''));
+            tasksMap[key] = {
+              key: key, refId: refId, categoria: 'transporte', subtipo: subtipo,
+              ident: nome, titulo: nome, data: data,
+              pessoas: (num(el.adultos) + num(el.criancas)) || paxCliente,
+              regra: regra, compradoHeian: el.compradoHeian !== false, origem: 'roteiro'
+            };
+          } else if (el.tipo === 'experiencia' && (el.nomeExp || el.expId)) {
             var baseE = el.expId ? findById(bases.experiencias, el.expId) : null;
             var nomeE = el.nomeExp || (baseE && baseE.nome) || 'Experiência';
-            add({ categoria: 'experiencia', subtipo: '', ident: nomeE, titulo: nomeE, data: data, pessoas: (num(el.adultos) + num(el.criancas)) || paxCliente, regra: resolverRegra('experiencia', '', baseE), origem: 'roteiro' });
+            var refId = el.refId;
+            var key = refId ? ('ref:' + refId) : ('exp:' + clienteId + ':' + (data || '') + ':' + norm(nomeE).replace(/[^a-z0-9]/g, ''));
+            tasksMap[key] = {
+              key: key, refId: refId, categoria: 'experiencia', subtipo: '',
+              ident: nomeE, titulo: nomeE, data: data,
+              pessoas: (num(el.adultos) + num(el.criancas)) || paxCliente,
+              regra: resolverRegra('experiencia', '', baseE), compradoHeian: el.compradoHeian !== false, origem: 'roteiro'
+            };
           } else if (el.tipo === 'sequencia' && Array.isArray(el.atracoesDoDia)) {
             el.atracoesDoDia.forEach(function (nomeA) {
               var baseA = findAtracaoByName(bases.atracoes, nomeA);
               if (baseA && (baseA.precisaReserva === true || baseA.precisaReserva === 'sim')) {
-                add({ categoria: 'atracao', subtipo: '', ident: nomeA, titulo: nomeA, data: data, pessoas: paxCliente, regra: resolverRegra('atracao', '', baseA), origem: 'roteiro' });
+                var key = 'atr:' + clienteId + ':' + (data || '') + ':' + norm(nomeA).replace(/[^a-z0-9]/g, '');
+                tasksMap[key] = {
+                  key: key, categoria: 'atracao', subtipo: '',
+                  ident: nomeA, titulo: nomeA, data: data, pessoas: paxCliente,
+                  regra: resolverRegra('atracao', '', baseA), compradoHeian: true, origem: 'roteiro'
+                };
               }
             });
           }
@@ -168,27 +180,105 @@
       });
     });
 
+    // 2. Processar Cotações (Enriquecer/Desduplicar com Roteiro)
     (orcamentos || []).forEach(function (orc) {
       (orc.transportes || []).forEach(function (tr) {
-        if (tr.compradoHeian === false) return;
-        var subtipo = detectTipoTransporte(tr.descricao) || 'transfer';
-        var nome = tr.descricao || 'Transporte';
-        add({ categoria: 'transporte', subtipo: subtipo, ident: nome, titulo: nome, data: normalizeDate(tr.data), pessoas: (num(tr.adultos) + num(tr.criancas)) || paxCliente, regra: resolverRegra('transporte', subtipo, null), origem: 'cotacao' });
+        var refId = tr._roteiroRefId;
+        var key = refId ? ('ref:' + refId) : null;
+        var data = normalizeDate(tr.data);
+
+        if (!key) {
+          var descClean = norm(tr.descricao).replace(/[^a-z0-9]/g, '');
+          Object.keys(tasksMap).forEach(function (k) {
+            var item = tasksMap[k];
+            if (item.categoria === 'transporte' && item.data === data) {
+              var identClean = norm(item.ident).replace(/[^a-z0-9]/g, '');
+              if (descClean.indexOf(identClean) >= 0 || identClean.indexOf(descClean) >= 0) {
+                key = k;
+              }
+            }
+          });
+        }
+
+        if (key && tasksMap[key]) {
+          if (tr.descricao && tr.descricao.length > tasksMap[key].titulo.length) {
+            tasksMap[key].titulo = tr.descricao;
+          }
+          var subtipo = detectTipoTransporte(tr.descricao) || tasksMap[key].subtipo;
+          tasksMap[key].subtipo = subtipo;
+          tasksMap[key].regra = resolverRegra('transporte', subtipo, null);
+          if (tr.compradoHeian === false) tasksMap[key].compradoHeian = false;
+        } else if (tr.compradoHeian !== false) {
+          var subtipo = detectTipoTransporte(tr.descricao) || 'transfer';
+          var nome = tr.descricao || 'Transporte';
+          key = key || ('cot_tr:' + (tr.id || Math.random()));
+          tasksMap[key] = {
+            key: key, refId: refId, categoria: 'transporte', subtipo: subtipo,
+            ident: nome, titulo: nome, data: data,
+            pessoas: (num(tr.adultos) + num(tr.criancas)) || paxCliente,
+            regra: resolverRegra('transporte', subtipo, null), compradoHeian: true, origem: 'cotacao'
+          };
+        }
       });
+
       (orc.experiencias || []).forEach(function (ex) {
-        if (ex.compradoHeian === false) return;
+        var refId = ex._roteiroRefId;
+        var key = refId ? ('ref:' + refId) : null;
+        var data = normalizeDate(ex.data);
         var nome = ex.nome || ex.descricao || 'Experiência';
-        add({ categoria: 'experiencia', subtipo: '', ident: nome, titulo: nome, data: normalizeDate(ex.data), pessoas: num(ex.pessoas) || paxCliente, regra: resolverRegra('experiencia', '', null), origem: 'cotacao' });
+
+        if (!key) {
+          var descClean = norm(nome).replace(/[^a-z0-9]/g, '');
+          Object.keys(tasksMap).forEach(function (k) {
+            var item = tasksMap[k];
+            if (item.categoria === 'experiencia' && item.data === data) {
+              var identClean = norm(item.ident).replace(/[^a-z0-9]/g, '');
+              if (descClean.indexOf(identClean) >= 0 || identClean.indexOf(descClean) >= 0) {
+                key = k;
+              }
+            }
+          });
+        }
+
+        if (key && tasksMap[key]) {
+          if (nome && nome.length > tasksMap[key].titulo.length) tasksMap[key].titulo = nome;
+          if (ex.compradoHeian === false) tasksMap[key].compradoHeian = false;
+        } else if (ex.compradoHeian !== false) {
+          key = key || ('cot_ex:' + (ex.id || Math.random()));
+          tasksMap[key] = {
+            key: key, refId: refId, categoria: 'experiencia', subtipo: '',
+            ident: nome, titulo: nome, data: data,
+            pessoas: num(ex.pessoas) || paxCliente,
+            regra: resolverRegra('experiencia', '', null), compradoHeian: true, origem: 'cotacao'
+          };
+        }
       });
+
       (orc.itensAdicionais || []).forEach(function (it) {
         var n = norm(it.nome);
         if (n.indexOf('restaurante') >= 0 || n.indexOf('reserva') >= 0 || n.indexOf('jantar') >= 0 || n.indexOf('almoco') >= 0) {
-          add({ categoria: 'restaurante', subtipo: '', ident: it.nome, titulo: it.nome, data: normalizeDate(it.data), pessoas: paxCliente, regra: resolverRegra('restaurante', '', null), origem: 'cotacao' });
+          var key = 'cot_it:' + (it.id || Math.random());
+          tasksMap[key] = {
+            key: key, categoria: 'restaurante', subtipo: '',
+            ident: it.nome, titulo: it.nome, data: normalizeDate(it.data),
+            pessoas: paxCliente, regra: resolverRegra('restaurante', '', null), compradoHeian: true, origem: 'cotacao'
+          };
         }
       });
     });
 
-    return tasks;
+    var outTasks = [];
+    Object.keys(tasksMap).forEach(function (k) {
+      var t = tasksMap[k];
+      if (t.compradoHeian !== false) {
+        t.clienteId = clienteId;
+        t.clienteNome = clienteNome;
+        t.chave = [clienteId, t.categoria, t.subtipo || '', norm(t.ident), t.data || ''].join('|');
+        outTasks.push(t);
+      }
+    });
+
+    return outTasks;
   }
 
   // ===================== DADOS / CACHE =====================
@@ -283,7 +373,10 @@
   function ensureCard() {
     var card = document.getElementById('provisoesCard');
     if (card) return card;
-    var kan = document.querySelector('.dashboard-kanban-card');
+    // Âncora: logo após a Agenda Operacional, no Painel Geral
+    // (antes ancorava no kanban, que agora vive na página Clientes)
+    var agenda = document.querySelector('#dashboardGeralContainer .dashboard-agenda-card');
+    var kan = agenda || document.querySelector('.dashboard-kanban-card');
     if (!kan || !kan.parentNode) return null;
     card = document.createElement('div');
     card.className = 'dashboard-provisoes-card';
@@ -296,7 +389,8 @@
       '<p style="font-size:12px;color:var(--ink-lt);margin:4px 0 16px;">Tudo que precisa ser comprado / reservado para os clientes na etapa <strong>Compras</strong>, por urgência.</p>' +
       '<div id="provisoesRegras" style="display:none;"></div>' +
       '<div id="provisoesBody"><p style="color:var(--ink-lt);font-size:12px;font-style:italic;">Carregando provisões…</p></div>';
-    kan.parentNode.insertBefore(card, kan);
+    if (agenda) kan.parentNode.insertBefore(card, kan.nextSibling);
+    else kan.parentNode.insertBefore(card, kan);
     var btn = card.querySelector('#provisoesRegrasBtn');
     if (btn) btn.addEventListener('click', toggleEditorRegras);
     return card;

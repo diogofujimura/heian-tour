@@ -157,20 +157,49 @@ async function salvarOrdemKanbanDOM() {
 }
 
 // ---- Ordem personalizada das COLUNAS (etapas) ----
+// Lista-base das etapas: prefere as opções vindas do Notion (window.kanbanStatusesFromNotion),
+// senão o array embutido KANBAN_STATUSES. Mantém a cor tunada quando o nome é conhecido e inclui
+// qualquer status presente em clientes (pra nunca perder card de uma etapa desconhecida).
+function statusBaseList() {
+  const known = {};
+  KANBAN_STATUSES.forEach(s => { known[s.name] = s; });
+  const list = [];
+  const seen = new Set();
+  const add = (name, color) => {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    if (known[name]) list.push(known[name]);
+    else list.push({ name, color: color || '#64748b', bgColor: 'rgba(100,116,139,0.08)', borderColor: '#cbd5e1' });
+  };
+  const fromNotion = Array.isArray(window.kanbanStatusesFromNotion) ? window.kanbanStatusesFromNotion : null;
+  if (fromNotion && fromNotion.length) fromNotion.forEach(o => add(o.name, o.color));
+  else KANBAN_STATUSES.forEach(s => add(s.name, s.color));
+  (window.notionClients || []).forEach(c => { if (c && c.status) add(c.status); });
+  return list;
+}
+
+// Busca (uma vez por sessão) as opções de status do Notion e re-renderiza o quadro.
+function carregarStatusOpcoesNotion() {
+  if (window.__statusOpcoesTried || window.__statusOpcoesInflight) return;
+  window.__statusOpcoesInflight = true;
+  fetch('/api/notion/status-opcoes')
+    .then(r => r.ok ? r.json() : [])
+    .then(arr => { if (Array.isArray(arr) && arr.length) { window.kanbanStatusesFromNotion = arr; if (typeof renderKanban === 'function') renderKanban(); } })
+    .catch(e => console.error('status-opcoes:', e))
+    .finally(() => { window.__statusOpcoesInflight = false; window.__statusOpcoesTried = true; });
+}
+
 function getOrderedStatuses() {
   const saved = Array.isArray(window.kanbanColunasOrdem) ? window.kanbanColunasOrdem : [];
+  const base = statusBaseList();
   const byName = {};
-  KANBAN_STATUSES.forEach(s => { byName[s.name] = s; });
+  base.forEach(s => { byName[s.name] = s; });
   const out = [];
   const used = new Set();
   // 1) respeita a ordem salva (só nomes que ainda existem)
-  saved.forEach(name => {
-    if (byName[name] && !used.has(name)) { out.push(byName[name]); used.add(name); }
-  });
-  // 2) acrescenta etapas novas que ainda não estavam na ordem salva (ex.: Compras)
-  KANBAN_STATUSES.forEach(s => {
-    if (!used.has(s.name)) { out.push(s); used.add(s.name); }
-  });
+  saved.forEach(name => { if (byName[name] && !used.has(name)) { out.push(byName[name]); used.add(name); } });
+  // 2) acrescenta etapas novas que ainda não estavam na ordem salva (ex.: nova coluna do Notion)
+  base.forEach(s => { if (!used.has(s.name)) { out.push(s); used.add(s.name); } });
   return out;
 }
 
@@ -393,6 +422,7 @@ function wireKanbanAutoScroll(board) {
 function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
+  carregarStatusOpcoesNotion(); // colunas dinâmicas do Notion (1x por sessão)
 
   const clientes = window.notionClients || [];
   board.innerHTML = '';
@@ -654,6 +684,7 @@ function renderKanban() {
         let activeContainer = null;
 
         card.addEventListener('touchstart', (e) => {
+          if (window.innerWidth <= 768) return; // celular: usar o botão "Mover etapa"
           isDraggingAction = false;
           const touch = e.touches[0];
           startX = touch.clientX;
@@ -663,6 +694,7 @@ function renderKanban() {
         }, { passive: true });
 
         card.addEventListener('touchmove', (e) => {
+          if (window.innerWidth <= 768) return; // celular: rolar a tela não move cards
           const touch = e.touches[0];
           const diffX = touch.clientX - startX;
           const diffY = touch.clientY - startY;
@@ -761,22 +793,26 @@ function renderKanban() {
           }
         });
 
-        // Click simples para navegar (só se não for arrasto)
         card.addEventListener('click', (e) => {
           if (isDraggingAction) {
             e.preventDefault();
             e.stopPropagation();
             return;
           }
-          const navItem = document.querySelector('.sidebar-nav a[data-page="clientes"]');
-          if (navItem) {
-            navItem.click();
-            setTimeout(() => {
-              if (typeof window.abrirDetalhesCliente === 'function') {
-                window.abrirDetalhesCliente(c.id);
-              }
-            }, 100);
+          if (typeof window.setClientesVista === 'function') {
+            window.setClientesVista('lista');
           }
+          if (typeof window.navToPage === 'function') {
+            window.navToPage('clientes');
+          } else {
+            const navItem = document.querySelector('.sidebar-nav a[data-page="clientes"]');
+            if (navItem) navItem.click();
+          }
+          setTimeout(() => {
+            if (typeof window.abrirDetalhesCliente === 'function') {
+              window.abrirDetalhesCliente(c.id);
+            }
+          }, 100);
         });
 
         // Nome
@@ -961,6 +997,9 @@ async function selecionarClienteDashboard(clientId) {
     const summary = data.summary;
     const details = data.details;
 
+    window.currentDashboardEntradas = details.entradas || [];
+    window.currentDashboardSaidas = details.saidas || [];
+
     // Fill KPI cards
     document.getElementById('kpiCliRecebido').textContent = `¥ ${summary.totalRecebido.toLocaleString('en-US')}`;
     document.getElementById('kpiCliDespesas').textContent = `¥ ${summary.totalDespesas.toLocaleString('en-US')}`;
@@ -974,7 +1013,8 @@ async function selecionarClienteDashboard(clientId) {
     document.getElementById('kpiCliCaixaAtual').textContent = `¥ ${summary.caixaAtual.toLocaleString('en-US')}`;
 
     // Fill client ficha info
-    const clientInfo = (window.notionClients || []).find(c => c.id === clientId);
+    let clientInfo = data.clientInfo || (window.notionClients || []).find(c => c.id === clientId);
+
     const contrato = clientInfo ? (clientInfo.valorTotal || 0) : 0;
     const lucroProjetadoFinal = contrato - summary.totalDespesas - summary.custoGuiasTotal;
 
@@ -988,17 +1028,18 @@ async function selecionarClienteDashboard(clientId) {
 
     if (clientInfo) {
       document.getElementById('cliFichaValorTotal').textContent = `¥ ${(clientInfo.valorTotal || 0).toLocaleString('en-US')}`;
-      document.getElementById('cliFichaTotalPago').textContent = `¥ ${(clientInfo.totalPago || 0).toLocaleString('en-US')}`;
-      document.getElementById('cliFichaSaldoPagar').textContent = `¥ ${(clientInfo.saldoPagar || 0).toLocaleString('en-US')}`;
+      document.getElementById('cliFichaTotalPago').textContent = `¥ ${(summary.totalRecebido || clientInfo.totalPago || 0).toLocaleString('en-US')}`;
+      const realSaldo = Math.max(0, Math.round((clientInfo.valorTotal || 0) - (summary.totalRecebido || 0)));
+      document.getElementById('cliFichaSaldoPagar').textContent = `¥ ${realSaldo.toLocaleString('en-US')}`;
       
       const statusEl = document.getElementById('cliFichaStatusPgto');
-      statusEl.textContent = clientInfo.statusPagamento || 'Sem status';
+      statusEl.textContent = realSaldo <= 0 ? 'Pago' : (summary.totalRecebido > 0 ? 'Parcial' : (clientInfo.statusPagamento || 'Pendente'));
       
       // Color status based on value
-      if (clientInfo.statusPagamento === 'Pago') {
+      if (statusEl.textContent === 'Pago') {
         statusEl.style.color = '#2ecc71';
         statusEl.style.background = 'rgba(46, 204, 113, 0.1)';
-      } else if (clientInfo.statusPagamento === 'Pendente') {
+      } else if (statusEl.textContent === 'Parcial' || statusEl.textContent === 'Pendente') {
         statusEl.style.color = '#f1c40f';
         statusEl.style.background = 'rgba(241, 196, 15, 0.1)';
       } else {
@@ -1077,8 +1118,8 @@ function renderTableCliEntradas(entradas) {
   const tbody = document.querySelector('#tableCliEntradas tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  if (entradas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Nenhum pagamento registrado.</td></tr>';
+  if (!entradas || entradas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#888;">Nenhum pagamento registrado.</td></tr>';
     return;
   }
   entradas.forEach(e => {
@@ -1088,6 +1129,10 @@ function renderTableCliEntradas(entradas) {
       <td><strong>${e.descricao}</strong></td>
       <td><span class="pdf-tag" style="margin-top:0">${e.tipo || '-'}</span></td>
       <td style="text-align:right; font-family:var(--ff-num); font-weight:600; color:#2ecc71">¥ ${e.valor.toLocaleString('en-US')}</td>
+      <td style="text-align:center; white-space:nowrap;">
+        <button class="btn-icon-tiny" onclick="editarEntradaDash('${e.id}')" title="Editar lançamento no Notion" style="cursor:pointer; background:none; border:none; color:var(--crimson); padding:4px 6px; font-size:14px;">✏️</button>
+        <button class="btn-icon-tiny" onclick="excluirEntradaDash('${e.id}')" title="Excluir lançamento no Notion" style="cursor:pointer; background:none; border:none; color:#e74c3c; padding:4px 6px; font-size:14px;">🗑️</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1097,8 +1142,8 @@ function renderTableCliSaidas(saidas) {
   const tbody = document.querySelector('#tableCliSaidas tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  if (saidas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#888;">Nenhuma despesa registrada.</td></tr>';
+  if (!saidas || saidas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#888;">Nenhuma despesa registrada.</td></tr>';
     return;
   }
   saidas.forEach(s => {
@@ -1109,6 +1154,10 @@ function renderTableCliSaidas(saidas) {
       <td><span class="pdf-tag" style="margin-top:0">${s.categoria || '-'}</span></td>
       <td>${s.tipoServico || '-'}</td>
       <td style="text-align:right; font-family:var(--ff-num); font-weight:600; color:#e74c3c">¥ ${s.valor.toLocaleString('en-US')}</td>
+      <td style="text-align:center; white-space:nowrap;">
+        <button class="btn-icon-tiny" onclick="editarSaidaDash('${s.id}')" title="Editar lançamento no Notion" style="cursor:pointer; background:none; border:none; color:var(--crimson); padding:4px 6px; font-size:14px;">✏️</button>
+        <button class="btn-icon-tiny" onclick="excluirSaidaDash('${s.id}')" title="Excluir lançamento no Notion" style="cursor:pointer; background:none; border:none; color:#e74c3c; padding:4px 6px; font-size:14px;">🗑️</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -2147,6 +2196,7 @@ async function abrirModalRegistrarEntrada() {
   document.getElementById('modalRegistrarEntradaMoeda').value = 'JPY';
   document.getElementById('modalRegistrarEntradaValor').value = '';
   document.getElementById('modalRegistrarEntradaPreviewJPYWrapper').style.display = 'none';
+  { const _j = document.getElementById('modalRegistrarEntradaValorJPY'); if (_j) _j.value = ''; const _c = document.getElementById('modalRegistrarEntradaCambio'); if (_c) _c.value = ''; const _w = document.getElementById('modalRegistrarEntradaConvWrapper'); if (_w) _w.style.display = 'none'; }
   document.getElementById('modalRegistrarEntradaData').value = new Date().toISOString().substring(0, 10);
 
   // Carregar contas
@@ -2178,38 +2228,239 @@ async function abrirModalRegistrarEntrada() {
 
 function fecharModalRegistrarEntrada() {
   const modal = document.getElementById('modalRegistrarEntrada');
-  modal.style.display = 'none';
-  modal.classList.add('hidden');
-  modal.classList.remove('active');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+  }
+  const editEl = document.getElementById('modalRegistrarEntradaEditId');
+  if (editEl) editEl.value = '';
+  const titleEl = document.querySelector('#modalRegistrarEntrada .event-modal-title');
+  if (titleEl) titleEl.textContent = 'Registrar Recebimento';
+  const btnBtn = document.getElementById('btnConfirmarRegistrarEntrada');
+  if (btnBtn) btnBtn.textContent = 'Confirmar Recebimento';
 }
 
-function onMoedaChangeRegistrarEntrada() {
-  onValorChangeRegistrarEntrada();
+function fecharModalRegistrarSaida() {
+  const modal = document.getElementById('modalRegistrarSaida');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+  }
+  const editEl = document.getElementById('modalRegistrarSaidaEditId');
+  if (editEl) editEl.value = '';
+  const titleEl = document.querySelector('#modalRegistrarSaida .event-modal-title');
+  if (titleEl) titleEl.textContent = 'Registrar Pagamento / Despesa';
+  const btnBtn = document.getElementById('btnConfirmarRegistrarSaida');
+  if (btnBtn) btnBtn.textContent = 'Confirmar Pagamento';
 }
 
-function onValorChangeRegistrarEntrada() {
-  const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
-  const valorInput = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
-  const wrapper = document.getElementById('modalRegistrarEntradaPreviewJPYWrapper');
-  const previewText = document.getElementById('modalRegistrarEntradaPreviewJPY');
-
-  if (moeda === 'JPY' || valorInput === 0) {
-    wrapper.style.display = 'none';
+// ── FUNÇÕES DE EDIÇÃO E EXCLUSÃO DE ENTRADAS E SAÍDAS NO DASHBOARD ─────────────
+window.editarEntradaDash = async function(id) {
+  const e = (window.currentDashboardEntradas || []).find(x => x.id === id);
+  if (!e) {
+    alert('Informações da entrada não encontradas.');
     return;
   }
 
-  const rateBRL = parseFloat(state.config.cambio_jpy_brl) || 0.031670;
-  const rateUSD = parseFloat(state.config.cambio_jpy_usd) || 0.006280;
-
-  let estimadoJPY = 0;
-  if (moeda === 'BRL') {
-    estimadoJPY = Math.round(valorInput / rateBRL);
-  } else if (moeda === 'USD') {
-    estimadoJPY = Math.round(valorInput / rateUSD);
+  document.getElementById('modalRegistrarEntradaEditId').value = id;
+  document.getElementById('modalRegistrarEntradaDesc').value = e.descricao || '';
+  document.getElementById('modalRegistrarEntradaValor').value = e.valorOriginal || e.valor;
+  document.getElementById('modalRegistrarEntradaMoeda').value = e.moeda || 'JPY';
+  document.getElementById('modalRegistrarEntradaData').value = e.data || new Date().toISOString().substring(0, 10);
+  if (document.getElementById('modalRegistrarEntradaValorJPY')) {
+    document.getElementById('modalRegistrarEntradaValorJPY').value = e.valor || '';
   }
 
-  previewText.textContent = `¥ ${estimadoJPY.toLocaleString('en-US')}`;
+  const titleEl = document.querySelector('#modalRegistrarEntrada .event-modal-title');
+  if (titleEl) titleEl.textContent = 'Editar Recebimento (Entrada)';
+  const btnBtn = document.getElementById('btnConfirmarRegistrarEntrada');
+  if (btnBtn) btnBtn.textContent = 'Salvar Alterações';
+
+  const selectConta = document.getElementById('modalRegistrarEntradaConta');
+  selectConta.innerHTML = '<option value="">Carregando contas...</option>';
+  try {
+    const res = await fetch('/api/notion/contas');
+    if (res.ok) {
+      const contas = await res.json();
+      selectConta.innerHTML = '<option value="">Selecione a conta...</option>';
+      contas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        selectConta.appendChild(opt);
+      });
+      if (e.contaId) selectConta.value = e.contaId;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  onMoedaChangeRegistrarEntrada();
+
+  const modal = document.getElementById('modalRegistrarEntrada');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+};
+
+window.excluirEntradaDash = async function(id) {
+  if (!confirm('Tem certeza de que deseja excluir este recebimento no Notion?')) return;
+  document.body.style.cursor = 'wait';
+  try {
+    const res = await fetch(`/api/notion/entradas/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao excluir');
+    }
+    alert('Recebimento excluído com sucesso no Notion!');
+    const clientId = document.getElementById('dashClienteSelect').value;
+    if (typeof selecionarClienteDashboard === 'function') {
+      await selecionarClienteDashboard(clientId);
+    }
+    if (typeof carregarSaldosContas === 'function') {
+      await carregarSaldosContas();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao excluir recebimento: ' + err.message);
+  } finally {
+    document.body.style.cursor = 'default';
+  }
+};
+
+window.editarSaidaDash = async function(id) {
+  const s = (window.currentDashboardSaidas || []).find(x => x.id === id);
+  if (!s) {
+    alert('Informações da saída não encontradas.');
+    return;
+  }
+
+  document.getElementById('modalRegistrarSaidaEditId').value = id;
+  document.getElementById('modalRegistrarSaidaDesc').value = s.descricao || '';
+  document.getElementById('modalRegistrarSaidaValor').value = s.valor || '';
+  document.getElementById('modalRegistrarSaidaData').value = s.data || new Date().toISOString().substring(0, 10);
+
+  const titleEl = document.querySelector('#modalRegistrarSaida .event-modal-title');
+  if (titleEl) titleEl.textContent = 'Editar Saída / Despesa';
+  const btnBtn = document.getElementById('btnConfirmarRegistrarSaida');
+  if (btnBtn) btnBtn.textContent = 'Salvar Alterações';
+
+  const selectConta = document.getElementById('modalRegistrarSaidaConta');
+  selectConta.innerHTML = '<option value="">Carregando contas...</option>';
+  try {
+    const res = await fetch('/api/notion/contas');
+    if (res.ok) {
+      const contas = await res.json();
+      selectConta.innerHTML = '<option value="">Selecione a conta...</option>';
+      contas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        selectConta.appendChild(opt);
+      });
+      if (s.contaId) selectConta.value = s.contaId;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  const modal = document.getElementById('modalRegistrarSaida');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+};
+
+window.excluirSaidaDash = async function(id) {
+  if (!confirm('Tem certeza de que deseja excluir esta saída/despesa no Notion?')) return;
+  document.body.style.cursor = 'wait';
+  try {
+    const res = await fetch(`/api/notion/saidas/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao excluir');
+    }
+    alert('Saída/Despesa excluída com sucesso no Notion!');
+    const clientId = document.getElementById('dashClienteSelect').value;
+    if (typeof selecionarClienteDashboard === 'function') {
+      await selecionarClienteDashboard(clientId);
+    }
+    if (typeof carregarSaldosContas === 'function') {
+      await carregarSaldosContas();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao excluir saída: ' + err.message);
+  } finally {
+    document.body.style.cursor = 'default';
+  }
+};
+
+function updatePreviewEntrada() {
+  const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
+  const wrapper = document.getElementById('modalRegistrarEntradaPreviewJPYWrapper');
+  const previewText = document.getElementById('modalRegistrarEntradaPreviewJPY');
+  if (!wrapper) return;
+  const rs = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
+  const jp = Number(document.getElementById('modalRegistrarEntradaValorJPY')?.value) || 0;
+  if (moeda === 'JPY' || jp <= 0) { wrapper.style.display = 'none'; return; }
+  const sim = moeda === 'BRL' ? 'R$' : '$';
+  let txt = '';
+  if (rs > 0) txt += `Cobrar ${sim} ${rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · `;
+  txt += `credita ¥ ${jp.toLocaleString('en-US')}`;
+  previewText.textContent = txt;
   wrapper.style.display = 'flex';
+}
+
+// Equação: valor a cobrar (R$/$) = ¥ que quita × câmbio turismo. O ¥ (a obrigação) é a âncora.
+// Câmbio digitado -> se já tem o ¥, calcula o R$ A COBRAR do cliente; senão, calcula o ¥ pelo R$.
+// (Setar .value via JS não dispara os handlers dos outros campos, então não há loop.)
+function syncEntradaFromCambio() {
+  const rs = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
+  const ipr = Number(document.getElementById('modalRegistrarEntradaCambio').value) || 0; // ienes por real
+  const jp = Number(document.getElementById('modalRegistrarEntradaValorJPY').value) || 0;
+  if (ipr > 0 && jp > 0) {
+    document.getElementById('modalRegistrarEntradaValor').value = (jp / ipr).toFixed(2);  // R$ a cobrar = ¥ / (ienes por real)
+  } else if (ipr > 0 && rs > 0) {
+    document.getElementById('modalRegistrarEntradaValorJPY').value = Math.round(rs * ipr);
+  }
+  updatePreviewEntrada();
+}
+
+// ¥ digitado -> se já tem o câmbio, calcula o R$ a cobrar; senão, calcula o câmbio pelo R$.
+function syncEntradaFromJPY() {
+  const rs = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
+  const ipr = Number(document.getElementById('modalRegistrarEntradaCambio').value) || 0;
+  const jp = Number(document.getElementById('modalRegistrarEntradaValorJPY').value) || 0;
+  if (jp > 0 && ipr > 0) {
+    document.getElementById('modalRegistrarEntradaValor').value = (jp / ipr).toFixed(2);
+  } else if (jp > 0 && rs > 0) {
+    document.getElementById('modalRegistrarEntradaCambio').value = (jp / rs).toFixed(2); // ienes por real = ¥ / R$
+  }
+  updatePreviewEntrada();
+}
+
+function onMoedaChangeRegistrarEntrada() {
+  const moeda = document.getElementById('modalRegistrarEntradaMoeda').value;
+  const conv = document.getElementById('modalRegistrarEntradaConvWrapper');
+  const unidade = document.getElementById('modalRegistrarEntradaCambioUnidade');
+  if (conv) conv.style.display = (moeda === 'JPY') ? 'none' : 'flex';
+  if (unidade) unidade.textContent = moeda === 'USD' ? '(ienes por dólar)' : '(ienes por real)';
+  updatePreviewEntrada();
+}
+
+function onValorChangeRegistrarEntrada() {
+  // Digitou o R$ a cobrar: com o ¥ preenchido, recalcula o câmbio (ienes/real); senão, com câmbio, recalcula o ¥.
+  const rs = Number(document.getElementById('modalRegistrarEntradaValor')?.value) || 0;
+  const ipr = Number(document.getElementById('modalRegistrarEntradaCambio')?.value) || 0;
+  const jp = Number(document.getElementById('modalRegistrarEntradaValorJPY')?.value) || 0;
+  if (rs > 0 && jp > 0) {
+    document.getElementById('modalRegistrarEntradaCambio').value = (jp / rs).toFixed(2);
+  } else if (rs > 0 && ipr > 0) {
+    document.getElementById('modalRegistrarEntradaValorJPY').value = Math.round(rs * ipr);
+  }
+  updatePreviewEntrada();
 }
 
 // Configurar o listener para confirmar o recebimento
@@ -2217,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmar = document.getElementById('btnConfirmarRegistrarEntrada');
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', async () => {
+      const editId = document.getElementById('modalRegistrarEntradaEditId').value;
       let clienteId = document.getElementById('modalRegistrarEntradaCliente').value;
       if (!clienteId) {
         clienteId = document.getElementById('dashClienteSelect').value;
@@ -2227,6 +2479,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const valorOriginal = Number(document.getElementById('modalRegistrarEntradaValor').value) || 0;
       const contaId = document.getElementById('modalRegistrarEntradaConta').value;
       const data = document.getElementById('modalRegistrarEntradaData').value;
+      const valorJPYManual = Number(document.getElementById('modalRegistrarEntradaValorJPY')?.value) || 0;
 
       if (!clienteId || clienteId === 'Geral') {
         alert('Selecione o cliente vinculado ao pagamento.');
@@ -2237,11 +2490,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (valorOriginal <= 0) {
-        alert('Por favor, insira un valor válido maior que zero.');
+        alert('Por favor, insira um valor válido maior que zero.');
         return;
       }
       if (!contaId) {
         alert('Por favor, selecione a conta receptora.');
+        return;
+      }
+      if (moeda !== 'JPY' && valorJPYManual <= 0) {
+        alert('Informe o valor em iene (¥) que este pagamento quita.');
         return;
       }
 
@@ -2251,14 +2508,18 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.cursor = 'wait';
 
       try {
-        const response = await fetch('/api/notion/registrar-entrada', {
-          method: 'POST',
+        const url = editId ? `/api/notion/entradas/${editId}` : '/api/notion/registrar-entrada';
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             clienteId,
             descricao,
             valorOriginal,
             moeda,
+            valorJPYManual,
             contaId,
             data
           })
@@ -2269,7 +2530,7 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(err.error || 'Erro na requisição');
         }
 
-        alert('Recebimento registrado com sucesso no Notion!');
+        alert(editId ? 'Recebimento atualizado com sucesso no Notion!' : 'Recebimento registrado com sucesso no Notion!');
         fecharModalRegistrarEntrada();
 
         // Recarregar os dados do cliente e os saldos/extrato de contabilidade
@@ -2283,7 +2544,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (err) {
         console.error(err);
-        alert('Erro ao registrar recebimento: ' + err.message);
+        alert('Erro ao salvar recebimento: ' + err.message);
       } finally {
         document.body.style.cursor = 'default';
         btnConfirmar.disabled = false;
@@ -2296,6 +2557,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmarSaida = document.getElementById('btnConfirmarRegistrarSaida');
   if (btnConfirmarSaida) {
     btnConfirmarSaida.addEventListener('click', async () => {
+      const editId = document.getElementById('modalRegistrarSaidaEditId').value;
       const descricao = document.getElementById('modalRegistrarSaidaDesc').value.trim();
       const moeda = document.getElementById('modalRegistrarSaidaMoeda').value;
       const valorOriginal = Number(document.getElementById('modalRegistrarSaidaValor').value) || 0;
@@ -2325,8 +2587,11 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.cursor = 'wait';
 
       try {
-        const response = await fetch('/api/notion/registrar-saida', {
-          method: 'POST',
+        const url = editId ? `/api/notion/saidas/${editId}` : '/api/notion/registrar-saida';
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             clienteId: clienteId || undefined,
@@ -2346,7 +2611,7 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(err.error || 'Erro na requisição');
         }
 
-        alert('Lançamento de Saída registrado com sucesso no Notion!');
+        alert(editId ? 'Saída atualizada com sucesso no Notion!' : 'Saída registrada com sucesso no Notion!');
         fecharModalRegistrarSaida();
 
         // Recarregar os dados do cliente e os saldos/extrato de contabilidade
@@ -2360,7 +2625,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (err) {
         console.error(err);
-        alert('Erro ao registrar saída: ' + err.message);
+        alert('Erro ao salvar saída: ' + err.message);
       } finally {
         document.body.style.cursor = 'default';
         btnConfirmarSaida.disabled = false;
@@ -2378,6 +2643,7 @@ window.abrirModalRegistrarEntradaGeral = async function() {
   document.getElementById('modalRegistrarEntradaMoeda').value = 'JPY';
   document.getElementById('modalRegistrarEntradaValor').value = '';
   document.getElementById('modalRegistrarEntradaPreviewJPYWrapper').style.display = 'none';
+  { const _j = document.getElementById('modalRegistrarEntradaValorJPY'); if (_j) _j.value = ''; const _c = document.getElementById('modalRegistrarEntradaCambio'); if (_c) _c.value = ''; const _w = document.getElementById('modalRegistrarEntradaConvWrapper'); if (_w) _w.style.display = 'none'; }
   document.getElementById('modalRegistrarEntradaData').value = new Date().toISOString().substring(0, 10);
 
   // Popular select de clientes com a lista global notionClients

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Indicações de Hotéis — Heian Tour</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #8e1c1c; --primary-dark: #560b0b;
+      --primary-gradient: linear-gradient(135deg, #8e1c1c 0%, #560b0b 100%);
+      --accent: #dfb76c; --accent-dark: #c5a059; --accent-light: #fdf8ee;
+      --bg: #fbf9f6; --card-bg: #ffffff;
+      --border: rgba(142, 28, 28, 0.10); --border-soft: rgba(142,28,28,.06);
+      --ink: #231f1b; --ink-mid: #5c544e; --ink-light: #9c9085;
+      --ff-display: 'Outfit', sans-serif; --ff-body: 'Inter', sans-serif;
+      --shadow-sm: 0 2px 8px rgba(35, 31, 27, 0.05);
+      --shadow-md: 0 10px 30px rgba(142, 28, 28, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 24px 55px rgba(86, 11, 11, 0.12), 0 6px 18px rgba(0, 0, 0, 0.05);
+      --transition: all 0.28s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: radial-gradient(circle at top right, #fdfcfa 0%, #f6f2ec 100%) fixed;
+      color: var(--ink); font-family: var(--ff-body);
+      -webkit-font-smoothing: antialiased; line-height: 1.55; min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── HERO ─────────────────────────────────────────── */
+    .hero { text-align: center; padding: 56px 22px 34px; max-width: 820px; margin: 0 auto; }
+    .hero .wordmark {
+      font-family: var(--ff-display); font-weight: 600; font-size: 12.5px;
+      letter-spacing: .32em; text-transform: uppercase; color: var(--accent-dark);
+      margin-bottom: 20px;
+    }
+    .hero .wordmark::before, .hero .wordmark::after {
+      content: ''; display: inline-block; width: 26px; height: 1px;
+      background: var(--accent-dark); vertical-align: middle; margin: 0 12px; opacity: .6;
+    }
+    .hero h1 {
+      font-family: var(--ff-display); font-weight: 600; font-size: clamp(30px, 6vw, 46px);
+      color: var(--primary-dark); line-height: 1.1; letter-spacing: -.01em; margin-bottom: 16px;
+    }
+    .hero p { color: var(--ink-mid); font-size: clamp(15px, 2.4vw, 17px); max-width: 600px; margin: 0 auto; }
+    .hero .brand-logo { height: 66px; width: auto; display: block; margin: 0 auto 22px; }
+    @media (max-width: 600px) { .hero .brand-logo { height: 50px; margin-bottom: 16px; } }
+
+    /* ── FILTER BAR ───────────────────────────────────── */
+    .filters {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(251, 249, 246, 0.86); backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      border-bottom: 1px solid var(--border-soft); padding: 14px 22px;
+    }
+    .filters-inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .chip-label { font-family: var(--ff-display); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-light); margin-right: 4px; }
+    .chip {
+      border: 1px solid var(--border); background: #fff; color: var(--ink-mid);
+      font-family: var(--ff-display); font-size: 13px; font-weight: 500; cursor: pointer;
+      padding: 7px 15px; border-radius: 99px; transition: var(--transition); white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--accent-dark); color: var(--ink); }
+    .chip.active { background: var(--primary-gradient); color: #fff; border-color: transparent; box-shadow: var(--shadow-sm); }
+    .chip.cat.active { background: var(--accent-gradient); color: var(--primary-dark); }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-wrap input {
+      width: 100%; border: 1px solid var(--border); border-radius: 99px; background: #fff;
+      padding: 10px 16px 10px 40px; font-family: var(--ff-body); font-size: 14.5px; color: var(--ink);
+      transition: var(--transition);
+    }
+    .search-wrap input:focus { outline: none; border-color: var(--accent-dark); box-shadow: 0 0 0 3px rgba(223,183,108,.15); }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--ink-light); fill: none; stroke-width: 2; }
+    .count { font-size: 12.5px; color: var(--ink-light); font-family: var(--ff-display); font-weight: 500; }
+
+    /* ── GRID ─────────────────────────────────────────── */
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 22px 80px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 24px; }
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border-soft); border-radius: 18px;
+      overflow: hidden; cursor: pointer; transition: var(--transition); box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--border); }
+    .card-img { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--accent-light); }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.25,.8,.25,1); display: block; }
+    .card:hover .card-img img { transform: scale(1.06); }
+    .card-img .noimg {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      background: var(--primary-gradient); color: rgba(255,255,255,.9);
+      font-family: var(--ff-display); font-weight: 600; font-size: 40px; letter-spacing: .04em;
+    }
+    .cat-pill {
+      position: absolute; top: 12px; left: 12px;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(4px);
+      color: var(--primary-dark); font-family: var(--ff-display); font-size: 11px; font-weight: 600;
+      letter-spacing: .04em; padding: 5px 11px; border-radius: 99px; box-shadow: var(--shadow-sm);
+    }
+    .card-body { padding: 16px 17px 18px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+    .card-stars { color: var(--accent-dark); font-size: 13px; letter-spacing: 1px; height: 16px; }
+    .card-name { font-family: var(--ff-display); font-weight: 600; font-size: 17.5px; color: var(--ink); line-height: 1.25; }
+    .card-loc { font-size: 12.5px; color: var(--ink-light); font-weight: 500; display: flex; align-items: center; gap: 5px; }
+    .card-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.5; margin-top: 2px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; }
+    .btn-mini {
+      flex: 1; text-align: center; border: 1px solid var(--border); border-radius: 99px;
+      padding: 8px 10px; font-family: var(--ff-display); font-size: 12.5px; font-weight: 600;
+      color: var(--primary); background: #fff; transition: var(--transition);
+    }
+    .btn-mini:hover { background: var(--primary); color: #fff; border-color: transparent; }
+
+    .empty, .loading { text-align: center; padding: 80px 20px; color: var(--ink-light); }
+    .empty h3 { font-family: var(--ff-display); color: var(--ink-mid); font-weight: 600; font-size: 20px; margin-bottom: 6px; }
+    .spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DETAIL MODAL ─────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 100; background: rgba(35,31,27,.55);
+      backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 20px;
+      opacity: 0; transition: opacity .25s ease;
+    }
+    .overlay.open { display: flex; opacity: 1; }
+    .modal {
+      background: #fff; border-radius: 22px; max-width: 720px; width: 100%; max-height: 92vh;
+      overflow-y: auto; box-shadow: var(--shadow-lg); transform: translateY(12px) scale(.98);
+      transition: transform .3s cubic-bezier(.25,.8,.25,1);
+    }
+    .overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-hero { position: relative; aspect-ratio: 16 / 9; background: var(--accent-light); overflow: hidden; }
+    .modal-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .modal-hero .noimg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--primary-gradient); color: rgba(255,255,255,.9); font-family: var(--ff-display); font-weight: 600; font-size: 60px; }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 50%;
+      background: rgba(255,255,255,.94); border: none; cursor: pointer; font-size: 20px; color: var(--ink);
+      display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); transition: var(--transition);
+    }
+    .modal-close:hover { background: #fff; transform: rotate(90deg); }
+    .thumbs { display: flex; gap: 8px; padding: 12px 22px 0; overflow-x: auto; }
+    .thumbs img { width: 72px; height: 54px; object-fit: cover; border-radius: 8px; cursor: pointer; opacity: .6; transition: var(--transition); border: 2px solid transparent; flex-shrink: 0; }
+    .thumbs img.active, .thumbs img:hover { opacity: 1; border-color: var(--accent-dark); }
+    .modal-body { padding: 22px 26px 30px; }
+    .modal-body .cat { font-family: var(--ff-display); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--accent-dark); background: var(--accent-light); display: inline-block; padding: 4px 12px; border-radius: 99px; margin-bottom: 12px; }
+    .modal-body h2 { font-family: var(--ff-display); font-weight: 600; font-size: 27px; color: var(--primary-dark); line-height: 1.15; }
+    .modal-stars { color: var(--accent-dark); font-size: 15px; letter-spacing: 2px; margin: 8px 0 4px; }
+    .modal-loc { color: var(--ink-mid); font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .modal-desc { color: var(--ink); font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; }
+    .modal-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
+    .modal-tags span { font-size: 12px; color: var(--ink-mid); background: #f4efe7; padding: 5px 12px; border-radius: 99px; font-weight: 500; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 140px; text-align: center; padding: 13px 18px; border-radius: 12px;
+      font-family: var(--ff-display); font-size: 14.5px; font-weight: 600; transition: var(--transition); cursor: pointer;
+    }
+    .btn-primary { background: var(--primary-gradient); color: #fff; box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--accent-light); border-color: var(--accent-dark); }
+
+    footer { text-align: center; padding: 30px 20px 40px; color: var(--ink-light); font-size: 12.5px; font-family: var(--ff-display); border-top: 1px solid var(--border-soft); }
+    footer b { color: var(--accent-dark); font-weight: 600; letter-spacing: .04em; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 40px 20px 22px; }
+      .grid { grid-template-columns: 1fr; gap: 18px; }
+      .modal-body { padding: 20px 20px 26px; }
+      .btn { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <img class="brand-logo" src="/assets/heian-logo-transparent.png" alt="Heian Tour" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+    <div class="wordmark" style="display:none;">Heian Tour</div>
+    <h1>Indicações de Hotéis</h1>
+    <p>Nossa curadoria de hospedagens no Japão — cada endereço escolhido a dedo pela Heian, com o que ele tem de melhor e os pontos de atenção.</p>
+  </header>
+
+  <div class="filters">
+    <div class="filters-inner">
+      <div class="chip-row" id="cidadeChips"></div>
+      <div class="chip-row" id="categoriaChips"></div>
+      <div class="chip-row">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="busca" placeholder="Buscar por nome, bairro, estilo...">
+        </div>
+        <span class="count" id="count"></span>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+    <div id="loading" class="loading"><div class="spinner"></div>Carregando indicações...</div>
+    <div id="empty" class="empty" style="display:none;"><h3>Nenhum hotel encontrado</h3><p>Tente ajustar os filtros ou a busca.</p></div>
+  </main>
+
+  <footer>Curadoria <b>HEIAN TOUR</b> · Viagens premium ao Japão</footer>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script>
+    var DADOS = [];
+    var filtro = { cidade: '', categoria: '', q: '' };
+    var ORDEM_CIDADE = ['Tokyo', 'Tóquio', 'Kyoto', 'Quioto', 'Osaka', 'Hakone', 'Kanazawa', 'Takayama', 'Hiroshima', 'Nara'];
+
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function estrelas(n) { n = parseInt(n) || 0; return n > 0 ? '★★★★★'.slice(0, n) : ''; }
+    function fotosDe(h) { return Array.isArray(h.fotos) ? h.fotos.filter(Boolean) : (h.fotos ? [h.fotos] : []); }
+    function inicial(h) { return (h.nome || '?').trim().charAt(0).toUpperCase(); }
+
+    function ordenarCidades(cids) {
+      return cids.sort(function (a, b) {
+        var ia = ORDEM_CIDADE.indexOf(a), ib = ORDEM_CIDADE.indexOf(b);
+        if (ia === -1) ia = 99; if (ib === -1) ib = 99;
+        return ia - ib || a.localeCompare(b);
+      });
+    }
+
+    async function carregar() {
+      try { DADOS = await fetch('/api/public/indicacoes').then(function (r) { return r.json(); }); }
+      catch (e) { DADOS = []; }
+      if (!Array.isArray(DADOS)) DADOS = [];
+      document.getElementById('loading').style.display = 'none';
+      montarFiltros();
+      render();
+    }
+
+    function montarFiltros() {
+      var cidades = ordenarCidades(Array.from(new Set(DADOS.map(function (h) { return (h.cidade || '').trim(); }).filter(Boolean))));
+      var cats = Array.from(new Set(DADOS.map(function (h) { return (h.categoria || '').trim(); }).filter(Boolean)));
+      var cc = document.getElementById('cidadeChips');
+      cc.innerHTML = '<span class="chip-label">Cidade</span>' +
+        '<button class="chip active" data-cidade="">Todas</button>' +
+        cidades.map(function (c) { return '<button class="chip" data-cidade="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
+      var ct = document.getElementById('categoriaChips');
+      ct.innerHTML = cats.length ? ('<span class="chip-label">Estilo</span>' +
+        '<button class="chip cat active" data-cat="">Todos</button>' +
+        cats.map(function (c) { return '<button class="chip cat" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('')) : '';
+      cc.querySelectorAll('.chip').forEach(function (b) { b.onclick = function () { filtro.cidade = b.dataset.cidade; setActive(cc, b); render(); }; });
+      ct.querySelectorAll('.chip').forEach(function (b) { b.onclick = function () { filtro.categoria = b.dataset.cat; setActive(ct, b); render(); }; });
+    }
+    function setActive(container, btn) { container.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); }); btn.classList.add('active'); }
+
+    function render() {
+      var q = filtro.q.toLowerCase();
+      var lista = DADOS.filter(function (h) {
+        if (filtro.cidade && (h.cidade || '').trim() !== filtro.cidade) return false;
+        if (filtro.categoria && (h.categoria || '').trim() !== filtro.categoria) return false;
+        if (q && [h.nome, h.cidade, h.bairro, h.categoria, h.descricao, (h.tags || []).join(' ')].join(' ').toLowerCase().indexOf(q) === -1) return false;
+        return true;
+      });
+      var grid = document.getElementById('grid');
+      document.getElementById('empty').style.display = lista.length ? 'none' : 'block';
+      document.getElementById('count').textContent = lista.length ? (lista.length + (lista.length === 1 ? ' hotel' : ' hotéis')) : '';
+      grid.innerHTML = lista.map(cardHTML).join('');
+      grid.querySelectorAll('[data-id]').forEach(function (el) {
+        el.onclick = function (ev) { if (ev.target.closest('.btn-mini')) return; abrirDetalhe(el.dataset.id); };
+      });
+    }
+
+    function cardHTML(h) {
+      var fs = fotosDe(h);
+      var img = fs.length ? '<img src="' + esc(fs[0]) + '" alt="' + esc(h.nome) + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.innerHTML=\'<div class=&quot;noimg&quot;>' + esc(inicial(h)) + '</div>\'">' : '<div class="noimg">' + esc(inicial(h)) + '</div>';
+      var loc = [h.bairro, h.cidade].filter(Boolean).map(esc).join(' · ');
+      var acts = '';
+      if (h.maps) acts += '<a class="btn-mini" href="' + esc(h.maps) + '" target="_blank" rel="noopener">📍 Mapa</a>';
+      if (h.site) acts += '<a class="btn-mini" href="' + esc(h.site) + '" target="_blank" rel="noopener">Site</a>';
+      return '<article class="card" data-id="' + esc(h.id) + '">' +
+        '<div class="card-img">' + img + (h.categoria ? '<span class="cat-pill">' + esc(h.categoria) + '</span>' : '') + '</div>' +
+        '<div class="card-body">' +
+          (estrelas(h.estrelas) ? '<div class="card-stars">' + estrelas(h.estrelas) + '</div>' : '') +
+          '<div class="card-name">' + esc(h.nome || '') + '</div>' +
+          (loc ? '<div class="card-loc">' + loc + '</div>' : '') +
+          (h.descricao ? '<div class="card-desc">' + esc(h.descricao) + '</div>' : '') +
+          (acts ? '<div class="card-actions">' + acts + '</div>' : '') +
+        '</div></article>';
+    }
+
+    function abrirDetalhe(id) {
+      var h = DADOS.find(function (x) { return String(x.id) === String(id); });
+      if (!h) return;
+      var fs = fotosDe(h);
+      var hero = fs.length ? '<img id="mHero" src="' + esc(fs[0]) + '" alt="' + esc(h.nome) + '" referrerpolicy="no-referrer">' : '<div class="noimg">' + esc(inicial(h)) + '</div>';
+      var thumbs = fs.length > 1 ? '<div class="thumbs">' + fs.map(function (u, i) { return '<img src="' + esc(u) + '" data-i="' + i + '" referrerpolicy="no-referrer" class="' + (i === 0 ? 'active' : '') + '">'; }).join('') + '</div>' : '';
+      var loc = [h.bairro, h.cidade].filter(Boolean).map(esc).join(' · ');
+      var tags = (Array.isArray(h.tags) ? h.tags : []).filter(Boolean);
+      var acts = '';
+      if (h.maps) acts += '<a class="btn btn-primary" href="' + esc(h.maps) + '" target="_blank" rel="noopener">📍 Ver no Google Maps</a>';
+      if (h.site) acts += '<a class="btn btn-outline" href="' + esc(h.site) + '" target="_blank" rel="noopener">Site oficial</a>';
+      document.getElementById('modal').innerHTML =
+        '<div class="modal-hero">' + hero + '<button class="modal-close" onclick="fecharDetalhe()">×</button></div>' +
+        thumbs +
+        '<div class="modal-body">' +
+          (h.categoria ? '<span class="cat">' + esc(h.categoria) + '</span><br>' : '') +
+          '<h2>' + esc(h.nome || '') + '</h2>' +
+          (estrelas(h.estrelas) ? '<div class="modal-stars">' + estrelas(h.estrelas) + '</div>' : '') +
+          (loc ? '<div class="modal-loc">' + loc + '</div>' : '') +
+          (h.descricao ? '<div class="modal-desc">' + esc(h.descricao) + '</div>' : '') +
+          (tags.length ? '<div class="modal-tags">' + tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
+          (acts ? '<div class="modal-actions">' + acts + '</div>' : '') +
+        '</div>';
+      document.querySelectorAll('.thumbs img').forEach(function (t) {
+        t.onclick = function () {
+          document.getElementById('mHero').src = t.src;
+          document.querySelectorAll('.thumbs img').forEach(function (x) { x.classList.remove('active'); });
+          t.classList.add('active');
+        };
+      });
+      var ov = document.getElementById('overlay'); ov.classList.add('open'); document.body.style.overflow = 'hidden';
+    }
+    function fecharDetalhe() { document.getElementById('overlay').classList.remove('open'); document.body.style.overflow = ''; }
+
+    document.getElementById('overlay').onclick = function (e) { if (e.target === this) fecharDetalhe(); };
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharDetalhe(); });
+    document.getElementById('busca').addEventListener('input', function (e) { filtro.q = e.target.value; render(); });
+
+    carregar();
+  </script>
+</body>
+</html>

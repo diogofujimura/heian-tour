@@ -612,7 +612,7 @@
                     <input type="file" id="fotoPerfilFile" accept="image/*" style="display:none;" onchange="previewFotoPerfil(this)">
                     <button type="button" class="btn-submit" onclick="document.getElementById('fotoPerfilFile').click()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid rgba(196,163,90,0.3); background:#fff; color:var(--ink-mid); cursor:pointer; width:auto; display:inline-block; transition: all 0.2s;">Selecionar Foto</button>
                     <button type="button" id="btnRemoverFoto" class="btn-submit" onclick="removerFotoPerfil()" style="margin-top:0; padding:10px 16px; font-size:13px; border-radius:8px; border:1px solid #fee; background:#fff; color:#c00; cursor:pointer; display:none; margin-left:8px; width:auto; display:inline-block; transition: all 0.2s;">Remover</button>
-                    <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Imagem de até 250KB.</p>
+                    <p style="margin:6px 0 0 0; font-size:11px; color:var(--ink-lt);">Sua foto será otimizada automaticamente (aceita qualquer tamanho do celular).</p>
                   </div>
                 </div>
               </div>
@@ -647,7 +647,7 @@
 
               <div class="form-group">
                 <label>Cidades que pretendem visitar</label>
-                <input type="text" id="cidadesPretendeVisitar" placeholder="Ex: Tóquio, Quioto, Osaka, Hakone, Hiroshima...">
+                 <input type="text" id="cidadesPretendeVisitar" placeholder="Ex: Tokyo, Kyoto, Osaka, Hakone, Hiroshima...">
               </div>
 
               <div class="form-group">
@@ -1054,18 +1054,40 @@
       const file = input.files[0];
       if (!file) return;
 
-      if (file.size > 250 * 1024) {
-        alert("A imagem selecionada é muito grande. Por favor, escolha uma imagem de até 250KB.");
-        input.value = "";
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = function(e) {
-        fotoPerfilBase64 = e.target.result;
-        const container = document.getElementById('avatarPreviewContainer');
-        container.innerHTML = `<img src="${fotoPerfilBase64}" style="width:100%; height:100%; object-fit:cover;">`;
-        document.getElementById('btnRemoverFoto').style.display = 'inline-block';
+        const img = new Image();
+        img.onload = function() {
+          const maxWidth = 600;
+          const maxHeight = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          fotoPerfilBase64 = canvas.toDataURL('image/jpeg', 0.82);
+
+          const container = document.getElementById('avatarPreviewContainer');
+          container.innerHTML = `<img src="${fotoPerfilBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+          document.getElementById('btnRemoverFoto').style.display = 'inline-block';
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -1109,7 +1131,7 @@
           <!-- Linha 1: Cidade e Hotel -->
           <div class="form-row" style="margin-bottom: 0;">
             <div class="form-group" style="flex: 1;">
-              <input type="text" class="hotel-cidade" placeholder="Cidade (ex: Tóquio)">
+              <input type="text" class="hotel-cidade" placeholder="Cidade (ex: Tokyo)">
             </div>
             <div class="form-group" style="flex: 1;">
               <input type="text" class="hotel-pref" placeholder="(Nome do Hotel)">

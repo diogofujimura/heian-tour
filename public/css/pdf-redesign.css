@@ -122,3 +122,80 @@
   font-weight:800; color:var(--pdf-wine); font-size:15px; }
 .pdf-resumo-row.pagamento-saldo{ margin-top:12px; color:var(--pdf-t2); font-style:italic; }
 @media print{ .pdf-pagamento-box{ -webkit-print-color-adjust:exact; print-color-adjust:exact; background:#FBF4E2 !important; } }
+
+/* ============================================================================
+   v2 — LEITURA NO CELULAR + QUALIDADE DE IMPRESSÃO (2026-07-08)
+   Backup do estado anterior em _BACKUP/preview-antes-20260708/
+   ============================================================================ */
+/* impressão: não partir blocos no meio da página */
+.pdf-body .dia-header,
+.pdf-body .dia-atracoes,
+.pdf-body .pdf-estadia-item,
+.pdf-body [style*="border-left:4px"],
+.pdf-body [style*="border-left: 4px"]{ break-inside:avoid; page-break-inside:avoid; }
+.pdf-body .dia-header{ break-after:avoid; page-break-after:avoid; }
+.pdf-section-header{ break-after:avoid; page-break-after:avoid; }
+
+/* tela pequena: aproveitar a largura e reduzir molduras */
+@media (max-width:640px){
+  .pdf-cover{ padding:44px 20px 40px !important; }
+  .pdf-cover-logo{ width:150px !important; }
+  .pdf-cover-title{ font-size:23px !important; }
+  .pdf-cover-meta{ margin-top:26px !important; padding-top:16px; }
+  .pdf-cover-meta-item{ padding:0 14px !important; }
+  .pdf-body{ padding:14px 8px 20px !important; }
+  .pdf-body > div{ padding:16px 12px !important; border-radius:10px !important; }
+  .pdf-body .roteiro-timeline{ padding-left:10px !important; border-left-width:1.5px !important; }
+  .pdf-body .dia-numero{ font-size:17px !important; }
+  .pdf-body .dia-header{ padding:8px 10px !important; }
+  .pdf-estadias-grid{ grid-template-columns:1fr 1fr !important; gap:8px !important; }
+  .pdf-body [style*="font-size:11px"],.pdf-body [style*="font-size: 11px"]{font-size:12.5px !important}
+  .pdf-body [style*="font-size:12px"],.pdf-body [style*="font-size: 12px"]{font-size:13px !important}
+  .pdf-body [style*="font-size:13px"],.pdf-body [style*="font-size: 13px"]{font-size:14px !important}
+  .pdf-body [style*="padding-left:12px"],.pdf-body [style*="padding-left: 12px"]{padding-left:9px !important}
+}
+
+/* ============================================================================
+   COTAÇÃO — export igual ao preview: sem a página vinho cheia.
+   Só afeta a COTAÇÃO (.pdf-doc-cotacao / .pdf-cover-cotacao), não o roteiro.
+   A capa vira um bloco compacto que NÃO gruda forçado na 1ª seção (era o
+   `page-break-after: avoid` que estourava a folha), e as tabelas longas
+   fluem entre páginas mantendo cada LINHA inteira — a tabela emenda logo
+   abaixo do cabeçalho, como no preview.
+   ============================================================================ */
+@media print {
+  .pdf-cover-cotacao{
+    page-break-after:auto !important; break-after:auto !important;
+    page-break-inside:avoid !important; break-inside:avoid !important;
+  }
+  .pdf-doc-cotacao .pdf-section{ page-break-inside:auto !important; break-inside:auto !important; }
+  .pdf-doc-cotacao .pdf-table{ page-break-inside:auto !important; break-inside:auto !important; }
+  .pdf-doc-cotacao .pdf-table thead{ display:table-header-group !important; }
+  .pdf-doc-cotacao .pdf-table tr{ page-break-inside:avoid !important; break-inside:avoid !important; }
+  /* resumo financeiro continua inteiro numa página só */
+  .pdf-doc-cotacao .pdf-resumo{ page-break-inside:avoid !important; break-inside:avoid !important; }
+
+  /* Mantém o visual REFINADO do preview no PDF: fundo creme + cada seção num box branco
+     com borda/cantos/sombra (o print padrão achatava tudo em branco). */
+  .pdf-doc-cotacao .pdf-body{
+    background:#FBF7F0 !important; padding:22px 16px 26px !important;
+    -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;
+  }
+  .pdf-doc-cotacao .pdf-body > div{
+    background:#fff !important;
+    border:1px solid var(--pdf-line) !important;
+    border-radius:12px !important;
+    box-shadow:0 10px 30px -16px rgba(60,30,30,.18) !important;
+    padding:22px 26px !important;
+    margin-bottom:16px !important;
+    -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;
+  }
+  /* Rodapé (termos + selo HEIAN TOUR): o box preenche a página e ancora a marca
+     no pé da folha, eliminando o retângulo creme que sobrava embaixo. */
+  .pdf-doc-cotacao .pdf-footer{
+    display:flex !important; flex-direction:column !important;
+    min-height:230mm !important; box-sizing:border-box !important;
+    margin-bottom:0 !important;
+  }
+  .pdf-doc-cotacao .pdf-colophon{ margin-top:auto !important; padding-top:20px !important; }
+}

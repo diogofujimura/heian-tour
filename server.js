@@ -11,6 +11,23 @@ const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+const { createNotionMirror } = require('./lib/notion-mirror');
+const NOTION_DATABASES = {
+  clientes: NOTION_CLIENTS_DB_ID,
+  colaboradores: process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602',
+  agenda: process.env.NOTION_AGENDA_DB_ID,
+  contas: process.env.NOTION_CONTAS_DB_ID || '2bab6e48f954803bae65d962d2b529f5',
+  entradas: process.env.NOTION_ENTRADAS_DB_ID,
+  saidas: process.env.NOTION_SAIDAS_DB_ID,
+  tasks: process.env.NOTION_TASKS_DB_ID
+};
+const notionMirror = createNotionMirror({
+  supabase,
+  token: NOTION_TOKEN,
+  databases: NOTION_DATABASES,
+  fetchImpl: fetch,
+  logger: console
+});
 
 const nodemailer = require('nodemailer');
 
@@ -42,26 +59,15 @@ async function obterColaboradoresEmails() {
   const colaboradoresMap = {};
   if (!NOTION_TOKEN) return colaboradoresMap;
   try {
-    const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
-    const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
+    const pages = await notionMirror.getPages('colaboradores');
+    pages.forEach(item => {
+      const nameProp = item.properties.Name || item.properties.Nome;
+      const name = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
+      const email = item.properties.Email?.email || '';
+      if (email) {
+        colaboradoresMap[item.id] = { name, email: email.trim() };
       }
     });
-    if (response.ok) {
-      const data = await response.json();
-      (data.results || []).forEach(item => {
-        const nameProp = item.properties.Name || item.properties.Nome;
-        const name = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
-        const email = item.properties.Email?.email || '';
-        if (email) {
-          colaboradoresMap[item.id] = { name, email: email.trim() };
-        }
-      });
-    }
   } catch (e) {
     console.error('[Email Init] Erro ao carregar colaboradores do Notion:', e);
   }
@@ -184,6 +190,12 @@ function formatarDataExtenso(dataStr) {
 // Helper para buscar o hotel do cliente com base na data do serviço
 async function buscarHotelPorData(evento) {
   try {
+    // Normaliza data para ISO (YYYY-MM-DD) — cobre estadias antigas salvas em BR (DD/MM/YYYY)
+    const normISO = (d) => {
+      if (!d) return '';
+      if (d.includes('/')) { const p = d.split('/'); if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`; }
+      return d;
+    };
     // 1. Tentar buscar via roteiroNome (aceita ID imutável ou nome de exibição)
     if (evento.roteiroNome) {
       const linhaRot = await acharRoteiroPorChaveOuNome(evento.roteiroNome);
@@ -194,7 +206,7 @@ async function buscarHotelPorData(evento) {
           // Encontrar a estadia que cobre a data do serviço
           for (const est of estadias) {
             if (est.dataInicio && est.dataFim && est.hotel) {
-              if (evento.dataServico >= est.dataInicio && evento.dataServico <= est.dataFim) {
+              if (evento.dataServico >= normISO(est.dataInicio) && evento.dataServico <= normISO(est.dataFim)) {
                 return { hotel: est.hotel, cidade: est.cidade || '' };
               }
             }
@@ -214,7 +226,7 @@ async function buscarHotelPorData(evento) {
         if (estadias.length > 0 && evento.dataServico) {
           for (const est of estadias) {
             if (est.dataInicio && est.dataFim && est.hotel) {
-              if (evento.dataServico >= est.dataInicio && evento.dataServico <= est.dataFim) {
+              if (evento.dataServico >= normISO(est.dataInicio) && evento.dataServico <= normISO(est.dataFim)) {
                 return { hotel: est.hotel, cidade: est.cidade || '' };
               }
             }
@@ -654,11 +666,43 @@ const DB_PATH = path.join(__dirname, 'database.json');
 const defaultData = { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
 
 // --- PUBLIC ROUTES (No Auth Required) ---
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, res, buffer) => {
+    if (req.originalUrl === '/api/integracoes/notion/webhook') {
+      req.rawBody = Buffer.from(buffer);
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
-app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets'), { maxAge: '1d' }));
+app.use('/css', express.static(path.join(__dirname, 'public', 'css'), { maxAge: '5m' }));
+
+// Notion -> Supabase. Esta rota precisa ser pública para o Notion entregar os eventos.
+// A assinatura é validada quando NOTION_WEBHOOK_VERIFICATION_TOKEN está configurado.
+app.post('/api/integracoes/notion/webhook', (req, res) => {
+  const verificationToken = req.body?.verification_token;
+  if (verificationToken) {
+    console.log('[Notion Mirror] verification_token recebido:', verificationToken);
+    return res.status(200).json({ verification_token: verificationToken });
+  }
+
+  const secret = process.env.NOTION_WEBHOOK_VERIFICATION_TOKEN;
+  if (!secret) {
+    return res.status(503).json({ error: 'Webhook do Notion ainda não foi ativado no servidor.' });
+  }
+  const signature = req.headers['x-notion-signature'];
+  if (!notionMirror.verifyWebhookSignature(req.rawBody, signature, secret)) {
+    return res.status(401).json({ error: 'Assinatura do webhook inválida.' });
+  }
+
+  res.status(200).json({ received: true });
+  setImmediate(() => {
+    notionMirror.processWebhookEvent(req.body)
+      .catch(error => console.error('[Notion Mirror] Falha no webhook:', error.message));
+  });
+});
 
 app.post('/api/public/cadastro', async (req, res) => {
   try {
@@ -915,6 +959,7 @@ app.post('/api/public/cadastro', async (req, res) => {
 
     // Gravar no Supabase a estrutura local correspondente (incluindo fotoPerfil)
     const cliId = result.id;
+    await notionMirror.upsertPage('clientes', result);
     const currentEditingViajantes = [];
     if (viajantes) {
       viajantes.split('\n').filter(l => l.trim()).forEach(line => {
@@ -958,36 +1003,29 @@ app.post('/api/public/cadastro', async (req, res) => {
       });
     }
 
-    try {
-      await supabase.from('clientes_locais').upsert({
-        id: String(cliId),
-        data: {
-          id: cliId,
-          nome: nome,
-          estadias: currentEditingEstadias,
-          viajantes: currentEditingViajantes,
-          emails: currentEditingEmails,
-          fotoPerfil: req.body.fotoPerfil || "",
-          preferencias: {
-            profissoes,
-            necessidadesEspeciais,
-            cidadesPretendeVisitar,
-            prioridades,
-            ritmo,
-            templos,
-            caminhada,
-            refeicoes,
-            interessesTour,
-            experienciasSazonais,
-            primeiraVez,
-            ocasiaoEspecial,
-            experienciasImperdiveis
-          }
-        }
-      });
-    } catch (dbErr) {
-      console.error('Erro ao gravar dados locais do cliente no Supabase via cadastro:', dbErr);
-    }
+    await salvarClienteLocalCanonico(cliId, {
+      id: cliId,
+      nome,
+      estadias: currentEditingEstadias,
+      viajantes: currentEditingViajantes,
+      emails: currentEditingEmails,
+      fotoPerfil: req.body.fotoPerfil || "",
+      preferencias: {
+        profissoes,
+        necessidadesEspeciais,
+        cidadesPretendeVisitar,
+        prioridades,
+        ritmo,
+        templos,
+        caminhada,
+        refeicoes,
+        interessesTour,
+        experienciasSazonais,
+        primeiraVez,
+        ocasiaoEspecial,
+        experienciasImperdiveis
+      }
+    });
 
     res.json({ success: true, client: result });
   } catch (error) {
@@ -1059,6 +1097,16 @@ app.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 
+// -------- CARA PÚBLICA (home aberta) --------
+// A raiz "/" é pública: visitante DESLOGADO vê a "Em Breve" (public/index.html).
+// Todo o resto do site continua protegido pela trava de senha abaixo.
+// Logado: cai no next() e recebe o portal normal (rota app.get('/') original, mais abaixo).
+// FASE 2: quando a landing nova for aprovada, trocar 'index.html' pelo arquivo dela.
+app.get('/', (req, res, next) => {
+  if (typeof sessaoValida === 'function' && sessaoValida(req)) return next();
+  return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // -------- AUTENTICAÇÃO GLOBAL --------
 // Protege tudo com senha, exceto as rotas públicas (cadastro e área do cliente)
 if (process.env.APP_PASS) {
@@ -1074,6 +1122,10 @@ if (process.env.APP_PASS) {
       '/cliente',
       '/cliente.html',
       '/api/public/client-data',
+      // Página escondida de indicações de hotéis (enviada ao cliente por link, sem senha)
+      '/indicacoes-hoteis',
+      '/indicacoes-hoteis.html',
+      '/api/public/indicacoes',
       '/login',
       '/api/login',
       // Estáticos inofensivos referenciados pelas páginas públicas — sem isso,
@@ -1081,13 +1133,15 @@ if (process.env.APP_PASS) {
       '/manifest.json',
       '/manifest-admin.json',
       '/service-worker.js',
-      '/favicon.ico'
+      '/favicon.ico',
+      // Chat cliente↔Heian: cada handler valida token do portal ou sessão admin
+      '/api/chat'
     ];
     if (rotasPublicas.some(r => req.path === r || req.path.startsWith(r + '/'))) {
       return next();
     }
-    // Libera a consulta pública de atrações para os tooltips na Área do Cliente (somente GET)
-    if (req.path === '/api/atracoes' && req.method === 'GET') {
+    // Libera a consulta pública de atrações, transportes e experiências para a Área do Cliente (somente GET)
+    if (['/api/atracoes', '/api/transportes', '/api/experiencias'].includes(req.path) && req.method === 'GET') {
       return next();
     }
     // 1º: cookie de sessão válido
@@ -1111,6 +1165,11 @@ app.get('/', (req, res) => {
 // Área admin: serve app.html (painel completo)
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+// Página escondida: curadoria de indicações de hotéis (link enviado ao cliente sob demanda)
+app.get('/indicacoes-hoteis', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'indicacoes-hoteis.html'));
 });
 
 app.post('/api/admin/enviar-roteiro-email', express.json({ limit: '50mb' }), async (req, res) => {
@@ -1230,9 +1289,17 @@ app.post('/api/admin/enviar-roteiro-email', express.json({ limit: '50mb' }), asy
 
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    const ext = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath).toLowerCase();
+    if (ext === '.html' || fileName === 'service-worker.js') {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      return;
+    }
+    if (ext === '.js' || ext === '.css') {
+      res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+      return;
+    }
+    res.setHeader('Cache-Control', 'public, max-age=86400');
   }
 }));
 
@@ -1251,6 +1318,14 @@ async function readDB() {
       supabase.from('roteiros').select('*'),
       supabase.from('rotas_base').select('data').eq('id', 'base').single()
     ]);
+    const falhas = [
+      ['app_config', cfgRes], ['transportes', transpRes], ['experiencias', expRes],
+      ['atracoes', atrRes], ['orcamentos', orcsRes], ['clientes_locais', clisRes],
+      ['roteiros', rotsRes], ['rotas_base', baseRes]
+    ].filter(([, result]) => result.error && result.error.code !== 'PGRST116');
+    if (falhas.length) {
+      throw new Error('Falha ao ler Supabase: ' + falhas.map(([nome, result]) => `${nome}: ${result.error.message}`).join(' | '));
+    }
 
     if (cfgRes.data && cfgRes.data.data) defaultData.config = cfgRes.data.data;
     if (transpRes.data && transpRes.data.data) defaultData.transportes = transpRes.data.data;
@@ -1273,7 +1348,7 @@ async function readDB() {
     return defaultData;
   } catch(e) {
     console.error('Erro no readDB do Supabase:', e);
-    return { config: {}, transportes: [], experiencias: [], atracoes: [], rotas: {}, orcamentosDB: [], clientesDB: [] };
+    throw e;
   }
 }
 
@@ -1324,9 +1399,13 @@ console.error = function(...args) {
 
 // Auxiliar para sincronização em duas vias com o Google Sheets via Apps Script Web App
 async function syncToGoogleSheets(type, action, data, oldData = null) {
-  const db = await readDB();
-  const { sheets_script_url, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas, sheets_aba_hoteis } = db.config;
-  if (!sheets_script_url) return; // Se não houver URL configurada, ignora silenciosamente
+  const { data: cfgRow, error: cfgError } = await supabase.from('config').select('data').eq('id', 'app_config').maybeSingle();
+  if (cfgError) {
+    return { ok: false, queued: false, error: `Configuração do Sheets indisponível: ${cfgError.message}` };
+  }
+  const config = cfgRow?.data || {};
+  const { sheets_script_url, sheets_aba_transportes, sheets_aba_experiencias, sheets_aba_atracoes, sheets_aba_rotas, sheets_aba_hoteis } = config;
+  if (!sheets_script_url) return { ok: false, queued: false, error: 'Apps Script não configurado' };
 
   let sheetName = '';
   if (type === 'transportes') sheetName = sheets_aba_transportes || 'Base';
@@ -1335,21 +1414,713 @@ async function syncToGoogleSheets(type, action, data, oldData = null) {
   else if (type === 'rotas') sheetName = sheets_aba_rotas || 'Rotas';
   else if (type === 'hoteis') sheetName = sheets_aba_hoteis || 'Hotéis';
 
+  const payload = { action, type, sheetName, data, oldData };
   try {
-    const payload = { action, type, sheetName, data, oldData };
-    // Dispara em background de forma assíncrona sem travar a resposta HTTP local
-    fetch(sheets_script_url, {
+    const response = await fetch(sheets_script_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).then(async r => {
-      const resVal = await r.json();
-      console.log(`[Google Sheets Sync] ${action.toUpperCase()} ${type}:`, resVal);
-    }).catch(err => {
-      console.error(`[Google Sheets Sync Error] Falha ao enviar para o Sheets:`, err.message);
     });
+    if (!response.ok) throw new Error(`Apps Script HTTP ${response.status}`);
+    const resVal = await response.json();
+    if (!resVal.ok) throw new Error(resVal.error || 'Apps Script recusou a operação');
+    console.log(`[Google Sheets Sync] ${action.toUpperCase()} ${type}:`, resVal);
+    return { ok: true, queued: false, result: resVal };
   } catch (err) {
-    console.error(`[Google Sheets Sync Error] Erro ao preparar requisição:`, err.message);
+    console.error(`[Google Sheets Sync Error] ${action} ${type}:`, err.message);
+    try {
+      const { data: row } = await supabase.from('config').select('data').eq('id', 'sheets_sync_outbox').maybeSingle();
+      const fila = Array.isArray(row?.data) ? row.data : [];
+      fila.push({
+        id: require('crypto').randomUUID(),
+        criadoEm: new Date().toISOString(),
+        tentativas: 0,
+        ultimoErro: err.message,
+        payload
+      });
+      const { error } = await supabase.from('config').upsert({ id: 'sheets_sync_outbox', data: fila.slice(-1000) });
+      if (error) throw error;
+      return { ok: false, queued: true, error: err.message };
+    } catch (queueError) {
+      console.error('[Google Sheets Sync Error] Falha também ao guardar na fila:', queueError.message);
+      return { ok: false, queued: false, error: `${err.message}; fila: ${queueError.message}` };
+    }
+  }
+}
+
+async function processarFilaSheets() {
+  const { data: cfgRow, error: cfgError } = await supabase.from('config').select('data').eq('id', 'app_config').maybeSingle();
+  if (cfgError) throw cfgError;
+  const url = cfgRow?.data?.sheets_script_url;
+  if (!url) return;
+  const { data: row } = await supabase.from('config').select('data').eq('id', 'sheets_sync_outbox').maybeSingle();
+  const fila = Array.isArray(row?.data) ? row.data : [];
+  if (!fila.length) return;
+  const restantes = [];
+  for (const item of fila) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item.payload)
+      });
+      if (!r.ok) throw new Error(`Apps Script HTTP ${r.status}`);
+      const out = await r.json();
+      if (!out.ok) throw new Error(out.error || 'Apps Script recusou a operação');
+    } catch (e) {
+      restantes.push({ ...item, tentativas: Number(item.tentativas || 0) + 1, ultimoErro: e.message, ultimaTentativaEm: new Date().toISOString() });
+    }
+  }
+  await supabase.from('config').upsert({ id: 'sheets_sync_outbox', data: restantes });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYNC BASE ⇄ GOOGLE SHEETS À PROVA DE ERROS (v8: replaceAll/readAll em lote)
+// Backup app→Sheets (upsert em lote, preserva fotos/fórmulas) + Import Sheets→app
+// (prévia/diff + snapshot reversível). Substitui o sync frágil item-a-item.
+// ═══════════════════════════════════════════════════════════════════════════
+const BASE_TYPES = ['transportes', 'experiencias', 'atracoes', 'rotas', 'hoteis'];
+const BASE_SCHEMAS = {
+  transportes: {
+    required: ['trecho', 'idade', 'tipo'],
+    fields: ['id','trecho','idade','tipo','linha','categoria','preco_jpy','tempo','observacao','link','link_klook','compra','uso'],
+    options: {
+      idade: ['Adulto', 'Infantil'],
+      tipo: ['Transfer','Shinkansen','Romancecar','Limited Express','Skyliner','Trem','Ônibus','Balsa','Multiplos transportes','Ingresso','Carro'],
+      categoria: ['Reservado','Green Car','Ordinary','GranClass']
+    }
+  },
+  experiencias: {
+    required: ['nome'],
+    fields: ['id','nome','tipo','cidade','descricao','preco_jpy','preco_crianca_jpy','duracao','link','janelaAbreDias','prazoDias','horarios','publico','sazonalidade','observacao']
+  },
+  atracoes: {
+    required: ['Nome da Atração', 'Cidade'],
+    fields: ['id','Nome da Atração','Cidade','Bairro','Descrição Detalhada','Preço (Ingresso)','Google Maps','Link do Google Maps','mapsUrl','diasFechados','manutencaoInicio','manutencaoFim','manutencaoMotivo','Origem','Foto (URL)']
+  },
+  rotas: {
+    required: ['nomeDaRota', 'cidade'],
+    fields: ['id','nomeDaRota','cidade','atracoesDoDia']
+  },
+  hoteis: {
+    required: ['Nome do Hotel', 'Cidade'],
+    fields: ['id','Nome do Hotel','Cidade','Descrição','Foto (URL)','Link do Google Maps','Comodidades']
+  }
+};
+const BASE_FIELD_KEYS = {
+  transportes: BASE_SCHEMAS.transportes.fields,
+  experiencias: BASE_SCHEMAS.experiencias.fields,
+  atracoes: BASE_SCHEMAS.atracoes.fields,
+  rotas: BASE_SCHEMAS.rotas.fields,
+  hoteis: BASE_SCHEMAS.hoteis.fields
+};
+let baseOpcoesCarregadasEm = 0;
+async function carregarOpcoesBase(force = false) {
+  if (!force && Date.now() - baseOpcoesCarregadasEm < 60000) return;
+  const { data, error } = await supabase.from('config').select('data').eq('id', 'base_opcoes').maybeSingle();
+  if (error) throw error;
+  const salvas = data?.data && typeof data.data === 'object' ? data.data : {};
+  for (const [type, campos] of Object.entries(salvas)) {
+    if (!BASE_SCHEMAS[type]?.options || !campos || typeof campos !== 'object') continue;
+    for (const [campo, valores] of Object.entries(campos)) {
+      if (!Array.isArray(valores) || !Array.isArray(BASE_SCHEMAS[type].options[campo])) continue;
+      for (const valor of valores) {
+        const limpo = String(valor || '').trim();
+        if (limpo && !BASE_SCHEMAS[type].options[campo].some(x => x.toLowerCase() === limpo.toLowerCase())) {
+          BASE_SCHEMAS[type].options[campo].push(limpo);
+        }
+      }
+    }
+  }
+  baseOpcoesCarregadasEm = Date.now();
+}
+function novoIdBase(type) {
+  return `${type.slice(0, 3)}_${require('crypto').randomUUID()}`;
+}
+function validarItemBase(type, item, { parcial = false } = {}) {
+  const schema = BASE_SCHEMAS[type];
+  if (!schema || !item || typeof item !== 'object' || Array.isArray(item)) {
+    throw new Error('Dados inválidos para a Base.');
+  }
+  if (!parcial) {
+    for (const campo of schema.required || []) {
+      if (item[campo] === undefined || item[campo] === null || String(item[campo]).trim() === '') {
+        throw new Error(`Campo obrigatório ausente: ${campo}`);
+      }
+    }
+  }
+  for (const [campo, opcoes] of Object.entries(schema.options || {})) {
+    if (item[campo] !== undefined && item[campo] !== '' && !opcoes.includes(String(item[campo]).trim())) {
+      throw new Error(`Valor inválido em ${campo}: ${item[campo]}`);
+    }
+  }
+}
+const baseWriteLocks = new Map();
+async function comLockBase(type, tarefa) {
+  const anterior = baseWriteLocks.get(type) || Promise.resolve();
+  let liberar;
+  const atual = new Promise(resolve => { liberar = resolve; });
+  const fila = anterior.then(() => atual);
+  baseWriteLocks.set(type, fila);
+  await anterior;
+  try { return await tarefa(); }
+  finally {
+    liberar();
+    if (baseWriteLocks.get(type) === fila) baseWriteLocks.delete(type);
+  }
+}
+async function criarItemConfigBase(type, body) {
+  await carregarOpcoesBase();
+  validarItemBase(type, body);
+  return comLockBase(type, async () => {
+    const { data, error } = await supabase.from('config').select('data').eq('id', type).maybeSingle();
+    if (error) throw error;
+    const list = Array.isArray(data?.data) ? data.data : [];
+    const item = { ...body, id: novoIdBase(type) };
+    list.push(item);
+    const { error: saveError } = await supabase.from('config').upsert({ id: type, data: list });
+    if (saveError) throw saveError;
+    return item;
+  });
+}
+async function atualizarItemConfigBase(type, id, body) {
+  await carregarOpcoesBase();
+  validarItemBase(type, body, { parcial: true });
+  return comLockBase(type, async () => {
+    const { data, error } = await supabase.from('config').select('data').eq('id', type).maybeSingle();
+    if (error) throw error;
+    const list = Array.isArray(data?.data) ? data.data : [];
+    const wanted = String(id).trim().toLowerCase();
+    const indices = list.map((x, i) => x?.id && String(x.id).trim().toLowerCase() === wanted ? i : -1).filter(i => i >= 0);
+    if (!indices.length) return null;
+    if (indices.length > 1) throw new Error(`ID duplicado na Base: ${id}. Operação bloqueada por segurança.`);
+    const idx = indices[0];
+    const oldItem = { ...list[idx] };
+    const item = { ...list[idx], ...body, id: list[idx].id };
+    validarItemBase(type, item);
+    list[idx] = item;
+    const { error: saveError } = await supabase.from('config').upsert({ id: type, data: list });
+    if (saveError) throw saveError;
+    return { item, oldItem };
+  });
+}
+async function excluirItemConfigBase(type, id) {
+  return comLockBase(type, async () => {
+    const { data, error } = await supabase.from('config').select('data').eq('id', type).maybeSingle();
+    if (error) throw error;
+    const list = Array.isArray(data?.data) ? data.data : [];
+    const wanted = String(id).trim().toLowerCase();
+    const matches = list.filter(x => x?.id && String(x.id).trim().toLowerCase() === wanted);
+    if (!matches.length) return null;
+    if (matches.length > 1) throw new Error(`ID duplicado na Base: ${id}. Exclusão bloqueada por segurança.`);
+    const next = list.filter(x => !x?.id || String(x.id).trim().toLowerCase() !== wanted);
+    const { error: saveError } = await supabase.from('config').upsert({ id: type, data: next });
+    if (saveError) throw saveError;
+    return matches[0];
+  });
+}
+function _abaDoTipo(config, type) {
+  return ({
+    transportes: config.sheets_aba_transportes || 'Base',
+    experiencias: config.sheets_aba_experiencias || 'BaseEX',
+    atracoes: config.sheets_aba_atracoes || 'Atracoes',
+    rotas: config.sheets_aba_rotas || 'Rotas',
+    hoteis: config.sheets_aba_hoteis || 'Hotéis'
+  })[type];
+}
+async function lerBaseApp(type) {
+  if (type === 'rotas') {
+    const { data, error } = await supabase.from('rotas_base').select('data').eq('id', 'base').maybeSingle();
+    if (error) throw error;
+    return Array.isArray(data && data.data) ? data.data : [];
+  }
+  const { data, error } = await supabase.from('config').select('data').eq('id', type).maybeSingle();
+  if (error) throw error;
+  return Array.isArray(data && data.data) ? data.data : [];
+}
+async function gravarBaseApp(type, arr) {
+  if (type === 'rotas') {
+    const { error } = await supabase.from('rotas_base').upsert({ id: 'base', data: arr });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('config').upsert({ id: type, data: arr });
+    if (error) throw error;
+  }
+}
+async function _chamarAppsScript(url, payload) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('Apps Script HTTP ' + r.status);
+  return await r.json();
+}
+function _normStr(v) {
+  if (v === undefined || v === null) return '';
+  if (Array.isArray(v)) return v.map(x => _normStr(x)).join(', ');
+  return String(v).trim();
+}
+function _normCampoBase(type, campo, valor) {
+  const normal = _normStr(valor);
+  if (type === 'atracoes' && campo === 'Preço (Ingresso)' && /\d/.test(normal)) {
+    return normal.replace(/[^\d-]/g, '');
+  }
+  if (type === 'atracoes' && (campo === 'manutencaoInicio' || campo === 'manutencaoFim') && normal) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(normal)) return normal;
+    const data = new Date(normal);
+    if (!Number.isNaN(data.getTime())) {
+      const partes = new Intl.DateTimeFormat('en', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(data).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+      return `${partes.year}-${partes.month}-${partes.day}`;
+    }
+  }
+  return normal;
+}
+function _difItem(type, a, b) {
+  for (const k of (BASE_FIELD_KEYS[type] || [])) {
+    if (k === 'id') continue;
+    if (_normCampoBase(type, k, a[k]) !== _normCampoBase(type, k, b[k])) return true;
+  }
+  return false;
+}
+function _mergeImport(type, appItem, sheetItem) {
+  const merged = Object.assign({}, appItem || {});
+  for (const k of (BASE_FIELD_KEYS[type] || [])) {
+    if (sheetItem[k] !== undefined) merged[k] = sheetItem[k];
+  }
+  return merged;
+}
+// Snapshot da base atual do app ANTES de sobrescrever (rede de segurança reversível).
+async function _snapshotBaseApp(motivo) {
+  const base = {};
+  for (const t of BASE_TYPES) base[t] = await lerBaseApp(t);
+  const { data } = await supabase.from('config').select('data').eq('id', 'base_snapshots').maybeSingle();
+  let snaps = Array.isArray(data && data.data) ? data.data : [];
+  snaps.push({ em: new Date().toISOString(), motivo: motivo || 'manual', base });
+  snaps = snaps.slice(-3); // guarda só as 3 últimas
+  const { error } = await supabase.from('config').upsert({ id: 'base_snapshots', data: snaps });
+  if (error) throw error;
+  return snaps.length;
+}
+
+// BACKUP app → Sheets (upsert em lote por aba, com conferência de contagem).
+// Núcleo do backup app→Sheets (usado pela rota E pelo agendador diário).
+async function _executarBackupSheets(tipos) {
+  const db = await readDB();
+  const url = db.config.sheets_script_url;
+  if (!url) return { ok: false, semUrl: true, resultado: {} };
+  const lista = (Array.isArray(tipos) && tipos.length) ? tipos : BASE_TYPES;
+  const resultado = {};
+  await Promise.all(lista.map(async (type) => {
+    const arr = await lerBaseApp(type);
+    const sheetName = _abaDoTipo(db.config, type);
+    let r;
+    try {
+      await carregarOpcoesBase();
+      r = await _chamarAppsScript(url, {
+        action: 'replaceAll', type, sheetName, items: arr,
+        validacoes: BASE_SCHEMAS[type]?.options || {}
+      });
+    }
+    catch (e) { r = { ok: false, error: e.message }; }
+    resultado[type] = {
+      ok: !!r.ok, appCount: arr.length,
+      atualizados: r.atualizados, inseridos: r.inseridos, totalSheet: r.totalSheet,
+      aviso: (r.ok && r.totalSheet != null && r.totalSheet > arr.length) ? ('Sheets tem ' + (r.totalSheet - arr.length) + ' linha(s) a mais que o app — revisar') : null,
+      erro: r.ok ? null : (r.error || 'falha')
+    };
+  }));
+  return { ok: Object.values(resultado).every(x => x.ok), resultado };
+}
+
+// Backup diário AUTOMÁTICO da Base no Sheets (roda no server 24/7; ~4h, hora de baixa). Reagenda a cada 24h.
+function agendarBackupDiarioSheets() {
+  const HORA = 4;
+  function msAteProxima() {
+    const agora = new Date();
+    const alvo = new Date(agora);
+    alvo.setHours(HORA, 0, 0, 0);
+    if (alvo <= agora) alvo.setDate(alvo.getDate() + 1);
+    return alvo - agora;
+  }
+  async function rodar() {
+    try {
+      const r = await _executarBackupSheets();
+      if (r.semUrl) console.log('[Backup diário Sheets] pulado (sem sheets_script_url).');
+      else console.log('[Backup diário Sheets] ' + (r.ok ? 'OK' : 'com falhas') + ' — ' + JSON.stringify(r.resultado || {}));
+    } catch (e) { console.error('[Backup diário Sheets] erro:', e.message); }
+    setTimeout(rodar, 24 * 60 * 60 * 1000);
+  }
+  setTimeout(rodar, msAteProxima());
+  console.log('[Backup diário Sheets] agendado para ~' + HORA + 'h (local do servidor).');
+}
+
+app.post('/api/base/backup-sheets', async (req, res) => {
+  try {
+    const tipos = (req.body && Array.isArray(req.body.tipos) && req.body.tipos.length) ? req.body.tipos : null;
+    const out = await _executarBackupSheets(tipos);
+    if (out.semUrl) return res.status(400).json({ error: 'URL do Apps Script (sheets_script_url) não configurada.' });
+    res.json(out);
+  } catch (e) { console.error('backup-sheets:', e); res.status(500).json({ error: e.message }); }
+});
+
+// IMPORT Sheets → app — PRÉVIA (dry-run): lê via readAll, valida, calcula diff. NÃO grava.
+app.post('/api/base/importar-sheets/preview', async (req, res) => {
+  try {
+    const db = await readDB();
+    const url = db.config.sheets_script_url;
+    if (!url) return res.status(400).json({ error: 'URL do Apps Script não configurada.' });
+    const tipos = (req.body && Array.isArray(req.body.tipos) && req.body.tipos.length) ? req.body.tipos : BASE_TYPES;
+    const preview = {};
+    await Promise.all(tipos.map(async (type) => {
+      const sheetName = _abaDoTipo(db.config, type);
+      let r;
+      try { r = await _chamarAppsScript(url, { action: 'readAll', type, sheetName }); }
+      catch (e) { preview[type] = { ok: false, erro: e.message }; return; }
+      if (!r.ok) { preview[type] = { ok: false, erro: r.error || 'falha' }; return; }
+      const sheetItems = r.items || [];
+      const appItems = await lerBaseApp(type);
+      const semId = sheetItems.filter(x => !x.id || String(x.id).trim() === '').length;
+      const idsSheet = sheetItems.filter(x => x.id && String(x.id).trim()).map(x => String(x.id).trim());
+      const idsDuplicados = idsSheet.length - new Set(idsSheet).size;
+      const appById = new Map(appItems.filter(x => x.id).map(x => [String(x.id), x]));
+      const sheetById = new Map(sheetItems.filter(x => x.id).map(x => [String(x.id), x]));
+      let novos = 0, alterados = 0, iguais = 0;
+      for (const [id, sIt] of sheetById) {
+        const aIt = appById.get(id);
+        if (!aIt) novos++;
+        else if (_difItem(type, aIt, sIt)) alterados++;
+        else iguais++;
+      }
+      const removidos = appItems.filter(a => a.id && !sheetById.has(String(a.id))).length;
+      preview[type] = { ok: true, sheetCount: sheetItems.length, appCount: appItems.length, semId, idsDuplicados, novos, alterados, iguais, removidos };
+    }));
+    res.json({ ok: true, preview });
+  } catch (e) { console.error('importar preview:', e); res.status(500).json({ error: e.message }); }
+});
+
+// IMPORT Sheets → app — APLICAR: snapshot + sobrescreve o app com os dados do Sheets (merge preserva campos do app fora do mapa).
+app.post('/api/base/importar-sheets/aplicar', async (req, res) => {
+  try {
+    const db = await readDB();
+    const url = db.config.sheets_script_url;
+    if (!url) return res.status(400).json({ error: 'URL do Apps Script não configurada.' });
+    const tipos = (req.body && Array.isArray(req.body.tipos) && req.body.tipos.length) ? req.body.tipos : BASE_TYPES;
+    await _snapshotBaseApp('antes-do-import');
+    const aplicado = {};
+    await Promise.all(tipos.map(async (type) => {
+      const sheetName = _abaDoTipo(db.config, type);
+      let r;
+      try { r = await _chamarAppsScript(url, { action: 'readAll', type, sheetName }); }
+      catch (e) { aplicado[type] = { ok: false, erro: e.message }; return; }
+      if (!r.ok) { aplicado[type] = { ok: false, erro: r.error || 'falha' }; return; }
+      const sheetItems = (r.items || []).filter(x => x.id && String(x.id).trim() !== '');
+      const idsImport = sheetItems.map(x => String(x.id).trim());
+      const semIdCount = (r.items || []).length - sheetItems.length;
+      const duplicadosCount = idsImport.length - new Set(idsImport).size;
+      // GUARDA: o Sheets só pode substituir a Base quando todos os IDs são válidos e únicos.
+      if (semIdCount > 0 || duplicadosCount > 0 || (sheetItems.length === 0 && (r.count || 0) > 0)) {
+        aplicado[type] = { ok: false, erro: `Import bloqueado: ${semIdCount} linha(s) sem ID e ${duplicadosCount} ID(s) duplicado(s).` };
+        return;
+      }
+      const appItems = await lerBaseApp(type);
+      const appById = new Map(appItems.filter(x => x.id).map(x => [String(x.id), x]));
+      const novos = sheetItems.map(sIt => _mergeImport(type, appById.get(String(sIt.id)), sIt));
+      await gravarBaseApp(type, novos);
+      aplicado[type] = { ok: true, importados: novos.length };
+    }));
+    res.json({ ok: true, aplicado, snapshot: 'guardado (últimas 3)' });
+  } catch (e) { console.error('importar aplicar:', e); res.status(500).json({ error: e.message }); }
+});
+
+// Lista os snapshots da base (para o botão de restaurar).
+app.get('/api/base/snapshots', async (req, res) => {
+  try {
+    const { data } = await supabase.from('config').select('data').eq('id', 'base_snapshots').maybeSingle();
+    const snaps = Array.isArray(data && data.data) ? data.data : [];
+    res.json(snaps.map((s, i) => ({ i, em: s.em, motivo: s.motivo, tamanhos: Object.fromEntries(BASE_TYPES.map(t => [t, (s.base && Array.isArray(s.base[t])) ? s.base[t].length : 0])) })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Restaura a base do app a partir de um snapshot (undo do import). NÃO mexe no Sheets.
+app.post('/api/base/snapshots/restaurar', async (req, res) => {
+  try {
+    const { data } = await supabase.from('config').select('data').eq('id', 'base_snapshots').maybeSingle();
+    const snaps = Array.isArray(data && data.data) ? data.data : [];
+    if (!snaps.length) return res.status(404).json({ error: 'Nenhum snapshot disponível.' });
+    const idx = (req.body && req.body.i != null) ? Number(req.body.i) : (snaps.length - 1);
+    const snap = snaps[idx];
+    if (!snap || !snap.base) return res.status(404).json({ error: 'Snapshot inválido.' });
+    // snapshot da base ATUAL antes de restaurar (pra poder desfazer a restauração também)
+    await _snapshotBaseApp('antes-de-restaurar');
+    for (const t of BASE_TYPES) {
+      if (Array.isArray(snap.base[t])) await gravarBaseApp(t, snap.base[t]);
+    }
+    res.json({ ok: true, restaurado: snap.em });
+  } catch (e) { console.error('restaurar snapshot:', e); res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/base/schema', async (req, res) => {
+  try {
+    await carregarOpcoesBase();
+    res.json(BASE_SCHEMAS);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/base/opcoes', async (req, res) => {
+  try {
+    const type = String(req.body?.type || '').trim();
+    const campo = String(req.body?.campo || '').trim();
+    const valor = String(req.body?.valor || '').replace(/\s+/g, ' ').trim();
+    const opcoesPadrao = BASE_SCHEMAS[type]?.options?.[campo];
+    if (!Array.isArray(opcoesPadrao)) return res.status(400).json({ error: 'Campo de opções inválido.' });
+    if (!valor || valor.length > 80) return res.status(400).json({ error: 'Informe um nome entre 1 e 80 caracteres.' });
+    if (valor === '__nova__') return res.status(400).json({ error: 'Nome inválido.' });
+
+    await carregarOpcoesBase(true);
+    let final = BASE_SCHEMAS[type].options[campo].find(x => x.toLowerCase() === valor.toLowerCase());
+    if (!final) {
+      final = valor;
+      BASE_SCHEMAS[type].options[campo].push(final);
+      const { data, error } = await supabase.from('config').select('data').eq('id', 'base_opcoes').maybeSingle();
+      if (error) throw error;
+      const salvas = data?.data && typeof data.data === 'object' ? data.data : {};
+      salvas[type] = salvas[type] && typeof salvas[type] === 'object' ? salvas[type] : {};
+      salvas[type][campo] = Array.isArray(salvas[type][campo]) ? salvas[type][campo] : [];
+      if (!salvas[type][campo].some(x => String(x).toLowerCase() === final.toLowerCase())) salvas[type][campo].push(final);
+      const { error: saveError } = await supabase.from('config').upsert({ id: 'base_opcoes', data: salvas });
+      if (saveError) throw saveError;
+    }
+
+    let sheets = { ok: false, error: 'Sheets não configurado' };
+    try {
+      const db = await readDB();
+      if (db.config.sheets_script_url) {
+        sheets = await _chamarAppsScript(db.config.sheets_script_url, {
+          action: 'ensureSchema',
+          type,
+          sheetName: _abaDoTipo(db.config, type),
+          validacoes: BASE_SCHEMAS[type].options
+        });
+      }
+    } catch (e) {
+      sheets = { ok: false, error: e.message };
+    }
+    res.json({ ok: true, valor: final, options: BASE_SCHEMAS[type].options[campo], _syncSheets: sheets });
+  } catch (e) {
+    console.error('base opcoes:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/base/integridade', async (req, res) => {
+  try {
+    const resultado = {};
+    for (const type of BASE_TYPES) {
+      const items = await lerBaseApp(type);
+      const ids = new Map();
+      let semId = 0;
+      const invalidos = [];
+      items.forEach((item, index) => {
+        const id = String(item?.id || '').trim();
+        if (!id) semId++;
+        else ids.set(id, (ids.get(id) || 0) + 1);
+        try { validarItemBase(type, item); }
+        catch (e) { invalidos.push({ index, id: id || null, erro: e.message }); }
+      });
+      resultado[type] = {
+        total: items.length,
+        semId,
+        idsDuplicados: Array.from(ids.entries()).filter(([, count]) => count > 1).map(([id, count]) => ({ id, count })),
+        invalidos
+      };
+    }
+    const { data: filaRow } = await supabase.from('config').select('data').eq('id', 'sheets_sync_outbox').maybeSingle();
+    res.json({ ok: true, bases: resultado, filaSheets: Array.isArray(filaRow?.data) ? filaRow.data.length : 0 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/base/reparar-ids/preview', async (req, res) => {
+  try {
+    const preview = {};
+    for (const type of BASE_TYPES) {
+      const items = await lerBaseApp(type);
+      const vistos = new Set();
+      const trocas = [];
+      items.forEach((item, index) => {
+        const antigo = String(item?.id || '').trim();
+        if (!antigo || vistos.has(antigo)) {
+          trocas.push({ index, antigo: antigo || null, novo: novoIdBase(type) });
+        } else {
+          vistos.add(antigo);
+        }
+      });
+      preview[type] = { total: items.length, trocas };
+    }
+    res.json({ ok: true, preview, aplica: false });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/base/reparar-ids/aplicar', async (req, res) => {
+  try {
+    if (req.body?.confirmacao !== 'REPARAR_IDS') {
+      return res.status(400).json({ error: 'Confirmação inválida.' });
+    }
+    await _snapshotBaseApp('antes-de-reparar-ids');
+    const aplicado = {};
+    for (const type of BASE_TYPES) {
+      const items = await lerBaseApp(type);
+      const vistos = new Set();
+      let trocas = 0;
+      const next = items.map(item => {
+        const antigo = String(item?.id || '').trim();
+        if (!antigo || vistos.has(antigo)) {
+          trocas++;
+          return { ...item, id: novoIdBase(type) };
+        }
+        vistos.add(antigo);
+        return item;
+      });
+      await gravarBaseApp(type, next);
+      aplicado[type] = { total: next.length, trocas };
+    }
+    res.json({ ok: true, aplicado, snapshot: 'antes-de-reparar-ids' });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ═══ INDICAÇÕES DE HOTÉIS (base dedicada, client-facing) ══════════════════════
+async function _lerIndicacoes() {
+  const { data } = await supabase.from('config').select('data').eq('id', 'hoteis_indicacoes').maybeSingle();
+  return Array.isArray(data && data.data) ? data.data : [];
+}
+async function _gravarIndicacoes(arr) {
+  const { error } = await supabase.from('config').upsert({ id: 'hoteis_indicacoes', data: arr });
+  if (error) throw error;
+}
+app.get('/api/hoteis-indicacoes', async (req, res) => {
+  try { res.json(await _lerIndicacoes()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/hoteis-indicacoes', async (req, res) => {
+  try {
+    const lista = await _lerIndicacoes();
+    const novo = Object.assign({}, req.body, { id: 'hi_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) });
+    lista.push(novo);
+    await _gravarIndicacoes(lista);
+    res.json(novo);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/hoteis-indicacoes/:id', async (req, res) => {
+  try {
+    const lista = await _lerIndicacoes();
+    const i = lista.findIndex(h => String(h.id) === String(req.params.id));
+    if (i < 0) return res.status(404).json({ error: 'Indicação não encontrada' });
+    lista[i] = Object.assign({}, lista[i], req.body, { id: lista[i].id });
+    await _gravarIndicacoes(lista);
+    res.json(lista[i]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/hoteis-indicacoes/:id', async (req, res) => {
+  try {
+    let lista = await _lerIndicacoes();
+    lista = lista.filter(h => String(h.id) !== String(req.params.id));
+    await _gravarIndicacoes(lista);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ── SOLICITAÇÕES INTERNAS (task tracker Diogo↔Deborah) — array no config do Supabase ──
+async function _lerSolicitacoes() {
+  const { data } = await supabase.from('config').select('data').eq('id', 'solicitacoes').maybeSingle();
+  return Array.isArray(data && data.data) ? data.data : [];
+}
+async function _gravarSolicitacoes(arr) {
+  const { error } = await supabase.from('config').upsert({ id: 'solicitacoes', data: arr });
+  if (error) throw error;
+}
+app.get('/api/solicitacoes', async (req, res) => {
+  try { res.json(await _lerSolicitacoes()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/solicitacoes', async (req, res) => {
+  try {
+    const lista = await _lerSolicitacoes();
+    const agora = new Date().toISOString();
+    const nova = Object.assign({}, req.body, { id: 'sol_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), criadoEm: agora, atualizadoEm: agora });
+    lista.push(nova);
+    await _gravarSolicitacoes(lista);
+    res.json(nova);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/solicitacoes/:id', async (req, res) => {
+  try {
+    const lista = await _lerSolicitacoes();
+    const i = lista.findIndex(x => String(x.id) === String(req.params.id));
+    if (i < 0) return res.status(404).json({ error: 'Solicitação não encontrada' });
+    lista[i] = Object.assign({}, lista[i], req.body, { id: lista[i].id, criadoEm: lista[i].criadoEm, atualizadoEm: new Date().toISOString() });
+    await _gravarSolicitacoes(lista);
+    res.json(lista[i]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/solicitacoes/:id', async (req, res) => {
+  try {
+    let lista = await _lerSolicitacoes();
+    lista = lista.filter(x => String(x.id) !== String(req.params.id));
+    await _gravarSolicitacoes(lista);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── OPÇÕES das Solicitações (pessoas / tipos / status / prioridades editáveis) ──
+async function _lerSolicConfig() {
+  const { data } = await supabase.from('config').select('data').eq('id', 'solic_config').maybeSingle();
+  return (data && data.data && typeof data.data === 'object') ? data.data : {};
+}
+app.get('/api/solic-config', async (req, res) => {
+  try { res.json(await _lerSolicConfig()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/solic-config', async (req, res) => {
+  try {
+    const atual = await _lerSolicConfig();
+    const novo = Object.assign({}, atual, req.body || {});
+    const { error } = await supabase.from('config').upsert({ id: 'solic_config', data: novo });
+    if (error) throw error;
+    res.json(novo);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Leitura PÚBLICA (para a página escondida de indicações) — só os ativos.
+app.get('/api/public/indicacoes', async (req, res) => {
+  try {
+    const lista = (await _lerIndicacoes()).filter(h => h && h.ativo !== false);
+    res.json(lista);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+async function syncNotionClienteValorTotal(notionClienteId, total) {
+  if (!NOTION_TOKEN || !notionClienteId || !total || total <= 0) return;
+  try {
+    const res = await fetch(`https://api.notion.com/v1/pages/${notionClienteId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        properties: {
+          'Valor Total': { number: Math.round(total) }
+        }
+      })
+    });
+    if (res.ok) {
+      console.log(`[Notion Sync] Valor Total atualizado no Notion para cliente ${notionClienteId}: ¥${Math.round(total)}`);
+    }
+  } catch (err) {
+    console.error('[Notion Sync Error]', err.message);
   }
 }
 
@@ -1386,7 +2157,9 @@ app.post('/api/config', async (req, res) => {
 // ── API: Transportes ────────────────────────────────────────────────────────
 app.get('/api/orcamentos', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('orcamentos').select('data');
+    // egress: view orcamentos_light devolve os dados SEM _historico. Fallback p/ tabela base se a view não existir.
+    let { data, error } = await supabase.from('orcamentos_light').select('data');
+    if (error) ({ data, error } = await supabase.from('orcamentos').select('data'));
     if (error) throw error;
     // Filtra para retornar apenas os orçamentos ativos (não deletados)
     const ativos = data ? data.map(r => r.data).filter(item => item && !item.deletado) : [];
@@ -1396,6 +2169,123 @@ app.get('/api/orcamentos', async (req, res) => {
     res.status(500).json({error: e.message});
   }
 });
+// Sincroniza o status compradoHeian dos itens da COTAÇÃO de volta pro ROTEIRO no Supabase,
+// em lote, ao salvar a cotação. Reaproveita o match da rota /sync-roteiro-item (refId, _dbId,
+// descrição/nome). Só grava se algo mudou de fato (evita reescrever o roteiro e churn de versão).
+// Tolerante a falhas: nunca deixa o salvamento da cotação quebrar por causa disso.
+async function sincronizarStatusItensComRoteiro(dados) {
+  try {
+    if (!dados) return;
+    const num = (v) => parseFloat(v) || 0;
+    // FASE 2 — comercial do item vive no roteiro (el.comercial / dia.comercialTour).
+    const comercialTransp = (t) => ({ preco: num(t.preco), precoInfantil: num(t.precoInfantil), taxaAtiva: !!t.taxaAtiva, taxaTipo: t.taxaTipo || 'grupo', taxaValor: num(t.taxaValor != null ? t.taxaValor : 3000) });
+    const comercialExp = (e) => ({ preco: num(e.preco), pessoas: num(e.pessoas != null ? e.pessoas : 2), precoTipo: e.precoTipo || 'pessoa', taxaAtiva: !!e.taxaAtiva, taxaTipo: e.taxaTipo || 'grupo', taxaValor: num(e.taxaValor != null ? e.taxaValor : 3000) });
+    const roteiroId = dados.roteiroId || dados.cliente?.roteiroId;
+    const notionClienteId = dados.notionClienteId || dados.cliente?.notionClienteId;
+
+    let rows = null;
+    if (roteiroId) {
+      const r = await supabase.from('roteiros').select('nome, data').eq('nome', roteiroId);
+      rows = r.data;
+    }
+    if ((!rows || !rows.length) && notionClienteId) {
+      const { data: all } = await supabase.from('roteiros').select('nome, data');
+      rows = (all || []).filter(r => r.data && (r.data.notionClienteId === notionClienteId || r.data.cliente?.notionClienteId === notionClienteId));
+    }
+    if (!rows || !rows.length) return;
+
+    const targetRow = rows[0];
+    const rotData = targetRow.data || {};
+    const dias = rotData.dias || [];
+    let alterado = false;
+
+    const setComercial = (el, novo) => {
+      if (JSON.stringify(el.comercial || null) !== JSON.stringify(novo)) { el.comercial = novo; alterado = true; }
+    };
+    const aplicar = (tipo, item) => {
+      const isHeian = item.compradoHeian !== false;
+      dias.forEach(d => {
+        (d.elementos || []).forEach(el => {
+          if (tipo === 'transporte' && el.tipo === 'transporte') {
+            // Casa por refId (único). Só cai em _dbId/descrição se o item não tiver refId (legado).
+            // A descrição é fuzzy e casava transportes do MESMO tipo (ex.: 2x Limited Express),
+            // fazendo um item revertê o compradoHeian do outro — foi o bug do "desmarca no F5".
+            const casa = item._roteiroRefId ? (el.refId === item._roteiroRefId)
+                       : item._dbId ? (el.trechoId == item._dbId)
+                       : !!(item.descricao && el.tipoTransporte && item.descricao.toLowerCase().includes(el.tipoTransporte.toLowerCase()));
+            if (casa) {
+              if (el.compradoHeian !== isHeian) { el.compradoHeian = isHeian; alterado = true; }
+              setComercial(el, comercialTransp(item));
+            }
+          } else if (tipo === 'experiencia' && el.tipo === 'experiencia') {
+            const casa = item._roteiroRefId ? (el.refId === item._roteiroRefId)
+                       : item._dbId ? (el.expId == item._dbId)
+                       : !!(item.nome && el.nomeExp && (item.nome.toLowerCase().includes(el.nomeExp.toLowerCase()) || el.nomeExp.toLowerCase().includes(item.nome.toLowerCase())));
+            if (casa) {
+              if (el.compradoHeian !== isHeian) { el.compradoHeian = isHeian; alterado = true; }
+              setComercial(el, comercialExp(item));
+            }
+          }
+        });
+      });
+    };
+
+    (dados.transportes || []).forEach(t => aplicar('transporte', t));
+    (dados.experiencias || []).forEach(e => aplicar('experiencia', e));
+
+    // Tours: comercial mora no dia (dia.comercialTour), casado por refId do dia.
+    (dados.tours || []).forEach(t => {
+      if (!t._roteiroRefId) return;
+      const novo = { valor: num(t.valor), desconto: num(t.desconto != null ? t.desconto : 0), descontoAtivo: !!t.descontoAtivo };
+      dias.forEach(d => {
+        if (d.tourGuiado && d.refId && d.refId === t._roteiroRefId) {
+          if (JSON.stringify(d.comercialTour || null) !== JSON.stringify(novo)) { d.comercialTour = novo; alterado = true; }
+        }
+      });
+    });
+
+    if (alterado) {
+      await supabase.from('roteiros').update({ data: rotData }).eq('nome', targetRow.nome);
+    }
+  } catch (err) {
+    console.error('sincronizarStatusItensComRoteiro:', err.message);
+  }
+}
+
+// FASE 2 — todo roteiro COM CLIENTE já nasce com uma cotação vinculada (por roteiroId).
+// Assim some o passo manual de "Gerar Cotação" e nenhuma cotação nasce sem vínculo (era a
+// origem da divergência do Haddad). Idempotente: só cria se ainda não houver cotação ligada.
+// Cotação avulsa (ballpark, sem roteiro) continua sendo criada normalmente pela aba Cotações.
+async function garantirCotacaoDoRoteiro(roteiro) {
+  try {
+    if (!roteiro || !roteiro.id) return;
+    const notionClienteId = roteiro.notionClienteId || (roteiro.cliente && roteiro.cliente.notionClienteId);
+    if (!notionClienteId) return; // sem cliente = rascunho: não cria ainda
+    const { data: orcRows } = await supabase.from('orcamentos').select('id, data');
+    const jaTem = (orcRows || []).some(r => r.data && !r.data.deletado &&
+      (r.data.roteiroId === roteiro.id || r.data.orcRoteiroVinculado === roteiro.id || (roteiro.nome && r.data.orcRoteiroVinculado === roteiro.nome)));
+    if (jaTem) return;
+    const agora = new Date().toISOString();
+    const id = 'cot_' + roteiro.id; // determinístico → dedup mesmo em corrida de autosave
+    const novo = {
+      id,
+      orcStatus: 'Pendente', statusVenda: 'Pendente',
+      notionClienteId,
+      nome: 'Cotação - ' + (roteiro.nome || 'Roteiro'),
+      roteiroId: roteiro.id,
+      orcRoteiroVinculado: roteiro.nome || '',
+      cliente: roteiro.cliente || { nome: '', pessoas: '', dataOrcamento: '' },
+      valoresTour: { '4h': 45000, '6h': 65000, '8h': 85000, '10h': 105000, '12h': 125000 },
+      estadias: [], consultoria: { ativa: false, valor: 0, descricao: '' },
+      tours: [], transportes: [], experiencias: [], itensAdicionais: [], textos: {},
+      criadoEm: agora, atualizadoEm: agora
+    };
+    await supabase.from('orcamentos').upsert({ id, data: novo });
+  } catch (e) {
+    console.error('garantirCotacaoDoRoteiro:', e.message);
+  }
+}
+
 app.post('/api/orcamentos', async (req, res) => {
   try {
     const corpo = { ...req.body };
@@ -1417,9 +2307,116 @@ app.post('/api/orcamentos', async (req, res) => {
     const dados = aplicarHistorico(corpo, armazenado);
     const { error } = await supabase.from('orcamentos').upsert({ id: String(dados.id), data: dados });
     if (error) throw error;
+
+    // Sincronizar status dos itens (compradoHeian) no roteiro no Supabase
+    // Guard: a Antigravity referenciou esta função mas ainda não a definiu — sem o guard,
+    // TODO salvamento de cotação estourava 500 ("sincronizarStatusItensComRoteiro is not defined").
+    // O sync por item (toggle) já roda em tempo real via /api/orcamentos/sync-roteiro-item.
+    if (typeof sincronizarStatusItensComRoteiro === 'function') {
+      Promise.resolve(sincronizarStatusItensComRoteiro(dados)).catch(err => console.error(err));
+    }
+
+    // Sincronizar Valor Total no Notion se houver cliente vinculado
+    const notionClienteId = dados.notionClienteId || dados.cliente?.notionClienteId;
+    if (notionClienteId) {
+      const totalOrc = calcularTotalOrcamento(dados);
+      if (totalOrc > 0) {
+        syncNotionClienteValorTotal(notionClienteId, totalOrc);
+      }
+    }
+
     res.json({ success: true, atualizadoEm: dados.atualizadoEm });
   } catch(e) {
     res.status(500).json({error: e.message});
+  }
+});
+
+app.post('/api/orcamentos/sync-roteiro-item', async (req, res) => {
+  try {
+    const { notionClienteId, roteiroId, tipo, item, campos } = req.body;
+    if (!item) return res.status(400).json({ success: false, error: 'Item não fornecido' });
+
+    // Resolve o roteiro alvo. IMPORTANTE: NUNCA cair num roteiro arbitrário (rows[0] de uma
+    // query sem filtro) — isso pode gravar no roteiro de OUTRO cliente. Só usa o .eq('nome')
+    // quando há roteiroId; se não houver (ou não achar), filtra pelo cliente do Notion.
+    let rows = null;
+    if (roteiroId) {
+      const r = await supabase.from('roteiros').select('nome, data').eq('nome', roteiroId);
+      rows = r.data;
+    }
+    if ((!rows || !rows.length) && notionClienteId) {
+      const { data: rowsByClient } = await supabase.from('roteiros').select('nome, data');
+      rows = (rowsByClient || []).filter(r => r.data && (r.data.notionClienteId === notionClienteId || r.data.cliente?.notionClienteId === notionClienteId));
+    }
+
+    if (!rows || !rows.length) {
+      return res.json({ success: false, message: 'Nenhum roteiro vinculado encontrado.' });
+    }
+
+    let alterado = false;
+
+    // Monta o pacote de campos a gravar no elemento do roteiro.
+    // Fonte 1: `campos` explícito (Fase 1 — classe/data/etc). Fonte 2: compradoHeian do item (compat. retro toggle).
+    const patch = {};
+    if (campos && typeof campos === 'object') {
+      Object.keys(campos).forEach(k => { if (campos[k] !== undefined && campos[k] !== null) patch[k] = campos[k]; });
+    }
+    if (item.compradoHeian !== undefined && patch.compradoHeian === undefined) {
+      patch.compradoHeian = item.compradoHeian !== false;
+    }
+    const aplicarPatch = (el) => {
+      let mud = false;
+      Object.keys(patch).forEach(k => {
+        // eslint-disable-next-line eqeqeq
+        if (el[k] != patch[k]) { el[k] = patch[k]; mud = true; }
+      });
+      return mud;
+    };
+    const elCasa = (el) => {
+      // Casa por refId (único) primeiro; _dbId/descrição só como fallback p/ item sem refId.
+      if (tipo === 'transporte' && el.tipo === 'transporte') {
+        if (item._roteiroRefId) return el.refId === item._roteiroRefId;
+        if (item._dbId) return el.trechoId == item._dbId;
+        return !!(item.descricao && el.tipoTransporte && item.descricao.toLowerCase().includes(el.tipoTransporte.toLowerCase()));
+      }
+      if (tipo === 'experiencia' && el.tipo === 'experiencia') {
+        if (item._roteiroRefId) return el.refId === item._roteiroRefId;
+        if (item._dbId) return el.expId == item._dbId;
+        return !!(item.nome && el.nomeExp && (item.nome.toLowerCase().includes(el.nomeExp.toLowerCase()) || el.nomeExp.toLowerCase().includes(item.nome.toLowerCase())));
+      }
+      return false;
+    };
+
+    // Cliente pode ter mais de um roteiro (proposta alternativa, versões). Aplica no PRIMEIRO
+    // roteiro candidato que realmente contém o elemento casado — evita gravar no roteiro errado.
+    let rowSalvar = null, mudouNaRow = false;
+    for (const row of rows) {
+      const rd = row.data || {};
+      const ds = rd.dias || [];
+      let matchou = false, mudou = false;
+      ds.forEach(d => (d.elementos || []).forEach(el => {
+        if (elCasa(el)) { matchou = true; if (aplicarPatch(el)) mudou = true; }
+      }));
+      if (matchou) { rowSalvar = { nome: row.nome, data: rd }; mudouNaRow = mudou; break; }
+    }
+
+    if (rowSalvar && mudouNaRow) {
+      await supabase.from('roteiros').update({ data: rowSalvar.data }).eq('nome', rowSalvar.nome);
+      alterado = true;
+    }
+
+    // Sincronizar valor total no Notion se houver cliente
+    if (notionClienteId) {
+      const novoTotal = await valorPacoteDaCotacao(notionClienteId);
+      if (novoTotal > 0) {
+        syncNotionClienteValorTotal(notionClienteId, novoTotal);
+      }
+    }
+
+    res.json({ success: true, alterado });
+  } catch (error) {
+    console.error('Erro em sync-roteiro-item:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 app.delete('/api/orcamentos/:id', async (req, res) => {
@@ -1443,23 +2440,247 @@ app.delete('/api/orcamentos/:id', async (req, res) => {
 });
 
 // Clientes Local (Dados estruturados atrelados ao Notion)
+// Grava um MARCO da timeline do cliente (ex.: materialEnviado) no clientes_locais, preservando o resto.
+app.post('/api/clientes/:id/marco', async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { marco, valor } = req.body || {};
+    if (!marco) return res.status(400).json({ error: 'marco ausente' });
+    const { data: row } = await supabase.from('clientes_locais').select('data').eq('id', id).maybeSingle();
+    const dados = (row && row.data) ? row.data : { id };
+    dados.marcos = dados.marcos || {};
+    dados.marcos[marco] = (valor === undefined ? true : valor);
+    const { error } = await supabase.from('clientes_locais').upsert({ id, data: dados });
+    if (error) throw error;
+    res.json({ success: true, marcos: dados.marcos });
+  } catch (e) {
+    console.error('Erro em /api/clientes/:id/marco:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+app.post('/api/clientes/:id/portal-status', express.json(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ativo } = req.body;
+    const { data: row } = await supabase.from('clientes_locais').select('data').eq('id', id).maybeSingle();
+    const dados = (row && row.data) ? row.data : { id };
+    dados.portalAtivo = (ativo !== false);
+    const { error } = await supabase.from('clientes_locais').upsert({ id, data: dados });
+    if (error) throw error;
+    res.json({ success: true, portalAtivo: dados.portalAtivo });
+  } catch (e) {
+    console.error('Erro ao atualizar portal-status:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+function normalizarDataEstadiaISO(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto) return '';
+  const br = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return texto;
+}
+
+function normalizarEstadias(estadias) {
+  if (!Array.isArray(estadias)) return [];
+  return estadias
+    .filter(e => e && typeof e === 'object')
+    .map((e, index) => ({
+      ...e,
+      id: e.id || `estadia_${Date.now()}_${index}`,
+      cidade: String(e.cidade || '').trim(),
+      hotel: String(e.hotel || '').trim(),
+      dataInicio: normalizarDataEstadiaISO(e.dataInicio),
+      dataFim: normalizarDataEstadiaISO(e.dataFim)
+    }));
+}
+
+function formatarEstadiasParaNotion(estadias) {
+  const fmtBR = valor => {
+    const iso = normalizarDataEstadiaISO(valor);
+    const partes = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : iso;
+  };
+
+  return normalizarEstadias(estadias).map(estadia => {
+    const local = [estadia.cidade, estadia.hotel].filter(Boolean).join(' - ');
+    const inicio = fmtBR(estadia.dataInicio);
+    const fim = fmtBR(estadia.dataFim);
+    const periodo = inicio && fim
+      ? ` (${inicio} a ${fim})`
+      : (inicio || fim ? ` (${inicio || fim})` : '');
+    return `${local}${periodo}`.trim();
+  }).filter(Boolean).join('\n');
+}
+
+async function salvarClienteLocalCanonico(idRecebido, alteracoes, { sincronizarNotion = true } = {}) {
+  const realId = await resolverNotionIdReal(idRecebido);
+  if (!realId) throw new Error('ID do cliente é obrigatório.');
+
+  const { data: existenteRow, error: erroLeitura } = await supabase
+    .from('clientes_locais')
+    .select('data')
+    .eq('id', realId)
+    .maybeSingle();
+  if (erroLeitura) throw erroLeitura;
+
+  const patch = { ...(alteracoes || {}) };
+  delete patch._temRegistroLocal;
+  if (Object.prototype.hasOwnProperty.call(patch, 'estadias')) {
+    if (Array.isArray(patch.estadias)) patch.estadias = normalizarEstadias(patch.estadias);
+    else delete patch.estadias;
+  }
+  for (const campoEstruturado of ['viajantes', 'emails', 'vouchers']) {
+    if (Object.prototype.hasOwnProperty.call(patch, campoEstruturado) && !Array.isArray(patch[campoEstruturado])) {
+      delete patch[campoEstruturado];
+    }
+  }
+
+  const dados = {
+    ...((existenteRow && existenteRow.data) || {}),
+    ...patch,
+    id: realId
+  };
+
+  const { error: erroGravacao } = await supabase
+    .from('clientes_locais')
+    .upsert({ id: realId, data: dados });
+  if (erroGravacao) throw erroGravacao;
+
+  if (sincronizarNotion && Object.prototype.hasOwnProperty.call(patch, 'estadias')) {
+    await sincronizarHoteisNoNotion(realId, dados.estadias);
+  }
+
+  return { realId, dados };
+}
+
+function arquivosVoucherLocal(voucher) {
+  if (Array.isArray(voucher?.arquivos) && voucher.arquivos.length > 0) {
+    return voucher.arquivos;
+  }
+  if (voucher?.url) {
+    return [{
+      id: 'legacy',
+      url: voucher.url,
+      fileName: voucher.fileName || voucher.nome || 'voucher'
+    }];
+  }
+  return [];
+}
+
+function urlArquivoVoucherAdmin(clientId, voucherIndex, fileIndex, dataUrl) {
+  const versao = require('crypto')
+    .createHash('sha256')
+    .update(String(dataUrl))
+    .digest('hex')
+    .slice(0, 16);
+  return `/api/clientes/local/${encodeURIComponent(clientId)}/voucher-file/${voucherIndex}/${fileIndex}?v=${versao}`;
+}
+
+function prepararClienteLocalLeve(localObj, clientId) {
+  const vouchers = Array.isArray(localObj?.vouchers) ? localObj.vouchers : [];
+  const vouchersLeves = vouchers.map((voucher, voucherIndex) => {
+    const arquivos = arquivosVoucherLocal(voucher).map((arquivo, fileIndex) => {
+      const urlOriginal = String(arquivo?.url || '');
+      return {
+        ...arquivo,
+        url: urlOriginal.startsWith('data:')
+          ? urlArquivoVoucherAdmin(clientId, voucherIndex, fileIndex, urlOriginal)
+          : urlOriginal
+      };
+    });
+    const urlRaiz = String(voucher?.url || '');
+    return {
+      ...voucher,
+      arquivos,
+      url: voucher?.tipo === 'link'
+        ? urlRaiz
+        : (arquivos[0]?.url || (urlRaiz.startsWith('data:') ? '' : urlRaiz))
+    };
+  });
+
+  return {
+    ...localObj,
+    vouchers: vouchersLeves
+  };
+}
+
 app.get('/api/clientes/local/:id', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('clientes_locais').select('data').eq('id', String(req.params.id)).single();
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    const idParam = String(req.params.id);
+    const realId = await resolverNotionIdReal(idParam);
+    const { data, error } = await supabase.from('clientes_locais').select('data').eq('id', realId).maybeSingle();
+    if (error) throw error;
+    const localObj = data && data.data ? { ...data.data } : null;
+
+    if (localObj) {
+      localObj.id = realId;
+      localObj.estadias = normalizarEstadias(localObj.estadias);
+      localObj._temRegistroLocal = true;
+      res.json(req.query.light === '1' ? prepararClienteLocalLeve(localObj, realId) : localObj);
+    } else {
+      res.json({ id: realId, estadias: null, _temRegistroLocal: false });
     }
-    res.json(data && data.data ? data.data : { id: req.params.id, estadias: [] });
   } catch(e) {
     console.error('Error getting local client:', e);
     res.status(500).json({error: e.message});
   }
 });
+
+app.get('/api/clientes/local/:id/voucher-file/:voucherIndex/:fileIndex', async (req, res) => {
+  try {
+    const realId = await resolverNotionIdReal(String(req.params.id));
+    const { data: row, error } = await supabase
+      .from('clientes_locais')
+      .select('data')
+      .eq('id', realId)
+      .maybeSingle();
+    if (error) throw error;
+
+    const localObj = row?.data || {};
+    const voucherIndex = Number.parseInt(req.params.voucherIndex, 10);
+    const fileIndex = Number.parseInt(req.params.fileIndex, 10);
+    const voucher = Array.isArray(localObj.vouchers) ? localObj.vouchers[voucherIndex] : null;
+    const arquivo = voucher ? arquivosVoucherLocal(voucher)[fileIndex] : null;
+    const dataUrl = String(arquivo?.url || '');
+    const match = dataUrl.match(/^data:([^;,]+)?(?:;[^,]*)?;base64,([\s\S]+)$/);
+    if (!match) return res.status(404).send('Arquivo não encontrado.');
+
+    const tiposPermitidos = new Set([
+      'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+      'application/pdf', 'application/octet-stream'
+    ]);
+    const tipoOriginal = String(match[1] || 'application/octet-stream').toLowerCase();
+    const contentType = tiposPermitidos.has(tipoOriginal) ? tipoOriginal : 'application/octet-stream';
+    const conteudo = Buffer.from(match[2], 'base64');
+    if (!conteudo.length) return res.status(404).send('Arquivo vazio.');
+
+    const etag = `"${require('crypto').createHash('sha256').update(conteudo).digest('hex')}"`;
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+
+    const nome = String(arquivo.fileName || voucher.fileName || voucher.nome || 'voucher')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 120);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${nome || 'voucher'}"`);
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    res.setHeader('ETag', etag);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.send(conteudo);
+  } catch (error) {
+    console.error('Erro ao entregar arquivo de voucher no Admin:', error);
+    return res.status(500).send('Erro ao carregar arquivo.');
+  }
+});
+
 app.post('/api/clientes/local', async (req, res) => {
   try {
-    const { error } = await supabase.from('clientes_locais').upsert({ id: String(req.body.id), data: req.body });
-    if (error) throw error;
-    res.json({success:true});
+    if (!req.body || !req.body.id) return res.status(400).json({ error: 'ID do cliente é obrigatório.' });
+    const salvo = await salvarClienteLocalCanonico(req.body.id, req.body);
+    res.json({ success: true, id: salvo.realId, data: salvo.dados });
   } catch(e) {
     console.error('Error saving local client:', e);
     res.status(500).json({error: e.message});
@@ -1514,18 +2735,20 @@ app.post('/api/config/:id', async (req, res) => {
 
 app.post('/api/transportes', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const novo = { ...req.body, id: Date.now() };
-    list.push(novo);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('transportes', 'insert', novo);
-    
-    res.json(novo);
+    await carregarOpcoesBase();
+    validarItemBase('transportes', req.body);
+    const novo = await comLockBase('transportes', async () => {
+      const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const item = { ...req.body, id: novoIdBase('transportes') };
+      list.push(item);
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
+      if (upsertErr) throw upsertErr;
+      return item;
+    });
+    const sheets = await syncToGoogleSheets('transportes', 'insert', novo);
+    res.json({ ...novo, _syncSheets: sheets });
   } catch(e) {
     console.error('Error saving transporte:', e);
     res.status(500).json({error: e.message});
@@ -1534,20 +2757,27 @@ app.post('/api/transportes', async (req, res) => {
 
 app.put('/api/transportes/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const idx = list.findIndex(t => t.id == req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-    const oldItem = list[idx];
-    list[idx] = { ...list[idx], ...req.body };
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('transportes', 'update', list[idx], oldItem);
-    
-    res.json(list[idx]);
+    await carregarOpcoesBase();
+    validarItemBase('transportes', req.body, { parcial: true });
+    const searchId = decodeURIComponent(req.params.id).trim().toLowerCase();
+    const resultado = await comLockBase('transportes', async () => {
+      const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const matches = list.map((t, i) => t?.id && String(t.id).trim().toLowerCase() === searchId ? i : -1).filter(i => i >= 0);
+      if (matches.length === 0) return null;
+      if (matches.length > 1) throw new Error(`ID duplicado na Base: ${req.params.id}. Operação bloqueada por segurança.`);
+      const idx = matches[0];
+      const oldItem = { ...list[idx] };
+      list[idx] = { ...list[idx], ...req.body, id: list[idx].id };
+      validarItemBase('transportes', list[idx]);
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
+      if (upsertErr) throw upsertErr;
+      return { item: list[idx], oldItem };
+    });
+    if (!resultado) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('transportes', 'update', resultado.item, resultado.oldItem);
+    res.json({ ...resultado.item, _syncSheets: sheets });
   } catch(e) {
     console.error('Error updating transporte:', e);
     res.status(500).json({error: e.message});
@@ -1556,13 +2786,22 @@ app.put('/api/transportes/:id', async (req, res) => {
 
 app.delete('/api/transportes/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    let list = data && data.data ? data.data : [];
-    list = list.filter(t => t.id != req.params.id);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: list });
-    if (upsertErr) throw upsertErr;
-    res.json({ ok: true });
+    const searchId = decodeURIComponent(req.params.id).trim().toLowerCase();
+    const oldItem = await comLockBase('transportes', async () => {
+      const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'transportes').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const matches = list.filter(t => t?.id && String(t.id).trim().toLowerCase() === searchId);
+      if (matches.length > 1) throw new Error(`ID duplicado na Base: ${req.params.id}. Exclusão bloqueada por segurança.`);
+      if (!matches.length) return null;
+      const filteredList = list.filter(t => !t?.id || String(t.id).trim().toLowerCase() !== searchId);
+      const { error: upsertErr } = await supabase.from('config').upsert({ id: 'transportes', data: filteredList });
+      if (upsertErr) throw upsertErr;
+      return matches[0];
+    });
+    if (!oldItem) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('transportes', 'delete', oldItem);
+    res.json({ ok: true, _syncSheets: sheets });
   } catch(e) {
     console.error('Error deleting transporte:', e);
     res.status(500).json({error: e.message});
@@ -1583,18 +2822,9 @@ app.get('/api/experiencias', async (req, res) => {
 
 app.post('/api/experiencias', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const novo = { ...req.body, id: Date.now() };
-    list.push(novo);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('experiencias', 'insert', novo);
-    
-    res.json(novo);
+    const novo = await criarItemConfigBase('experiencias', req.body);
+    const sheets = await syncToGoogleSheets('experiencias', 'insert', novo);
+    res.json({ ...novo, _syncSheets: sheets });
   } catch(e) {
     console.error('Error saving experiencia:', e);
     res.status(500).json({error: e.message});
@@ -1603,20 +2833,10 @@ app.post('/api/experiencias', async (req, res) => {
 
 app.put('/api/experiencias/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const idx = list.findIndex(e => e.id == req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-    const oldItem = list[idx];
-    list[idx] = { ...list[idx], ...req.body };
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('experiencias', 'update', list[idx], oldItem);
-    
-    res.json(list[idx]);
+    const resultado = await atualizarItemConfigBase('experiencias', decodeURIComponent(req.params.id), req.body);
+    if (!resultado) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('experiencias', 'update', resultado.item, resultado.oldItem);
+    res.json({ ...resultado.item, _syncSheets: sheets });
   } catch(e) {
     console.error('Error updating experiencia:', e);
     res.status(500).json({error: e.message});
@@ -1625,13 +2845,10 @@ app.put('/api/experiencias/:id', async (req, res) => {
 
 app.delete('/api/experiencias/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'experiencias').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    let list = data && data.data ? data.data : [];
-    list = list.filter(e => e.id != req.params.id);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'experiencias', data: list });
-    if (upsertErr) throw upsertErr;
-    res.json({ ok: true });
+    const oldItem = await excluirItemConfigBase('experiencias', decodeURIComponent(req.params.id));
+    if (!oldItem) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('experiencias', 'delete', oldItem);
+    res.json({ ok: true, _syncSheets: sheets });
   } catch(e) {
     console.error('Error deleting experiencia:', e);
     res.status(500).json({error: e.message});
@@ -1653,15 +2870,8 @@ app.post('/api/roteiros/gerar-ia', async (req, res) => {
     // 1. Opcional: Buscar dados do cliente no Notion se houver clienteId
     if (clienteId && clienteId !== 'cliente_desconhecido' && process.env.NOTION_API_KEY) {
       try {
-        const notionRes = await fetch(`https://api.notion.com/v1/pages/${clienteId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${process.env.NOTION_API_KEY || NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28'
-          }
-        });
-        if (notionRes.ok) {
-          const page = await notionRes.json();
+        const page = await notionMirror.getPage('clientes', clienteId);
+        if (page) {
           const p = page.properties;
           clienteNome = p['Nome do Cliente']?.title?.map(t => t.plain_text).join('') || 
                         p['Name']?.title?.map(t => t.plain_text).join('') || 
@@ -1719,7 +2929,7 @@ Modelo do JSON esperado de saída:
         {
           "tipo": "sequencia",
           "cidade": "Nome da cidade do passeio",
-          "nomeDaRota": "Título descritivo da rota do dia (ex: Quioto Histórico ou Asakusa e Ueno Tradicional)",
+          "nomeDaRota": "Título descritivo da rota do dia (ex: Kyoto Histórico ou Asakusa e Ueno Tradicional)",
           "atracoesDoDia": []
         },
         {
@@ -1769,46 +2979,23 @@ ${datas ? `Data de início da viagem: ${datas}` : ''}
 
 Por favor, gere o JSON do roteiro estruturado com base nas instruções e atrações fornecidas. Certifique-se de que os nomes de atrações colocados no array "atracoesDoDia" correspondam EXATAMENTE aos nomes presentes na lista de atrações por cidade fornecida.`;
 
-    // 4. Chamar a API REST do Gemini com suporte dinâmico a chaves AQ. (Authorization Keys) e AIza (Legacy Keys)
-    const isNewAuthKey = GEMINI_API_KEY.startsWith('AQ.');
-    const geminiUrl = isNewAuthKey 
-      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
-      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // 4. Chamar o Gemini via SDK oficial (@google/genai). O SDK trata internamente o
+    //    formato de chave "AQ..." (auth key vinculada a conta de servico), que falha
+    //    quando chamado por REST cru. Chaves "AIza..." tambem funcionam por aqui.
+    const { GoogleGenAI } = require('@google/genai');
+    const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (isNewAuthKey) {
-      headers['Authorization'] = `Bearer ${GEMINI_API_KEY}`;
+    let responseText;
+    try {
+      const result = await genAI.models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: systemPrompt + '\n\n' + userPrompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      responseText = result.text;
+    } catch (apiErr) {
+      throw new Error(`Erro na API do Gemini: ${apiErr.message}`);
     }
-
-    const geminiPayload = {
-      contents: [
-        {
-          parts: [
-            { text: systemPrompt + '\n\n' + userPrompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
-    };
-
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(geminiPayload)
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Erro na API do Gemini: ${errText}`);
-    }
-
-    const geminiData = await response.json();
-    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!responseText) {
       throw new Error('A API do Gemini retornou uma resposta vazia ou em formato inesperado.');
     }
@@ -1858,18 +3045,9 @@ app.get('/api/templates-vouchers', async (req, res) => {
 
 app.post('/api/hoteis', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    
-    const novo = { ...req.body, id: String(Date.now()) };
-    list.push(novo);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    await syncToGoogleSheets('hoteis', 'insert', novo);
-    
-    res.json(novo);
+    const novo = await criarItemConfigBase('hoteis', req.body);
+    const sheets = await syncToGoogleSheets('hoteis', 'insert', novo);
+    res.json({ ...novo, _syncSheets: sheets });
   } catch(e) {
     console.error('Error saving hotel:', e);
     res.status(500).json({error: e.message});
@@ -1878,24 +3056,10 @@ app.post('/api/hoteis', async (req, res) => {
 
 app.put('/api/hoteis/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
-    if (fetchErr) throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    
-    const idx = list.findIndex(h => h.id == id);
-    if (idx === -1) return res.status(404).json({ error: 'Hotel não encontrado' });
-    
-    const oldItem = { ...list[idx] };
-    const updated = { ...list[idx], ...req.body, id };
-    list[idx] = updated;
-    
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    await syncToGoogleSheets('hoteis', 'update', updated, oldItem);
-    
-    res.json(updated);
+    const resultado = await atualizarItemConfigBase('hoteis', decodeURIComponent(req.params.id), req.body);
+    if (!resultado) return res.status(404).json({ error: 'Hotel não encontrado' });
+    const sheets = await syncToGoogleSheets('hoteis', 'update', resultado.item, resultado.oldItem);
+    res.json({ ...resultado.item, _syncSheets: sheets });
   } catch(e) {
     console.error('Error updating hotel:', e);
     res.status(500).json({error: e.message});
@@ -1904,23 +3068,10 @@ app.put('/api/hoteis/:id', async (req, res) => {
 
 app.delete('/api/hoteis/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
-    if (fetchErr) throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    
-    const idx = list.findIndex(h => h.id == id);
-    if (idx === -1) return res.status(404).json({ error: 'Hotel não encontrado' });
-    
-    const oldItem = list[idx];
-    const filteredList = list.filter(h => h.id != id);
-    
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'hoteis', data: filteredList });
-    if (upsertErr) throw upsertErr;
-    
-    await syncToGoogleSheets('hoteis', 'delete', oldItem);
-    
-    res.json({ ok: true });
+    const oldItem = await excluirItemConfigBase('hoteis', decodeURIComponent(req.params.id));
+    if (!oldItem) return res.status(404).json({ error: 'Hotel não encontrado' });
+    const sheets = await syncToGoogleSheets('hoteis', 'delete', oldItem);
+    res.json({ ok: true, _syncSheets: sheets });
   } catch(e) {
     console.error('Error deleting hotel:', e);
     res.status(500).json({error: e.message});
@@ -1929,24 +3080,12 @@ app.delete('/api/hoteis/:id', async (req, res) => {
 
 app.post('/api/atracoes', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    
-    // Strip any HTML codes from the description
     if (req.body && req.body['Descrição Detalhada']) {
       req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
     }
-    
-    const novo = { ...req.body, id: Date.now() };
-    list.push(novo);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('atracoes', 'insert', novo);
-    
-    res.json(novo);
+    const novo = await criarItemConfigBase('atracoes', req.body);
+    const sheets = await syncToGoogleSheets('atracoes', 'insert', novo);
+    res.json({ ...novo, _syncSheets: sheets });
   } catch(e) {
     console.error('Error saving atracao:', e);
     res.status(500).json({error: e.message});
@@ -1955,26 +3094,13 @@ app.post('/api/atracoes', async (req, res) => {
 
 app.put('/api/atracoes/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const idx = list.findIndex(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-    
-    // Strip any HTML codes from the description
     if (req.body && req.body['Descrição Detalhada']) {
       req.body['Descrição Detalhada'] = req.body['Descrição Detalhada'].replace(/<[^>]*>?/gm, '').trim();
     }
-    
-    const oldItem = list[idx];
-    list[idx] = { ...list[idx], ...req.body };
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: list });
-    if (upsertErr) throw upsertErr;
-    
-    // Sincroniza em background
-    await syncToGoogleSheets('atracoes', 'update', list[idx], oldItem);
-    
-    res.json(list[idx]);
+    const resultado = await atualizarItemConfigBase('atracoes', decodeURIComponent(req.params.id), req.body);
+    if (!resultado) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('atracoes', 'update', resultado.item, resultado.oldItem);
+    res.json({ ...resultado.item, _syncSheets: sheets });
   } catch(e) {
     console.error('Error updating atracao:', e);
     res.status(500).json({error: e.message});
@@ -1983,16 +3109,10 @@ app.put('/api/atracoes/:id', async (req, res) => {
 
 app.delete('/api/atracoes/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('config').select('data').eq('id', 'atracoes').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    const list = data && data.data ? data.data : [];
-    const oldItem = list.find(a => a.id == req.params.id || a['Nome da Atração'] === req.params.id);
-    const filteredList = list.filter(a => a.id != req.params.id && a['Nome da Atração'] !== req.params.id);
-    const { error: upsertErr } = await supabase.from('config').upsert({ id: 'atracoes', data: filteredList });
-    if (upsertErr) throw upsertErr;
-    
-    if (oldItem) await syncToGoogleSheets('atracoes', 'delete', oldItem);
-    res.json({ ok: true });
+    const oldItem = await excluirItemConfigBase('atracoes', decodeURIComponent(req.params.id));
+    if (!oldItem) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('atracoes', 'delete', oldItem);
+    res.json({ ok: true, _syncSheets: sheets });
   } catch(e) {
     console.error('Error deleting atracao:', e);
     res.status(500).json({error: e.message});
@@ -2034,17 +3154,24 @@ function aplicarHistorico(dadosNovos, dadosAntigos) {
   if (!ultimo || (agora - ultimoTs) > 10 * 60 * 1000) {
     const snapshot = { ...dadosAntigos };
     delete snapshot._historico;
-    novoHistorico = [...historicoAnterior, { em: dadosAntigos.atualizadoEm || new Date().toISOString(), dados: snapshot }].slice(-5);
+    novoHistorico = [...historicoAnterior, { em: dadosAntigos.atualizadoEm || new Date().toISOString(), dados: snapshot }].slice(-2); // egress: 5→2 versões de histórico (front não lê _historico) — 2026-07-28
   }
   return { ...dadosNovos, _historico: novoHistorico };
+}
+
+// Conta o total de elementos do roteiro (soma dos elementos de cada dia).
+// Base da trava anti-esvaziamento: um autosave que derruba isso bruscamente e recusado.
+function contarElementosRoteiro(r) {
+  try { return (r && Array.isArray(r.dias) ? r.dias : []).reduce((acc, d) => acc + ((d && Array.isArray(d.elementos)) ? d.elementos.length : 0), 0); }
+  catch (e) { return 0; }
 }
 
 // Guarda de versão: se o registro no banco mudou desde que o cliente o carregou,
 // recusa a gravação (evita que duas pessoas se sobrescrevam sem perceber).
 function conflitoDeVersao(baseVersao, dadosArmazenados) {
-  if (baseVersao === undefined || baseVersao === null) return false; // cliente legado: não valida
-  if (!dadosArmazenados || !dadosArmazenados.atualizadoEm) return false;
-  return String(dadosArmazenados.atualizadoEm) !== String(baseVersao);
+  // Edição colaborativa (Diogo <-> Deborah em máquinas/abas diferentes): trava de versão DESLIGADA a pedido.
+  // Último a salvar prevalece; o autosave grava cada alteração e o histórico guarda as últimas versões.
+  return false;
 }
 
 // Migração única e idempotente: converte chaves legadas (nome de exibição)
@@ -2114,10 +3241,12 @@ app.get('/api/admin/migrar-roteiros', async (req, res) => {
 
 app.get('/api/roteiros', async (req, res) => {
   try {
-    const [rotsRes, baseRes] = await Promise.all([
-      supabase.from('roteiros').select('*'),
+    // egress: view roteiros_light devolve os dados SEM _historico (~80% menor). Fallback p/ tabela base se a view não existir.
+    let [rotsRes, baseRes] = await Promise.all([
+      supabase.from('roteiros_light').select('*'),
       supabase.from('rotas_base').select('data').eq('id', 'base').single()
     ]);
+    if (rotsRes.error) rotsRes = await supabase.from('roteiros').select('*');
     if (rotsRes.error) throw rotsRes.error;
     
     const rotasMap = {};
@@ -2188,6 +3317,24 @@ app.post('/api/roteiros/:name', async (req, res) => {
       });
     }
 
+    // TRAVA ANTI-ESVAZIAMENTO: recusa um save automatico que derruba o conteudo
+    // bruscamente (ex.: aba/sessao desatualizada sobrescrevendo com menos itens).
+    // Nao perde nada: o recusado fica parkeado num backup. Salvamento explicito
+    // pode forcar com _permitirReducao:true.
+    const _permitirReducao = corpo._permitirReducao === true;
+    delete corpo._permitirReducao;
+    if (armazenado && !_permitirReducao) {
+      const nOld = contarElementosRoteiro(armazenado);
+      const nNew = contarElementosRoteiro(corpo);
+      if (nOld >= 8 && nNew < nOld * 0.5) {
+        try {
+          await supabase.from('config').upsert({ id: '_bak_reducao_' + chave, data: { em: new Date().toISOString(), nOld, nNew, recusado: corpo } });
+        } catch (e) { console.error('park reducao:', e.message); }
+        console.warn('Anti-esvaziamento: recusado save de ' + chave + ' (' + nOld + ' -> ' + nNew + ' elementos)');
+        return res.status(409).json({ error: 'reducao', nOld, nNew, atualizadoEm: armazenado.atualizadoEm });
+      }
+    }
+
     let dados = {
       ...corpo,
       id: chave,
@@ -2202,7 +3349,12 @@ app.post('/api/roteiros/:name', async (req, res) => {
       data: dados
     }, { onConflict: 'nome' });
     if (error) throw error;
-    
+
+    // FASE 2 — garante cotação vinculada (nasce junto com o roteiro). Não bloqueia a resposta.
+    if (typeof garantirCotacaoDoRoteiro === 'function') {
+      Promise.resolve(garantirCotacaoDoRoteiro(dados)).catch(e => console.error('garantirCotacaoDoRoteiro:', e.message));
+    }
+
     res.json({ ok: true, name, id: chave, nome: dados.nome, atualizadoEm: dados.atualizadoEm, roteiro: dados });
   } catch(e) {
     console.error('Error saving roteiro:', e);
@@ -2402,21 +3554,20 @@ app.get('/api/rotas-base', async (req, res) => {
 
 app.post('/api/rotas-base', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    
-    const list = data && data.data ? data.data : [];
-    const novo = { id: Date.now(), ...req.body };
-    list.push(novo);
-    
-    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
-      id: 'base',
-      data: list
+    await carregarOpcoesBase();
+    validarItemBase('rotas', req.body);
+    const novo = await comLockBase('rotas', async () => {
+      const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const item = { ...req.body, id: novoIdBase('rotas') };
+      list.push(item);
+      const { error: upsertErr } = await supabase.from('rotas_base').upsert({ id: 'base', data: list });
+      if (upsertErr) throw upsertErr;
+      return item;
     });
-    if (upsertErr) throw upsertErr;
-    
-    await syncToGoogleSheets('rotas', 'insert', novo);
-    res.json(novo);
+    const sheets = await syncToGoogleSheets('rotas', 'insert', novo);
+    res.json({ ...novo, _syncSheets: sheets });
   } catch(e) {
     console.error('Error saving rotas-base:', e);
     res.status(500).json({error: e.message});
@@ -2425,24 +3576,27 @@ app.post('/api/rotas-base', async (req, res) => {
 
 app.put('/api/rotas-base/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    
-    const list = data && data.data ? data.data : [];
-    const idx = list.findIndex(d => d.id == req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-    
-    const oldItem = list[idx];
-    list[idx] = { ...list[idx], ...req.body };
-    
-    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
-      id: 'base',
-      data: list
+    await carregarOpcoesBase();
+    validarItemBase('rotas', req.body, { parcial: true });
+    const searchId = decodeURIComponent(req.params.id).trim().toLowerCase();
+    const resultado = await comLockBase('rotas', async () => {
+      const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const indices = list.map((x, i) => x?.id && String(x.id).trim().toLowerCase() === searchId ? i : -1).filter(i => i >= 0);
+      if (!indices.length) return null;
+      if (indices.length > 1) throw new Error(`ID duplicado na Base: ${req.params.id}. Operação bloqueada por segurança.`);
+      const idx = indices[0];
+      const oldItem = { ...list[idx] };
+      list[idx] = { ...list[idx], ...req.body, id: list[idx].id };
+      validarItemBase('rotas', list[idx]);
+      const { error: upsertErr } = await supabase.from('rotas_base').upsert({ id: 'base', data: list });
+      if (upsertErr) throw upsertErr;
+      return { item: list[idx], oldItem };
     });
-    if (upsertErr) throw upsertErr;
-    
-    await syncToGoogleSheets('rotas', 'update', list[idx], oldItem);
-    res.json(list[idx]);
+    if (!resultado) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('rotas', 'update', resultado.item, resultado.oldItem);
+    res.json({ ...resultado.item, _syncSheets: sheets });
   } catch(e) {
     console.error('Error updating rotas-base:', e);
     res.status(500).json({error: e.message});
@@ -2451,21 +3605,22 @@ app.put('/api/rotas-base/:id', async (req, res) => {
 
 app.delete('/api/rotas-base/:id', async (req, res) => {
   try {
-    const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
-    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-    
-    const list = data && data.data ? data.data : [];
-    const oldItem = list.find(d => d.id == req.params.id);
-    const filteredList = list.filter(d => d.id != req.params.id);
-    
-    const { error: upsertErr } = await supabase.from('rotas_base').upsert({
-      id: 'base',
-      data: filteredList
+    const searchId = decodeURIComponent(req.params.id).trim().toLowerCase();
+    const oldItem = await comLockBase('rotas', async () => {
+      const { data, error: fetchErr } = await supabase.from('rotas_base').select('data').eq('id', 'base').single();
+      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const matches = list.filter(x => x?.id && String(x.id).trim().toLowerCase() === searchId);
+      if (!matches.length) return null;
+      if (matches.length > 1) throw new Error(`ID duplicado na Base: ${req.params.id}. Exclusão bloqueada por segurança.`);
+      const filteredList = list.filter(x => !x?.id || String(x.id).trim().toLowerCase() !== searchId);
+      const { error: upsertErr } = await supabase.from('rotas_base').upsert({ id: 'base', data: filteredList });
+      if (upsertErr) throw upsertErr;
+      return matches[0];
     });
-    if (upsertErr) throw upsertErr;
-    
-    if (oldItem) await syncToGoogleSheets('rotas', 'delete', oldItem);
-    res.json({ ok: true });
+    if (!oldItem) return res.status(404).json({ error: 'Não encontrado' });
+    const sheets = await syncToGoogleSheets('rotas', 'delete', oldItem);
+    res.json({ ok: true, _syncSheets: sheets });
   } catch(e) {
     console.error('Error deleting rotas-base:', e);
     res.status(500).json({error: e.message});
@@ -2501,9 +3656,9 @@ app.post('/api/sync', async (req, res) => {
       templates_vouchers: null
     };
 
-  // Busca uma aba via gviz usando o range completo (inclui linhas em branco)
+  // Busca uma aba via gviz usando o range completo (inclui linhas em branco e preserva a 1ª linha como único cabeçalho)
   async function fetchAba(nomeAba) {
-    const url = `https://docs.google.com/spreadsheets/d/${sheets_id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nomeAba)}`;
+    const url = `https://docs.google.com/spreadsheets/d/${sheets_id}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(nomeAba)}`;
     const resp = await fetch(url);
     const text = await resp.text();
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
@@ -2622,18 +3777,55 @@ app.post('/api/sync', async (req, res) => {
         dataRows = rows.slice(1);
       }
 
+      // v2: leitura por CABEÇALHO (layout novo da BaseEX), com fallback pro layout legado
+      let headE = [];
+      if (table.cols && table.cols.some(cc => (cc.label || '').trim() !== '')) {
+        headE = table.cols.map(cc => (cc.label || '').toLowerCase().trim());
+      } else if (rows.length > 0) {
+        headE = (rows[0].c || []).map(cell => (cellVal(cell) || '').toLowerCase().trim());
+      }
+      const hIdxE = (tests, fb) => {
+        const i = headE.findIndex(h => tests.some(t => h.includes(t)));
+        return i > -1 ? i : fb;
+      };
+      const iNome = hIdxE(['nome'], 0);
+      const iTipo = hIdxE(['tipo'], 1);
+      const iCid  = hIdxE(['cidade'], -1);
+      const iDesc = hIdxE(['descri'], -1);
+      const iPre  = hIdxE(['preço adulto', 'preco adulto', 'preço'], 4);
+      const iPreC = hIdxE(['criança', 'crianca'], -1);
+      const iDur  = hIdxE(['duração', 'duracao'], -1);
+      const iLink = hIdxE(['link'], 7);
+      const iJan  = hIdxE(['janela'], -1);
+      const iPraz = hIdxE(['prazo'], -1);
+      const iIdE  = headE.indexOf('id') > -1 ? headE.indexOf('id') : 10;
+      const iHor  = hIdxE(['horário', 'horario'], -1);
+      const iPub  = hIdxE(['público', 'publico'], -1);
+      const iSaz  = hIdxE(['sazonal'], -1);
+      const iObs  = hIdxE(['observa'], -1);
+      const gvE = (c, i) => (i > -1 ? (cellVal(c[i]) || '') : '');
+
       const experiencias = dataRows
         .map((r, i) => {
           const c = r.c || [];
-          const nome = cellVal(c[0]);
+          const nome = cellVal(c[iNome]);
           if (!nome) return null;
           return {
-            id: cellVal(c[10]) || (i + 1),
+            id: cellVal(c[iIdE]) || (i + 1),
             nome,
-            tipo:       cellVal(c[1]) || 'Ingresso',
-            preco_jpy:  cellNum(c[4]),  // Preço está na 5ª coluna (índice 4)
-            observacao: '',
-            link:       cellVal(c[7])
+            tipo:       gvE(c, iTipo) || 'Ingresso',
+            cidade:     gvE(c, iCid),
+            descricao:  gvE(c, iDesc),
+            preco_jpy:  iPre > -1 ? cellNum(c[iPre]) : 0,
+            preco_crianca_jpy: iPreC > -1 ? cellNum(c[iPreC]) : 0,
+            duracao:    gvE(c, iDur),
+            link:       gvE(c, iLink),
+            janelaAbreDias: iJan > -1 ? cellNum(c[iJan]) : 0,
+            prazoDias:  iPraz > -1 ? cellNum(c[iPraz]) : 0,
+            horarios:   gvE(c, iHor),
+            publico:    gvE(c, iPub),
+            sazonalidade: gvE(c, iSaz),
+            observacao: gvE(c, iObs)
           };
         })
         .filter(Boolean);
@@ -2672,9 +3864,10 @@ app.post('/api/sync', async (req, res) => {
 
         const headerVals = headers;
 
-        const getIdx = (keywords, defaultVal) => {
+        const getIdx = (keywords, defaultVal, forceExact = false) => {
           let idx = headerVals.findIndex(h => keywords.some(k => h === k));
           if (idx >= 0) return idx;
+          if (forceExact) return defaultVal;
           idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
           return idx >= 0 ? idx : defaultVal;
         };
@@ -2686,7 +3879,7 @@ app.post('/api/sync', async (req, res) => {
         const idxPreco = getIdx(['preço (ingresso)', 'preco (ingresso)', 'preço', 'preco', 'ingresso', 'valor', 'price', 'custo'], 4);
         const idxOrigem = getIdx(['origem', 'source', 'casal'], 5);
         const idxDiasFechados = getIdx(['diasfechados', 'dias fechados', 'fechados', 'fechado'], 5);
-        const idxId = getIdx(['id', 'id_atracao', 'idatracao'], 6);
+        const idxId = getIdx(['id', 'id_atracao', 'idatracao'], 6, true);
         const idxManutencaoInicio = getIdx(['manutencaoinicio', 'manutencao_inicio', 'manutenção início', 'manutencao inicio'], 7);
         const idxManutencaoFim = getIdx(['manutencaofim', 'manutencao_fim', 'manutenção fim', 'manutencao fim'], 8);
         const idxManutencaoMotivo = getIdx(['manutencaomotivo', 'manutencao_motivo', 'motivo', 'manutencao motivo'], 9);
@@ -2800,41 +3993,42 @@ app.post('/api/sync', async (req, res) => {
         let foundHeader = false;
         let headers = [];
 
-        // Tenta ler dos 'cols' do gviz primeiro
-        if (table.cols && table.cols.length > 0 && table.cols[0].label) {
+        let dataRows = [];
+        if (table.cols && table.cols.length > 0 && table.cols.some(c => c && c.label)) {
           headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
           foundHeader = true;
+          dataRows = rows;
         } else {
           for (let i = 0; i < Math.min(5, rows.length); i++) {
             const cells = rows[i].c || [];
             const rowVals = cells.map(cellVal).map(v => v.toLowerCase());
-            if (rowVals.some(v => v.includes('hotel') || v.includes('hotéis') || v.includes('hoteis') || v.includes('nome'))) {
+            if (rowVals.some(v => v === 'nome de hotel' || v === 'nome do hotel' || v === 'cidade')) {
               headerIdx = i;
               foundHeader = true;
               headers = rowVals;
               break;
             }
           }
+          dataRows = (foundHeader && headerIdx >= 0) ? rows.slice(headerIdx + 1) : rows;
         }
 
         const headerVals = headers;
 
-        const getIdx = (keywords, defaultVal) => {
+        const getIdx = (keywords, defaultVal, forceExact = false) => {
           let idx = headerVals.findIndex(h => keywords.some(k => h === k));
           if (idx >= 0) return idx;
+          if (forceExact) return defaultVal;
           idx = headerVals.findIndex(h => keywords.some(k => h.includes(k)));
           return idx >= 0 ? idx : defaultVal;
         };
 
-        const idxNome = getIdx(['nome do hotel', 'hotel', 'nome', 'name'], 0);
+        const idxNome = getIdx(['nome do hotel', 'nome de hotel', 'hotel', 'nome', 'name'], 0);
         const idxCidade = getIdx(['cidade', 'city', 'local'], 1);
         const idxDescricao = getIdx(['descrição', 'descricao', 'description', 'sobre'], 2);
         const idxFoto = getIdx(['foto (url)', 'foto', 'imagem', 'image', 'foto_url'], 3);
         const idxLinkMaps = getIdx(['link do google maps', 'link maps', 'maps', 'google maps', 'link'], 4);
         const idxComodidades = getIdx(['comodidades', 'tags', 'facilidades', 'comodidade'], 5);
-        const idxId = getIdx(['id'], 6);
-
-        const dataRows = (foundHeader && headerIdx >= 0) ? rows.slice(headerIdx + 1) : rows;
+        const idxId = getIdx(['id'], 6, true);
 
         const hoteis = dataRows
           .map((r, i) => {
@@ -3004,28 +4198,61 @@ function parsePreco(v) {
 }
 
 // ── Integração Notion ───────────────────────────────────────────────────────
+// Opções de status do QUADRO lidas direto do Notion (options de 'Status do Cliente').
+// Assim o quadro reflete o Notion: adicionar/remover uma opção lá aparece/some aqui.
+app.get('/api/integracoes/notion/status', async (req, res) => {
+  try {
+    const status = {};
+    for (const type of Object.keys(NOTION_DATABASES)) {
+      if (!NOTION_DATABASES[type]) continue;
+      const snapshot = await notionMirror.getSnapshot(type, { fallbackToNotion: false });
+      status[type] = snapshot
+        ? { pronto: true, quantidade: snapshot.count, sincronizadoEm: snapshot.syncedAt }
+        : { pronto: false, quantidade: 0, sincronizadoEm: null };
+    }
+    res.json({ success: true, fontePrimaria: 'supabase', status });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/integracoes/notion/sincronizar', async (req, res) => {
+  try {
+    const types = Array.isArray(req.body?.types) ? req.body.types : undefined;
+    const resultado = await notionMirror.refreshAll(types);
+    reconstruirCacheSlugs().catch(error =>
+      console.error('[Notion Mirror] Falha ao reconstruir slugs:', error.message)
+    );
+    res.json({ success: true, fontePrimaria: 'supabase', resultado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/notion/status-opcoes', async (req, res) => {
+  try {
+    const schema = await notionMirror.getSchema('clientes');
+    const prop = (schema.properties && (schema.properties['Status do Cliente'] || schema.properties['Status'])) || null;
+    const opcoes = (prop && prop.select && Array.isArray(prop.select.options)) ? prop.select.options : [];
+    const NOTION_CORES = {
+      default: '#787878', gray: '#787878', brown: '#b45309', orange: '#ea580c',
+      yellow: '#ca8a04', green: '#16a34a', blue: '#2563eb', purple: '#7c3aed',
+      pink: '#db2777', red: '#dc2626'
+    };
+    res.json(opcoes.map(o => ({ name: o.name, color: NOTION_CORES[o.color] || '#64748b' })));
+  } catch (e) {
+    console.error('Erro em /api/notion/status-opcoes:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
 app.get('/api/notion/clientes', async (req, res) => {
   let clientesMapeados = [];
   
   try {
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CLIENTS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sorts: [
-          { timestamp: 'created_time', direction: 'descending' }
-        ]
-      })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      
-      clientesMapeados = (data.results || []).map(page => {
+    const pages = (await notionMirror.getPages('clientes'))
+      .slice()
+      .sort((a, b) => String(b.created_time || '').localeCompare(String(a.created_time || '')));
+    clientesMapeados = pages.map(page => {
         const p = page.properties;
         
         const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
@@ -3081,10 +4308,6 @@ app.get('/api/notion/clientes', async (req, res) => {
           c.vooPartidaHora = '';
         }
       });
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Notion API response error (Handled gracefully):', errorData);
-    }
   } catch (error) {
     console.error('Erro na conexão do Notion API (Mantendo clientes locais):', error.message);
   }
@@ -3116,6 +4339,45 @@ app.get('/api/notion/clientes', async (req, res) => {
     statusPagamento: 'Pendente'
   });
 
+  // Derivar Valor do Pacote para clientes sem "Valor Total" no Notion.
+  // PERF: lê a tabela de cotações UMA vez só e deriva em memória (antes: 1 leitura da tabela
+  // INTEIRA por cliente = N+1, que fazia a lista demorar "uma vida" a cada F5 em produção).
+  let _orcDataList = [];
+  const _totalPagoPorCliente = new Map();
+  try {
+    const [{ data: _orcRows }, _entradasPages] = await Promise.all([
+      supabase.from('orcamentos').select('data'),
+      notionMirror.getPages('entradas')
+    ]);
+    _orcDataList = (_orcRows || []).map(r => r.data);
+    for (const entrada of (_entradasPages || [])) {
+      const p = entrada.properties || {};
+      const clienteProp = Object.entries(p).find(([nome, prop]) =>
+        nome.toLowerCase().includes('cliente') && Array.isArray(prop?.relation)
+      );
+      const clienteId = clienteProp?.[1]?.relation?.[0]?.id;
+      if (!clienteId) continue;
+      const valor = Number(p['Valor (JPY)']?.number) || 0;
+      _totalPagoPorCliente.set(clienteId, (_totalPagoPorCliente.get(clienteId) || 0) + valor);
+    }
+  } catch (e) { console.error('Erro ao ler cotações p/ derivar Valor do Pacote:', e.message); }
+  for (const c of clientesValidos) {
+    if (_totalPagoPorCliente.has(c.id)) c.totalPago = _totalPagoPorCliente.get(c.id);
+    if (!c.valorTotal || Number(c.valorTotal) <= 0) {
+      const derivado = derivarValorPacoteDeLista(c.id, c.nome, _orcDataList);
+      if (derivado > 0) {
+        c.valorTotal = derivado;
+        c.saldoPagar = Math.max(0, Math.round(c.valorTotal - (c.totalPago || 0)));
+        syncNotionClienteValorTotal(c.id, derivado); // background, não aguardado
+      }
+    }
+    c.sinalDevido = derivarSinalDeLista(c.id, c.nome, _orcDataList); // 1º pagamento (entrada)
+  }
+
+  clientesValidos.forEach(c => {
+    c.saldoPagar = Math.max(0, Math.round((Number(c.valorTotal) || 0) - (Number(c.totalPago) || 0)));
+    c.statusPagamento = c.saldoPagar <= 0 ? 'Pago' : (c.totalPago > 0 ? 'Parcial' : 'Pendente');
+  });
   res.json(clientesValidos);
 });
 
@@ -3155,7 +4417,12 @@ async function sincronizarPerfilNotion(pageId, preferencias) {
 
 app.post('/api/clientes', async (req, res) => {
   try {
-    const { notionPayload, localPayload } = req.body;
+    const notionPayload = req.body.notionPayload || {};
+    const localPayload = req.body.localPayload ? { ...req.body.localPayload } : null;
+    if (localPayload && Object.prototype.hasOwnProperty.call(localPayload, 'estadias')) {
+      localPayload.estadias = normalizarEstadias(localPayload.estadias);
+      notionPayload.hotel = formatarEstadiasParaNotion(localPayload.estadias);
+    }
     
     // 1. Criar no Notion
     const properties = {
@@ -3201,13 +4468,12 @@ app.post('/api/clientes', async (req, res) => {
     }
     const data = await response.json();
     const cliId = data.id;
+    await notionMirror.upsertPage('clientes', data);
 
     // 2. Criar localmente no Supabase
     if (localPayload) {
-      localPayload.id = cliId; // Garante o ID correto gerado pelo Notion
       localPayload.nome = notionPayload.nome || localPayload.nome;
-      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id: cliId, data: localPayload });
-      if (localErr) throw localErr;
+      await salvarClienteLocalCanonico(cliId, localPayload, { sincronizarNotion: false });
     }
 
     if (localPayload && localPayload.preferencias) { await sincronizarPerfilNotion(cliId, localPayload.preferencias); }
@@ -3222,7 +4488,13 @@ app.post('/api/clientes', async (req, res) => {
 app.patch('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { notionPayload, localPayload } = req.body;
+    const realId = await resolverNotionIdReal(id);
+    const notionPayload = req.body.notionPayload || {};
+    const localPayload = req.body.localPayload ? { ...req.body.localPayload } : null;
+    if (localPayload && Object.prototype.hasOwnProperty.call(localPayload, 'estadias')) {
+      localPayload.estadias = normalizarEstadias(localPayload.estadias);
+      notionPayload.hotel = formatarEstadiasParaNotion(localPayload.estadias);
+    }
     
     // 1. Atualizar no Notion
     const properties = {};
@@ -3262,7 +4534,7 @@ app.patch('/api/clientes/:id', async (req, res) => {
       }
     }
 
-    const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+    const response = await fetch(`https://api.notion.com/v1/pages/${realId}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${NOTION_TOKEN}`,
@@ -3274,26 +4546,30 @@ app.patch('/api/clientes/:id', async (req, res) => {
 
     if (!response.ok) {
       const err = await response.json();
-      return res.status(response.status).json(err);
+      throw new Error(`Notion recusou a atualização do cliente: ${err.message || response.status}`);
     }
+
+    const paginaAtualizada = await response.json();
+    await notionMirror.upsertPage('clientes', paginaAtualizada);
 
     // 2. Atualizar localmente no Supabase
+    let clienteLocalSalvo = null;
     if (localPayload) {
-      localPayload.id = id;
-      const { data: existingRow } = await supabase.from('clientes_locais').select('data').eq('id', id).maybeSingle();
-      const existingData = existingRow ? existingRow.data : {};
-      const mergedData = {
-        ...existingData,
-        ...localPayload,
-        nome: notionPayload.nome || localPayload.nome || existingData.nome
-      };
-      const { error: localErr } = await supabase.from('clientes_locais').upsert({ id, data: mergedData });
-      if (localErr) throw localErr;
+      localPayload.nome = notionPayload.nome || localPayload.nome;
+      const resultadoLocal = await salvarClienteLocalCanonico(realId, localPayload, { sincronizarNotion: false });
+      clienteLocalSalvo = resultadoLocal.dados;
     }
 
-    if (localPayload && localPayload.preferencias) { await sincronizarPerfilNotion(id, localPayload.preferencias); }
+    if (localPayload && localPayload.preferencias) { await sincronizarPerfilNotion(realId, localPayload.preferencias); }
 
-    res.json({ success: true, id });
+    res.json({
+      success: true,
+      id: realId,
+      estadias: clienteLocalSalvo && Array.isArray(clienteLocalSalvo.estadias)
+        ? clienteLocalSalvo.estadias
+        : undefined,
+      hotelNotion: notionPayload.hotel
+    });
   } catch (error) {
     console.error('Erro unificado ao atualizar cliente:', error);
     res.status(500).json({ error: error.message });
@@ -3344,6 +4620,7 @@ app.post('/api/notion/clientes', async (req, res) => {
       return res.status(response.status).json(err);
     }
     const data = await response.json();
+    await notionMirror.upsertPage('clientes', data);
     res.json({ success: true, id: data.id });
   } catch (error) {
     console.error('Erro ao criar no Notion:', error);
@@ -3405,6 +4682,7 @@ app.patch('/api/notion/clientes/:id', async (req, res) => {
       return res.status(response.status).json(err);
     }
     const data = await response.json();
+    await notionMirror.upsertPage('clientes', data);
     res.json({ success: true, id: data.id });
   } catch (error) {
     console.error('Erro ao atualizar no Notion:', error);
@@ -3415,21 +4693,8 @@ app.patch('/api/notion/clientes/:id', async (req, res) => {
 // ── APIs DO CALENDÁRIO & COLABORADORES NOTION ────────────────────────────────
 app.get('/api/notion/colaboradores', async (req, res) => {
   try {
-    const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
-    const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      }
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Erro ao consultar banco de colaboradores: ${errText}`);
-    }
-    const data = await response.json();
-    const colaboradores = (data.results || []).map(item => {
+    const pages = await notionMirror.getPages('colaboradores');
+    const colaboradores = pages.map(item => {
       const nameProp = item.properties.Name || item.properties.Nome;
       const name = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
       const email = item.properties.Email?.email || '';
@@ -3500,14 +4765,8 @@ app.post('/api/calendario/eventos', async (req, res) => {
     let clienteNome = '';
     if (NOTION_TOKEN && clienteId && clienteId !== 'cliente_desconhecido') {
       try {
-        const response = await fetch(`https://api.notion.com/v1/pages/${clienteId}`, {
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28'
-          }
-        });
-        if (response.ok) {
-          const pageData = await response.json();
+        const pageData = await notionMirror.getPage('clientes', clienteId);
+        if (pageData) {
           const p = pageData.properties;
           const nameProp = p?.['Nome do Cliente'] || p?.['Name'] || p?.['Nome'];
           clienteNome = nameProp?.title?.[0]?.plain_text || '';
@@ -3522,18 +4781,8 @@ app.post('/api/calendario/eventos', async (req, res) => {
     let colaboradoresMap = {};
     if (NOTION_TOKEN && assigneeIds && assigneeIds.length > 0) {
       try {
-        const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
-        const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28',
-            'Content-Type': 'application/json'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          (data.results || []).forEach(item => {
+        const pages = await notionMirror.getPages('colaboradores');
+          pages.forEach(item => {
             const p = item.properties;
             const nameProp = p.Name || p.Nome;
             colaboradoresMap[item.id] = nameProp?.title?.[0]?.plain_text || 'Sem Nome';
@@ -3542,7 +4791,6 @@ app.post('/api/calendario/eventos', async (req, res) => {
             id: uid,
             name: colaboradoresMap[uid] || uid
           }));
-        }
       } catch (e) {
         console.error('Erro ao mapear colaboradores no Notion:', e);
       }
@@ -3794,24 +5042,32 @@ app.post('/api/calendario/eventos', async (req, res) => {
 app.patch('/api/calendario/eventos/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { assigneeIds, dataServico, valorDiaria, pago, colaboradorId, valorDiariaColab, pagoColab } = req.body;
+    const { assigneeIds, dataServico, valorDiaria, pago, colaboradorId, valorDiariaColab, pagoColab,
+            titulo, tipoServico, clienteId, cidade, observacoes, richData } = req.body;
+
+    // Se veio clienteId, obter o nome atualizado do cliente no Notion
+    let clienteNomeAtualizado = null;
+    if (NOTION_TOKEN && clienteId !== undefined && clienteId && clienteId !== 'cliente_desconhecido') {
+      try {
+        const pageData = await notionMirror.getPage('clientes', clienteId);
+        if (pageData) {
+          const p = pageData.properties;
+          const nameProp = p?.['Nome do Cliente'] || p?.['Name'] || p?.['Nome'];
+          clienteNomeAtualizado = nameProp?.title?.[0]?.plain_text || '';
+        }
+      } catch (e) {
+        console.error('Erro ao buscar nome do cliente no PATCH:', e);
+      }
+    } else if (clienteId === 'cliente_desconhecido') {
+      clienteNomeAtualizado = '';
+    }
 
     // Buscar colaboradores do Notion (somente leitura) para preencher nome/avatar
     let collaborators = [];
     if (NOTION_TOKEN) {
       try {
-        const DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
-        const response = await fetch(`https://api.notion.com/v1/databases/${DB_ID}/query`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28',
-            'Content-Type': 'application/json'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          collaborators = (data.results || []).map(item => {
+        const pages = await notionMirror.getPages('colaboradores');
+          collaborators = pages.map(item => {
             const nameProp = item.properties.Name || item.properties.Nome;
             const rateProp = item.properties.Rate;
             return {
@@ -3821,7 +5077,6 @@ app.patch('/api/calendario/eventos/:id', async (req, res) => {
               rate: rateProp && typeof rateProp.number === 'number' ? rateProp.number : 35000
             };
           });
-        }
       } catch (e) {
         console.error('Erro ao buscar colaboradores no Notion para o PATCH:', e);
       }
@@ -3948,6 +5203,59 @@ app.patch('/api/calendario/eventos/:id', async (req, res) => {
           }
         }
 
+        // === Edição completa de campos (modal de edição) ===
+        if (titulo !== undefined) newEv.titulo = titulo;
+        if (tipoServico !== undefined) newEv.tipoServico = tipoServico;
+        if (clienteId !== undefined) {
+          newEv.clienteId = clienteId;
+          newEv.clientes = [clienteId];
+          if (clienteNomeAtualizado !== null) newEv.clienteNome = clienteNomeAtualizado;
+        }
+        if (cidade !== undefined) newEv.cidade = cidade;
+        if (observacoes !== undefined) {
+          newEv.textos = observacoes ? [observacoes] : [];
+        }
+
+        // richData: reescreve os campos específicos por tipo
+        if (richData !== undefined && richData) {
+          const tipoAtual = (tipoServico !== undefined ? tipoServico : newEv.tipoServico) || '';
+          if (tipoAtual === 'Roteiro') {
+            newEv.horaEncontro = richData.horaEncontro || null;
+            newEv.localEncontro = richData.localEncontro || null;
+            newEv.duracaoTour = richData.duracaoTour || null;
+            newEv.transportInfo = null;
+            newEv.expInfo = null;
+          } else if (tipoAtual === 'Transporte') {
+            newEv.transportInfo = {
+              ...(newEv.transportInfo || {}),
+              origem: richData.origem || '',
+              destino: richData.destino || '',
+              horario: richData.horario || '',
+              tipoTransporte: richData.tipoTransporte || '',
+              linha: richData.linha || '',
+              categoria: richData.categoria || '',
+              tempo: richData.tempo || '',
+              adultos: richData.adultos ? Number(richData.adultos) : null,
+              compradoHeian: richData.compradoHeian !== false,
+              observacoes: observacoes !== undefined ? (observacoes || '') : (newEv.transportInfo?.observacoes || '')
+            };
+            newEv.expInfo = null;
+            newEv.horaEncontro = null; newEv.localEncontro = null; newEv.duracaoTour = null;
+          } else if (tipoAtual === 'Experiência') {
+            newEv.expInfo = {
+              ...(newEv.expInfo || {}),
+              nomeExp: richData.nomeExp || newEv.titulo,
+              horaPartida: richData.horaPartida || '',
+              adultos: richData.adultos ? Number(richData.adultos) : null,
+              compradoHeian: richData.compradoHeian !== false,
+              observacoes: observacoes !== undefined ? (observacoes || '') : (newEv.expInfo?.observacoes || '')
+            };
+            newEv.localEncontro = richData.localEncontro || null;
+            newEv.transportInfo = null;
+            newEv.horaEncontro = null; newEv.duracaoTour = null;
+          }
+        }
+
         return newEv;
       }
       return ev;
@@ -3982,7 +5290,52 @@ app.patch('/api/calendario/eventos/:id', async (req, res) => {
                 status: { name: evUpdated.pago ? "Concluído" : "Não iniciado" }
               };
             }
-            
+
+            // Espelhar campos editados no modal de edição
+            if (titulo !== undefined) {
+              properties['Nome'] = { title: [{ text: { content: titulo || '' } }] };
+            }
+            if (cidade !== undefined) {
+              properties['Cidade'] = cidade ? { select: { name: cidade } } : { select: null };
+            }
+            if (clienteId !== undefined) {
+              properties['🎀 Clientes'] = {
+                relation: (clienteId && clienteId !== 'cliente_desconhecido') ? [{ id: clienteId }] : []
+              };
+            }
+            if (observacoes !== undefined || richData !== undefined) {
+              // Reconstrói o bloco de observações rico a partir do estado atualizado
+              const tAtual = evUpdated.tipoServico || '';
+              let obsTxt = '';
+              if (observacoes) obsTxt += `${observacoes}\n\n`;
+              if (tAtual === 'Transporte' && evUpdated.transportInfo) {
+                const ti = evUpdated.transportInfo;
+                obsTxt += `--- DETALHES DO TRANSPORTE ---\n`;
+                obsTxt += `Tipo: ${ti.tipoTransporte || '-'}\n`;
+                obsTxt += `Rota: ${ti.origem || '-'} ➔ ${ti.destino || '-'}\n`;
+                obsTxt += `Horário: ${ti.horario || '-'}\n`;
+                if (ti.linha) obsTxt += `Linha: ${ti.linha}\n`;
+                if (ti.categoria) obsTxt += `Assento/Categoria: ${ti.categoria}\n`;
+                if (ti.tempo) obsTxt += `Tempo/Duração: ${ti.tempo}\n`;
+                if (ti.adultos) obsTxt += `Passageiros: ${ti.adultos} Adultos\n`;
+                obsTxt += `Comprado por Heian: ${ti.compradoHeian ? 'Sim' : 'Não'}\n`;
+              } else if (tAtual === 'Experiência' && evUpdated.expInfo) {
+                const ei = evUpdated.expInfo;
+                obsTxt += `--- DETALHES DA EXPERIÊNCIA ---\n`;
+                obsTxt += `Atração: ${ei.nomeExp || evUpdated.titulo}\n`;
+                obsTxt += `Horário Entrada: ${ei.horaPartida || '-'}\n`;
+                if (ei.adultos) obsTxt += `Passageiros: ${ei.adultos} Adultos\n`;
+                if (evUpdated.localEncontro) obsTxt += `Ponto de Encontro: ${evUpdated.localEncontro}\n`;
+                obsTxt += `Comprado por Heian: ${ei.compradoHeian ? 'Sim' : 'Não'}\n`;
+              } else if (tAtual === 'Roteiro') {
+                obsTxt += `--- DETALHES DO ROTEIRO ---\n`;
+                if (evUpdated.horaEncontro) obsTxt += `Hora de Encontro: ${evUpdated.horaEncontro}\n`;
+                if (evUpdated.localEncontro) obsTxt += `Local de Encontro: ${evUpdated.localEncontro}\n`;
+                if (evUpdated.duracaoTour) obsTxt += `Duração: ${evUpdated.duracaoTour}\n`;
+              }
+              properties['Observações'] = { rich_text: [{ text: { content: obsTxt.substring(0, 2000) } }] };
+            }
+
             console.log(`Espelhando alteração do evento ${id} na Agenda do Notion...`);
             const response = await fetch(`https://api.notion.com/v1/pages/${id}`, {
               method: 'PATCH',
@@ -4078,39 +5431,14 @@ app.post('/api/calendario/sincronizar-do-notion', async (req, res) => {
     }
 
     // Função genérica para buscar todas as páginas de uma base do Notion (paginação)
+    await notionMirror.refreshAll(['colaboradores', 'clientes', 'agenda']);
     const queryAllNotion = async (dbId) => {
-      let results = [];
-      let hasMore = true;
-      let startCursor = undefined;
-
-      while (hasMore) {
-        const body = {};
-        if (startCursor) {
-          body.start_cursor = startCursor;
-        }
-
-        const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
-        }
-
-        const data = await response.json();
-        results = results.concat(data.results || []);
-        hasMore = data.has_more;
-        startCursor = data.next_cursor;
-      }
-
-      return { results };
+      const wanted = String(dbId || '').replace(/-/g, '').toLowerCase();
+      const type = Object.keys(NOTION_DATABASES).find(key =>
+        String(NOTION_DATABASES[key] || '').replace(/-/g, '').toLowerCase() === wanted
+      );
+      if (!type) return { results: [] };
+      return { results: await notionMirror.getPages(type) };
     };
 
     // 1. Buscar todos os colaboradores do Notion para mapear os IDs para nomes
@@ -4618,23 +5946,8 @@ app.post('/api/calendario/sincronizar-roteiro', async (req, res) => {
 
 app.get('/api/notion/contas', async (req, res) => {
   try {
-    const NOTION_CONTAS_DB_ID = process.env.NOTION_CONTAS_DB_ID || '2bab6e48f954803bae65d962d2b529f5';
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CONTAS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Erro ao consultar base de contas: ${errText}`);
-    }
-
-    const data = await response.json();
-    const contas = (data.results || [])
+    const pages = await notionMirror.getPages('contas');
+    const contas = pages
       .map(item => {
         const p = item.properties;
         return {
@@ -4734,6 +6047,7 @@ app.post('/api/calendario/pagar-guia', async (req, res) => {
     }
 
     const notionData = await notionRes.json();
+    await notionMirror.upsertPage('saidas', notionData);
 
     // 4. Atualizar evento local no Supabase
     if (!ev.pagoColab) ev.pagoColab = {};
@@ -4762,7 +6076,7 @@ app.post('/api/calendario/pagar-guia', async (req, res) => {
 
 app.post('/api/notion/registrar-entrada', async (req, res) => {
   try {
-    const { clienteId, descricao, valorOriginal, moeda, contaId, data } = req.body;
+    const { clienteId, descricao, valorOriginal, moeda, contaId, data, cambioManual, valorJPYManual } = req.body;
 
     if (!clienteId || !descricao || !valorOriginal || !moeda || !contaId) {
       return res.status(400).json({ error: 'Parâmetros incompletos.' });
@@ -4778,14 +6092,27 @@ app.post('/api/notion/registrar-entrada', async (req, res) => {
     }
 
     const valorOriginalNum = Number(valorOriginal) || 0;
+    const valorJPYManualNum = Number(valorJPYManual) || 0;
+    const cambioManualNum = Number(cambioManual) || 0;
+
+    // Prioridade do câmbio: (1) o ¥ que a entrada quita → câmbio DERIVADO (R$/¥),
+    // (2) câmbio manual informado, (3) câmbio corrente (spot).
+    if (valorJPYManualNum > 0 && valorOriginalNum > 0) {
+      if (moeda === 'BRL') rateBRL = valorOriginalNum / valorJPYManualNum;
+      else if (moeda === 'USD') rateUSD = valorOriginalNum / valorJPYManualNum;
+    } else if (cambioManualNum > 0) {
+      if (moeda === 'BRL') rateBRL = cambioManualNum;
+      else if (moeda === 'USD') rateUSD = cambioManualNum;
+    }
+
     let valorJPY = valorOriginalNum;
     let descCambioText = '';
 
     if (moeda === 'BRL') {
-      valorJPY = Math.round(valorOriginalNum / rateBRL);
+      valorJPY = (valorJPYManualNum > 0) ? Math.round(valorJPYManualNum) : Math.round(valorOriginalNum / rateBRL);
       descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${rateBRL.toFixed(6)}]`;
     } else if (moeda === 'USD') {
-      valorJPY = Math.round(valorOriginalNum / rateUSD);
+      valorJPY = (valorJPYManualNum > 0) ? Math.round(valorJPYManualNum) : Math.round(valorOriginalNum / rateUSD);
       descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${rateUSD.toFixed(6)}]`;
     } else {
       descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
@@ -4824,6 +6151,7 @@ app.post('/api/notion/registrar-entrada', async (req, res) => {
     }
 
     const notionData = await notionRes.json();
+    await notionMirror.upsertPage('entradas', notionData);
     res.json({ success: true, notionPageId: notionData.id, valorJPY });
   } catch (error) {
     console.error('Erro ao registrar entrada de pagamento:', error);
@@ -4905,6 +6233,7 @@ app.post('/api/notion/registrar-saida', async (req, res) => {
     }
 
     const notionData = await notionRes.json();
+    await notionMirror.upsertPage('saidas', notionData);
 
     // 3. Se houver eventoId e colaboradorId, marcar o colaborador como pago no Supabase
     let localUpdated = false;
@@ -4945,6 +6274,200 @@ app.post('/api/notion/registrar-saida', async (req, res) => {
   }
 });
 
+// ── ROTAS DE EDIÇÃO E EXCLUSÃO DE ENTRADAS E SAÍDAS NO NOTION ────────────────
+app.put('/api/notion/entradas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { descricao, valorOriginal, moeda, valorJPYManual, contaId, data, clienteId } = req.body;
+    if (!NOTION_TOKEN) return res.status(400).json({ error: 'Notion token não configurado.' });
+
+    const appConfig = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    const valorOriginalNum = Number(valorOriginal) || 0;
+    const valorJPYManualNum = Number(valorJPYManual) || 0;
+    let valorJPY = valorOriginalNum;
+    let descCambioText = '';
+
+    if (moeda === 'BRL') {
+      valorJPY = (valorJPYManualNum > 0) ? Math.round(valorJPYManualNum) : Math.round(valorOriginalNum / rateBRL);
+      const cambioAplicado = (valorJPYManualNum > 0 && valorOriginalNum > 0) ? (valorOriginalNum / valorJPYManualNum) : rateBRL;
+      descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${cambioAplicado.toFixed(6)}]`;
+    } else if (moeda === 'USD') {
+      valorJPY = (valorJPYManualNum > 0) ? Math.round(valorJPYManualNum) : Math.round(valorOriginalNum / rateUSD);
+      const cambioAplicado = (valorJPYManualNum > 0 && valorOriginalNum > 0) ? (valorOriginalNum / valorJPYManualNum) : rateUSD;
+      descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${cambioAplicado.toFixed(6)}]`;
+    } else {
+      descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
+    }
+
+    const descricaoCompleta = `${descricao}${descCambioText}`;
+    const properties = {
+      'Descrição da Entrada': { title: [{ text: { content: descricaoCompleta } }] },
+      'Valor (JPY)': { number: valorJPY },
+      'Data do pagamento': { date: { start: data || new Date().toISOString().substring(0, 10) } },
+      'Moeda Original': { select: { name: moeda || 'JPY' } }
+    };
+    if (contaId) {
+      properties['💳 Contas'] = { relation: [{ id: contaId }] };
+    }
+    if (clienteId) {
+      properties['Cliente (Relação)'] = { relation: [{ id: clienteId }] };
+    }
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ properties })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao atualizar entrada no Notion: ${errTxt}`);
+    }
+
+    const paginaAtualizada = await notionRes.json();
+    await notionMirror.upsertPage('entradas', paginaAtualizada);
+    res.json({ success: true, valorJPY });
+  } catch (error) {
+    console.error('Erro ao atualizar entrada no Notion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/notion/entradas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!NOTION_TOKEN) return res.status(400).json({ error: 'Notion token não configurado.' });
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ archived: true })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao excluir entrada no Notion: ${errTxt}`);
+    }
+
+    await notionMirror.removePage('entradas', id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao excluir entrada no Notion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/notion/saidas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { descricao, valorOriginal, moeda, contaId, data, clienteId, colaboradorId } = req.body;
+    if (!NOTION_TOKEN) return res.status(400).json({ error: 'Notion token não configurado.' });
+
+    const appConfig = await supabase.from('config').select('data').eq('id', 'app_config').single();
+    let rateBRL = 0.031670;
+    let rateUSD = 0.006280;
+    if (appConfig && appConfig.data) {
+      rateBRL = parseFloat(appConfig.data.cambio_jpy_brl) || rateBRL;
+      rateUSD = parseFloat(appConfig.data.cambio_jpy_usd) || rateUSD;
+    }
+
+    const valorOriginalNum = Number(valorOriginal) || 0;
+    let valorJPY = valorOriginalNum;
+    let descCambioText = '';
+
+    if (moeda === 'BRL') {
+      valorJPY = Math.round(valorOriginalNum / rateBRL);
+      descCambioText = ` [Original: R$ ${valorOriginalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/BRL: ${rateBRL.toFixed(6)}]`;
+    } else if (moeda === 'USD') {
+      valorJPY = Math.round(valorOriginalNum / rateUSD);
+      descCambioText = ` [Original: $ ${valorOriginalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Câmbio JPY/USD: ${rateUSD.toFixed(6)}]`;
+    } else {
+      descCambioText = ` [Original: ¥ ${valorOriginalNum.toLocaleString('en-US')} JPY]`;
+    }
+
+    const descricaoCompleta = `${descricao}${descCambioText}`;
+    const properties = {
+      'Descrição': { title: [{ text: { content: descricaoCompleta } }] },
+      'Valor (JPY)': { number: valorJPY },
+      'Data de pagamento': { date: { start: data || new Date().toISOString().substring(0, 10) } }
+    };
+    if (contaId) {
+      properties['💳 Contas'] = { relation: [{ id: contaId }] };
+    }
+    if (clienteId && clienteId !== 'cliente_desconhecido' && clienteId !== 'Sem Nome' && clienteId !== 'Geral') {
+      properties['🎀 Clientes'] = { relation: [{ id: clienteId }] };
+    }
+    if (colaboradorId) {
+      properties['🫂 Colaboradores'] = { relation: [{ id: colaboradorId }] };
+    }
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ properties })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao atualizar saída no Notion: ${errTxt}`);
+    }
+
+    const paginaAtualizada = await notionRes.json();
+    await notionMirror.upsertPage('saidas', paginaAtualizada);
+    res.json({ success: true, valorJPY });
+  } catch (error) {
+    console.error('Erro ao atualizar saída no Notion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/notion/saidas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!NOTION_TOKEN) return res.status(400).json({ error: 'Notion token não configurado.' });
+
+    const notionRes = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ archived: true })
+    });
+
+    if (!notionRes.ok) {
+      const errTxt = await notionRes.text();
+      throw new Error(`Erro ao excluir saída no Notion: ${errTxt}`);
+    }
+
+    await notionMirror.removePage('saidas', id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao excluir saída no Notion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/notion/tasks-cliente/:clientId', async (req, res) => {
   try {
     const { clientId } = req.params;
@@ -4954,31 +6477,15 @@ app.get('/api/notion/tasks-cliente/:clientId', async (req, res) => {
       return res.status(400).json({ error: 'Configuração do Notion incompleta.' });
     }
 
-    console.log(`[Tasks Cliente] Buscando tasks do cliente ${clientId} no Notion...`);
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_TASKS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: {
-          property: '🎀 Clientes',
-          relation: {
-            contains: clientId
-          }
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Erro ao consultar tasks: ${errText}`);
-    }
-
-    const data = await response.json();
-    const tasks = (data.results || []).map(item => {
+    const clientIdNorm = String(clientId).replace(/-/g, '').toLowerCase();
+    const pages = await notionMirror.getPages('tasks');
+    const relacionadas = pages.filter(item =>
+      Object.values(item.properties || {}).some(prop =>
+        Array.isArray(prop?.relation) &&
+        prop.relation.some(rel => String(rel.id).replace(/-/g, '').toLowerCase() === clientIdNorm)
+      )
+    );
+    const tasks = relacionadas.map(item => {
       const p = item.properties;
       const nome = p['Task name']?.title?.map(t => t.plain_text).join('') || 'Sem nome';
       return {
@@ -5047,38 +6554,12 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
 
     // Função genérica para buscar todas as páginas de uma base do Notion (paginação)
     const queryAllNotion = async (dbId) => {
-      let results = [];
-      let hasMore = true;
-      let startCursor = undefined;
-
-      while (hasMore) {
-        const body = {};
-        if (startCursor) {
-          body.start_cursor = startCursor;
-        }
-
-        const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`Erro ao consultar base ${dbId} do Notion: ${errText}`);
-        }
-
-        const data = await response.json();
-        results = results.concat(data.results || []);
-        hasMore = data.has_more;
-        startCursor = data.next_cursor;
-      }
-
-      return { results };
+      const wanted = String(dbId || '').replace(/-/g, '').toLowerCase();
+      const type = Object.keys(NOTION_DATABASES).find(key =>
+        String(NOTION_DATABASES[key] || '').replace(/-/g, '').toLowerCase() === wanted
+      );
+      if (!type) return { results: [] };
+      return { results: await notionMirror.getPages(type) };
     };
 
     // Buscar contas
@@ -5099,24 +6580,21 @@ app.get('/api/dashboard/saldos-contas', async (req, res) => {
 
     const NOTION_COLABORADORES_DB_ID = process.env.NOTION_COLABORADORES_DB_ID || '2a0b6e48f954816082afde2815056602';
 
-    const [entradasData, saidasData, clisRes, colaboradoresData, appConfig] = await Promise.all([
+    const [entradasData, saidasData, clientesPages, colaboradoresData, appConfig] = await Promise.all([
       queryAllNotion(NOTION_ENTRADAS_DB_ID),
       queryAllNotion(NOTION_SAIDAS_DB_ID),
-      supabase.from('clientes_locais').select('data'),
+      notionMirror.getPages('clientes'),
       queryAllNotion(NOTION_COLABORADORES_DB_ID),
       supabase.from('config').select('data').eq('id', 'app_config').single()
     ]);
 
-    // Construir mapas de ID -> Nome para Clientes (local Supabase) e Colaboradores (Notion)
+    // Construir mapas de ID -> Nome usando somente o espelho leve do Supabase.
     const clientesMap = {};
-    if (clisRes.data) {
-      clisRes.data.forEach(row => {
-        const c = row.data;
-        if (c && c.id) {
-          clientesMap[c.id] = c.nome || 'Sem Nome';
-        }
-      });
-    }
+    (clientesPages || []).forEach(item => {
+      const p = item.properties || {};
+      const nameProp = p['Nome do Cliente'] || p.Name || p.Nome;
+      clientesMap[item.id] = nameProp?.title?.map(t => t.plain_text).join('') || 'Sem Nome';
+    });
 
     const colaboradoresMap = {};
     (colaboradoresData.results || []).forEach(item => {
@@ -5318,33 +6796,10 @@ function requestAutenticadaAdmin(req) {
 // Reconstrói o mapa slug → id consultando a base de Clientes do Notion
 async function reconstruirCacheSlugs() {
   const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
-  if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID) {
+  if (!NOTION_CLIENTS_DB_ID) {
     throw new Error('Configuração do Notion incompleta no arquivo .env.');
   }
-  let results = [];
-  let hasMore = true;
-  let startCursor = undefined;
-  while (hasMore) {
-    const body = {};
-    if (startCursor) body.start_cursor = startCursor;
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CLIENTS_DB_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Erro ao consultar base ${NOTION_CLIENTS_DB_ID} do Notion: ${errText}`);
-    }
-    const data = await response.json();
-    results = results.concat(data.results || []);
-    hasMore = data.has_more;
-    startCursor = data.next_cursor;
-  }
+  let results = await notionMirror.getPages('clientes');
   const newCache = {};
   results.forEach(item => {
     const p = item.properties;
@@ -5357,6 +6812,24 @@ async function reconstruirCacheSlugs() {
   slugToIdCache = newCache;
   lastCacheUpdate = Date.now();
   return newCache;
+}
+
+// Resolver qualquer slug ou ID recebido para o Notion ID oficial e unico do cliente
+async function resolverNotionIdReal(slugOuId) {
+  if (!slugOuId) return slugOuId;
+  const rawId = String(slugOuId).trim();
+  
+  if (slugToIdCache[rawId]) return slugToIdCache[rawId];
+
+  const cleanHex = rawId.replace(/-/g, '');
+  if (cleanHex.length === 32) return rawId;
+
+  try {
+    const cache = await reconstruirCacheSlugs();
+    if (cache && cache[rawId]) return cache[rawId];
+  } catch(e) {}
+
+  return rawId;
 }
 
 // Rotina de auto-cura para preencher o nome de clientes locais que ficaram sem nome no Supabase
@@ -5379,18 +6852,11 @@ async function corrigirNomesClientesSemNome() {
 
     for (const c of semNome) {
       try {
-        const response = await fetch(`https://api.notion.com/v1/pages/${c.id}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${NOTION_TOKEN}`,
-            'Notion-Version': '2022-06-28'
-          }
-        });
-        if (!response.ok) {
-          console.error(`[Self-Heal] Erro ao buscar cliente ${c.id} no Notion: status ${response.status}`);
+        const clientPage = await notionMirror.getPage('clientes', c.id);
+        if (!clientPage) {
+          console.error(`[Self-Heal] Cliente ${c.id} não existe no espelho Supabase.`);
           continue;
         }
-        const clientPage = await response.json();
         const cp = clientPage.properties;
         const nomeProp = cp['Nome do Cliente'] || cp['Nome'];
         const nome = nomeProp?.title?.map(t => t.plain_text).join('') || '';
@@ -5412,28 +6878,165 @@ async function corrigirNomesClientesSemNome() {
   }
 }
 
+// Calcula o total de uma cotacao com a MESMA formula do app (updateResumo):
+// tours + transportes + experiencias + itens adicionais + consultoria.
+function calcularTotalOrcamento(orc) {
+  if (!orc) return 0;
+  const num = (v) => parseFloat(v) || 0;
+  const tourTot = (t) => { let b = num(t.valor); if (t.descontoAtivo && t.desconto > 0) b -= b * (num(t.desconto) / 100); return b; };
+  const transpTot = (t) => {
+    const a = num(t.adultos), c = num(t.criancas);
+    const d = (t.descricao || '').toLowerCase();
+    const isTransfer = d.includes('transfer') || d.includes('privado') || d.includes('privativo');
+    let b = isTransfer ? num(t.preco) : num(t.preco) * a + num(t.precoInfantil) * c;
+    const tp = a + c;
+    if (t.taxaAtiva) b += t.taxaTipo === 'grupo' ? num(t.taxaValor || 3000) : num(t.taxaValor || 3000) * (tp > 0 ? tp : 1);
+    return b;
+  };
+  const expTot = (e) => {
+    let b = num(e.preco) * (e.precoTipo === 'grupo' ? 1 : (num(e.pessoas) || 1));
+    if (e.taxaAtiva) b += e.taxaTipo === 'grupo' ? num(e.taxaValor || 3000) : num(e.taxaValor || 3000) * (num(e.pessoas) || 1);
+    return b;
+  };
+  const tT = (orc.tours || []).reduce((s, t) => s + tourTot(t), 0);
+  const tTr = (orc.transportes || []).filter(t => t.compradoHeian !== false).reduce((s, t) => s + transpTot(t), 0);
+  const tEx = (orc.experiencias || []).filter(e => e.compradoHeian !== false).reduce((s, e) => s + expTot(e), 0);
+  const tItens = (orc.itensAdicionais || []).reduce((s, i) => s + num(i.valor), 0);
+  // consultoria pode vir como objeto {ativa, valor, descricao} (formato atual) ou número (legado)
+  const cons = (orc.consultoria && typeof orc.consultoria === 'object')
+    ? (orc.consultoria.ativa ? num(orc.consultoria.valor) : 0)
+    : num(orc.consultoria);
+  return Math.round(tT + tTr + tEx + tItens + cons);
+}
+
+function calcularToursOrcamento(orc) {
+  if (!orc) return 0;
+  const num = (v) => parseFloat(v) || 0;
+  const tourTot = (t) => { let b = num(t.valor); if (t.descontoAtivo && t.desconto > 0) b -= b * (num(t.desconto) / 100); return b; };
+  return Math.round((orc.tours || []).reduce((sum, t) => sum + tourTot(t), 0));
+}
+// ENTRADA (1º pagamento) = 30% dos tours + 100% de transportes + experiências + itens + consultoria = total - 70% dos tours.
+function calcularSinalOrcamento(orc) {
+  return Math.max(0, calcularTotalOrcamento(orc) - Math.round(0.70 * calcularToursOrcamento(orc)));
+}
+
+// Deriva o "Valor do Pacote" a partir de uma LISTA já carregada de cotações (array de r.data).
+// Puro (sem I/O). Assim o endpoint de clientes lê a tabela UMA vez e deriva todos em memória,
+// em vez de reler a tabela inteira por cliente (era o gargalo do "demora uma vida" no F5).
+function derivarValorPacoteDeLista(clientId, clientNome, dataList) {
+  try {
+    const _norm = (v) => String(v || '').toLowerCase().trim().replace('família ', '').replace('familia ', '');
+    const _cn = _norm(clientNome);
+    let doCliente = (dataList || []).filter(o =>
+      o && !o.deletado && (o.notionClienteId === clientId || (o.cliente && o.cliente.notionClienteId === clientId)));
+    if (!doCliente.length && _cn) {
+      doCliente = (dataList || []).filter(o => {
+        if (!o || o.deletado) return false;
+        const on = _norm(o.cliente?.nome);
+        return on && (_cn === on || _cn.includes(on) || on.includes(_cn));
+      });
+    }
+    if (!doCliente.length) return 0;
+    // Prefere cotação COM conteúdo (itens ou consultoria) — evita que uma cotação VAZIA
+    // (auto-criada ao salvar o roteiro) seja escolhida por ser a mais recente e zere o valor.
+    const _temConteudo = (o) => ((o.tours||[]).length + (o.transportes||[]).length + (o.experiencias||[]).length + (o.itensAdicionais||[]).length) > 0 || (o.consultoria && o.consultoria.ativa);
+    const _pool = doCliente.some(_temConteudo) ? doCliente.filter(_temConteudo) : doCliente;
+    _pool.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || 0) - new Date(a.atualizadoEm || a.criadoEm || 0));
+    return calcularTotalOrcamento(_pool[0]);
+  } catch (e) {
+    console.error('Erro ao derivar Valor do Pacote (lista):', e.message);
+    return 0;
+  }
+}
+// Deriva a ENTRADA (1º pagamento) do cliente da mesma lista de cotações (mesma seleção do valor).
+function derivarSinalDeLista(clientId, clientNome, dataList) {
+  try {
+    const _norm = (v) => String(v || '').toLowerCase().trim().replace('família ', '').replace('familia ', '');
+    const _cn = _norm(clientNome);
+    let doCliente = (dataList || []).filter(o =>
+      o && !o.deletado && (o.notionClienteId === clientId || (o.cliente && o.cliente.notionClienteId === clientId)));
+    if (!doCliente.length && _cn) {
+      doCliente = (dataList || []).filter(o => {
+        if (!o || o.deletado) return false;
+        const on = _norm(o.cliente?.nome);
+        return on && (_cn === on || _cn.includes(on) || on.includes(_cn));
+      });
+    }
+    if (!doCliente.length) return 0;
+    const _temConteudo = (o) => ((o.tours||[]).length + (o.transportes||[]).length + (o.experiencias||[]).length + (o.itensAdicionais||[]).length) > 0 || (o.consultoria && o.consultoria.ativa);
+    const _pool = doCliente.some(_temConteudo) ? doCliente.filter(_temConteudo) : doCliente;
+    _pool.sort((a, b) => new Date(b.atualizadoEm || b.criadoEm || 0) - new Date(a.atualizadoEm || a.criadoEm || 0));
+    return calcularSinalOrcamento(_pool[0]);
+  } catch (e) { console.error('Erro ao derivar Sinal (lista):', e.message); return 0; }
+}
+// Versão que lê o banco (mantida p/ os demais callers). Lê a tabela e delega ao helper puro.
+async function valorPacoteDaCotacao(clientId, clientNome) {
+  try {
+    const { data: orcRows } = await supabase.from('orcamentos').select('data');
+    return derivarValorPacoteDeLista(clientId, clientNome, (orcRows || []).map(r => r.data));
+  } catch (e) {
+    console.error('Erro ao derivar Valor do Pacote da cotacao:', e.message);
+    return 0;
+  }
+}
+
 async function getClientDataHelper(clientId) {
   const NOTION_CLIENTS_DB_ID = process.env.NOTION_CLIENTS_DB_ID;
   const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
 
-  if (!NOTION_TOKEN || !NOTION_CLIENTS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
+  if (!NOTION_CLIENTS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
     throw new Error('Configuração do Notion incompleta no arquivo .env.');
   }
 
   let clientInfo = null;
 
+  // As fontes abaixo sao independentes entre si. Dispara todas de uma vez para
+  // que o portal nao some a latencia do Notion com cada leitura do Supabase.
+  const entradasPromise = notionMirror.getPages('entradas').then(pages => {
+    const clientIdNorm = String(clientId).replace(/-/g, '').toLowerCase();
+    const results = pages.filter(item =>
+      Object.values(item.properties || {}).some(prop =>
+        Array.isArray(prop?.relation) &&
+        prop.relation.some(rel => String(rel.id).replace(/-/g, '').toLowerCase() === clientIdNorm)
+      )
+    );
+    return { ok: true, json: async () => ({ results }) };
+  }).catch(err => {
+    console.error('Erro ao buscar entradas no espelho Supabase:', err.message);
+    return null;
+  });
+  const orcamentosPromise = Promise.resolve(supabase.from('orcamentos').select('data')).catch(err => {
+    console.error('Erro ao buscar orcamentos (getClientDataHelper):', err.message);
+    return { data: [] };
+  });
+  const roteirosPromise = Promise.resolve(supabase.from('roteiros').select('nome,data')).catch(err => {
+    console.error('Erro ao buscar roteiros (getClientDataHelper):', err.message);
+    return { data: [] };
+  });
+  const realIdPromise = resolverNotionIdReal(clientId);
+  const localDataPromise = realIdPromise.then(realId =>
+    supabase.from('clientes_locais').select('data').eq('id', realId).maybeSingle()
+  ).catch(err => {
+    console.error('Erro ao buscar cliente local (getClientDataHelper):', err.message);
+    return { data: null };
+  });
+  const hoteisPromise = Promise.resolve(
+    supabase.from('config').select('data').eq('id', 'hoteis').single()
+  ).catch(err => {
+    console.error('Erro ao buscar hoteis no Supabase:', err.message);
+    return { data: null };
+  });
+  const transportesPromise = Promise.resolve(
+    supabase.from('config').select('data').eq('id', 'transportes').single()
+  ).catch(err => {
+    console.error('Erro ao buscar transportes no Supabase (getClientDataHelper):', err.message);
+    return { data: null };
+  });
+
   // 1. Tentar buscar dados do cliente no Notion
   try {
-    const notionClientRes = await fetch(`https://api.notion.com/v1/pages/${clientId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28'
-      }
-    });
-
-    if (notionClientRes.ok) {
-      const clientPage = await notionClientRes.json();
+    const clientPage = await notionMirror.getPage('clientes', clientId);
+    if (clientPage) {
       const p = clientPage.properties;
 
       const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
@@ -5458,6 +7061,7 @@ async function getClientDataHelper(clientId) {
         dataFim: getDateEnd(p['Período da Viagem']),
         hotel: getRichText(p['Hotel']),
         viajantes: getRichText(p['Nome dos Viajantes'] || p['Viajantes']),
+        email: (p['Email']?.email || '').trim(),
         briefing: getRichText(p['Briefing'] || p['Preferências'] || p['Observações'] || p['Descrição']),
         valorTotal: getNumber(p['Valor Total']),
         totalPago: getRollupNumber(p['Total Pago']),
@@ -5472,7 +7076,7 @@ async function getClientDataHelper(clientId) {
   // Fallback para o banco local se o Notion falhar ou não encontrar o cliente
   if (!clientInfo) {
     try {
-      const { data: localClientRow } = await supabase.from('clientes_locais').select('data').eq('id', clientId).maybeSingle();
+      const { data: localClientRow } = await localDataPromise;
       if (localClientRow && localClientRow.data) {
         const lc = localClientRow.data;
         clientInfo = {
@@ -5503,57 +7107,90 @@ async function getClientDataHelper(clientId) {
     throw new Error('Cliente não encontrado no Notion ou no banco de dados local.');
   }
 
+  const { data: orcamentos } = await orcamentosPromise;
+
+  // "Valor do Pacote": o "Valor Total" manual (Notion) PREVALECE; se estiver vazio,
+  // deriva automaticamente da cotacao vinculada mais recente do cliente.
+  if (!clientInfo.valorTotal || Number(clientInfo.valorTotal) <= 0) {
+    const derivado = derivarValorPacoteDeLista(
+      clientId,
+      clientInfo.nome,
+      (orcamentos || []).map(row => row.data)
+    );
+    if (derivado > 0) clientInfo.valorTotal = derivado;
+  }
+
   // 2. Buscar Entradas (pagamentos confirmados) do cliente no Notion
-  const entradasRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_ENTRADAS_DB_ID}/query`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${NOTION_TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      filter: {
-        property: 'Cliente (Relação)',
-        relation: {
-          contains: clientId
-        }
-      }
-    })
-  });
+  const entradasRes = await entradasPromise;
 
   let payments = [];
-  if (entradasRes.ok) {
+  if (entradasRes && entradasRes.ok) {
     const entradasData = await entradasRes.json();
     payments = (entradasData.results || []).map(item => {
       const ep = item.properties;
+      const descRaw = ep['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada';
+      const valorJPY = ep['Valor (JPY)']?.number || 0;
+      const moedaOrig = ep['Moeda Original']?.select?.name || 'JPY';
+      // Extrai o valor ORIGINAL (na moeda paga) e o câmbio aplicado do texto
+      // "[Original: R$ 5.965,20 | Câmbio JPY/BRL: 0.038000]" — assim o extrato mostra o R$ real
+      let valorOriginal = valorJPY;
+      let cambio = 0;
+      let descricaoLimpa = descRaw;
+      const mOrig = descRaw.match(/\s*\[Original:\s*(?:R\$|\$|¥)\s*([\d.,]+)(?:\s*JPY)?(?:\s*\|\s*Câmbio\s+JPY\/(?:BRL|USD):\s*([\d.]+))?\]/i);
+      if (mOrig) {
+        const rate = parseFloat(mOrig[2]) || 0;
+        cambio = rate;
+        const amtStr = mOrig[1];
+        let amt = NaN;
+        if (moedaOrig === 'BRL') amt = parseFloat(amtStr.replace(/\./g, '').replace(',', '.'));
+        else amt = parseFloat(amtStr.replace(/,/g, ''));
+        if (isFinite(amt) && amt > 0) valorOriginal = amt;
+        else if (rate > 0) valorOriginal = valorJPY * rate;
+        descricaoLimpa = descRaw.replace(mOrig[0], '').trim();
+      }
       return {
         id: item.id,
-        descricao: ep['Descrição da Entrada']?.title?.map(t => t.plain_text).join('') || 'Entrada',
-        valor: ep['Valor (JPY)']?.number || 0,
+        descricao: descricaoLimpa,
+        valor: valorJPY,
+        valorOriginal,
+        cambio,
         data: ep['Data do pagamento']?.date?.start || '',
-        moeda: ep['Moeda Original']?.select?.name || 'JPY'
+        moeda: moedaOrig
       };
     }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
   }
 
+  // Saldo/Total Pago consistentes com o Valor do Pacote resolvido e as entradas reais.
+  // (A fórmula "Saldo a Pagar" do Notion usa o campo MANUAL "Valor Total"; quando o total
+  //  vem da cotação, esse campo fica vazio → Notion devolvia saldo NEGATIVO = − total pago.)
+  {
+    const totalPagoReal = payments.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+    clientInfo.totalPago = totalPagoReal;
+    clientInfo.saldoPagar = Math.round((Number(clientInfo.valorTotal) || 0) - totalPagoReal);
+  }
+
   // 3. Buscar cotação local (orcamento) no Supabase
-  const { data: orcamentos } = await supabase.from('orcamentos').select('data');
   let quote = null;
   if (orcamentos && orcamentos.length > 0) {
-    const matched = orcamentos.find(o => {
-      if (!o.data) return false;
-      if (o.data.notionClienteId === clientId) return true;
-      if (clientInfo.nome) {
-        const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-        if (o.data.cliente?.nome) {
-          const orcClientName = o.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-          if (clientNameNormalized === orcClientName || clientNameNormalized.includes(orcClientName) || orcClientName.includes(clientNameNormalized)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    });
+    // Escolhe a MESMA cotação que alimenta o Valor do Pacote: vínculo por notionClienteId,
+    // não-deletada e a MAIS RECENTE. (Antes usava .find() = primeira que casasse, podendo
+    // pegar uma cotação antiga — ex.: sem a consultoria — divergindo do valor mostrado.)
+    const _norm = (v) => String(v || '').toLowerCase().trim().replace('família ', '').replace('familia ', '');
+    const _clientNome = _norm(clientInfo.nome);
+    const _porRecencia = (a2, b2) => new Date(b2.data.atualizadoEm || b2.data.criadoEm || 0) - new Date(a2.data.atualizadoEm || a2.data.criadoEm || 0);
+    let _cands = orcamentos.filter(o => o.data && !o.data.deletado && (o.data.notionClienteId === clientId || o.data.cliente?.notionClienteId === clientId));
+    if (!_cands.length) {
+      _cands = orcamentos.filter(o => {
+        if (!o.data || o.data.deletado) return false;
+        const on = _norm(o.data.cliente?.nome);
+        return _clientNome && on && (_clientNome === on || _clientNome.includes(on) || on.includes(_clientNome));
+      });
+    }
+    // Prefere a cotação COM conteúdo (evita a vazia auto-criada zerar a aba Serviços), depois a recente.
+    const _temConteudo2 = (o2) => { const d = o2.data || {}; return ((d.tours||[]).length + (d.transportes||[]).length + (d.experiencias||[]).length + (d.itensAdicionais||[]).length) > 0 || (d.consultoria && d.consultoria.ativa); };
+    const _pool2 = _cands.some(_temConteudo2) ? _cands.filter(_temConteudo2) : _cands;
+    _pool2.sort(_porRecencia);
+    const matched = _pool2[0];
     if (matched && matched.data) {
       const o = matched.data;
       const sanitizeTours = (tours) => (tours || []).map(t => ({
@@ -5579,7 +7216,8 @@ async function getClientDataHelper(clientId) {
         taxaTipo: t.taxaTipo || 'pessoa',
         taxaValor: Number(t.taxaValor) || 0,
         compradoHeian: t.compradoHeian !== false,
-        observacao: t.observacao || ''
+        observacao: t.observacao || '',
+        _roteiroRefId: t._roteiroRefId || ''
       }));
       const sanitizeExperiencias = (exps) => (exps || []).map(e => ({
         id: e.id,
@@ -5593,7 +7231,8 @@ async function getClientDataHelper(clientId) {
         taxaValor: Number(e.taxaValor) || 0,
         compradoHeian: e.compradoHeian !== false,
         observacao: e.observacao || '',
-        descricao: e.descricao || ''
+        descricao: e.descricao || '',
+        _roteiroRefId: e._roteiroRefId || ''
       }));
       const sanitizeItens = (items) => (items || []).map(i => ({
         data: i.data,
@@ -5616,31 +7255,35 @@ async function getClientDataHelper(clientId) {
   }
 
   // 4. Buscar roteiro local no Supabase
-  const { data: roteiros } = await supabase.from('roteiros').select('*');
+  const { data: roteiros } = await roteirosPromise;
   let itinerary = null;
   if (roteiros && roteiros.length > 0) {
-    const matched = roteiros.find(r => {
-      if (!r.data) return false;
-      if (r.data.notionClienteId === clientId || r.data.cliente?.notionClienteId === clientId) return true;
-      if (clientInfo.nome) {
-        const clientNameNormalized = clientInfo.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-        if (r.data.cliente?.nome) {
-          const rotClientName = r.data.cliente.nome.toLowerCase().trim().replace('família ', '').replace('familia ', '');
-          if (clientNameNormalized === rotClientName || clientNameNormalized.includes(rotClientName) || rotClientName.includes(clientNameNormalized)) {
-            return true;
-          }
+    const _normRot = (v) => String(v || '').toLowerCase().trim().replace('família ', '').replace('familia ', '');
+    const _clientNomeRot = _normRot(clientInfo.nome);
+    const _porRecenciaRot = (a2, b2) => new Date(b2.data.atualizadoEm || b2.data.criadoEm || 0) - new Date(a2.data.atualizadoEm || a2.data.criadoEm || 0);
+
+    let _candsRot = roteiros.filter(r => r.data && !r.data.deletado && (r.data.notionClienteId === clientId || r.data.cliente?.notionClienteId === clientId));
+    if (!_candsRot.length && _clientNomeRot) {
+      _candsRot = roteiros.filter(r => {
+        if (!r.data || r.data.deletado) return false;
+        const rotClientName = _normRot(r.data.cliente?.nome);
+        if (rotClientName && (_clientNomeRot === rotClientName || _clientNomeRot.includes(rotClientName) || rotClientName.includes(_clientNomeRot))) {
+          return true;
         }
-        // Usa o nome de exibição (data.nome); a chave física agora é um ID imutável
         const nomeExibicao = r.data.nome || (String(r.nome).startsWith('rot_') ? '' : r.nome);
         if (nomeExibicao) {
-          const rotNameClean = nomeExibicao.toLowerCase().trim().replace('roteiro - ', '').replace('roteiro ', '').replace('família ', '').replace('familia ', '');
-          if (clientNameNormalized === rotNameClean || clientNameNormalized.includes(rotNameClean) || rotNameClean.includes(clientNameNormalized)) {
+          const rotNameClean = _normRot(nomeExibicao.replace('roteiro - ', '').replace('roteiro ', ''));
+          if (_clientNomeRot === rotNameClean || _clientNomeRot.includes(rotNameClean) || rotNameClean.includes(_clientNomeRot)) {
             return true;
           }
         }
-      }
-      return false;
-    });
+        return false;
+      });
+    }
+    const _temDias = (r2) => Array.isArray(r2.data?.dias) && r2.data.dias.length > 0;
+    const _poolRot = _candsRot.some(_temDias) ? _candsRot.filter(_temDias) : _candsRot;
+    _poolRot.sort(_porRecenciaRot);
+    const matched = _poolRot[0];
     if (matched && matched.data) {
       const r = matched.data;
       const sanitizedDays = (r.dias || []).map(d => {
@@ -5663,18 +7306,30 @@ async function getClientDataHelper(clientId) {
   }
 
   // 5. Buscar Ficha Local (Supabase clientes_locais)
-  const { data: localData } = await supabase.from('clientes_locais').select('data').eq('id', clientId).single();
+  const realId = await realIdPromise;
+  let { data: localData } = await localDataPromise;
   const clientLocalInfo = localData && localData.data ? localData.data : { estadias: [], viajantes: [] };
 
   // 6. Buscar lista de Hotéis ricos cadastrados no Supabase
   let hoteis = [];
   try {
-    const { data: cfgHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').single();
+    const { data: cfgHoteis } = await hoteisPromise;
     if (cfgHoteis && cfgHoteis.data) {
       hoteis = cfgHoteis.data;
     }
   } catch (e) {
     console.error('Erro ao buscar hotéis no Supabase:', e.message);
+  }
+
+  // 7. Buscar lista de Transportes ricos cadastrados no Supabase
+  let transportes = [];
+  try {
+    const { data: cfgTransp } = await transportesPromise;
+    if (cfgTransp && cfgTransp.data) {
+      transportes = cfgTransp.data;
+    }
+  } catch (e) {
+    console.error('Erro ao buscar transportes no Supabase:', e.message);
   }
 
   return {
@@ -5683,30 +7338,578 @@ async function getClientDataHelper(clientId) {
     quote,
     itinerary,
     clientLocalInfo,
-    hoteis
+    hoteis,
+    transportes
+  };
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// CAIXA DE ENTRADA / CHAT (Heian ↔ Cliente)
+// - Tabela Supabase: chat_mensagens (ver RELATORIO §23 para o SQL)
+// - Anexos: salvos FORA do webroot (não são apagados pelo deploy nem servidos
+//   publicamente); download só por rota autenticada (token do portal ou admin)
+// - Sem multer: upload em JSON base64 (limite já configurado no express.json)
+// ═════════════════════════════════════════════════════════════════════════
+const PASTA_CHAT_PREFERIDA = path.join(__dirname, '..', 'heian_chat_uploads');
+const PASTA_CHAT_RESERVA = path.join(__dirname, 'chat_uploads_privado');
+let PASTA_CHAT = PASTA_CHAT_PREFERIDA;
+try {
+  fs.mkdirSync(PASTA_CHAT_PREFERIDA, { recursive: true });
+} catch (e) {
+  try {
+    fs.mkdirSync(PASTA_CHAT_RESERVA, { recursive: true });
+    PASTA_CHAT = PASTA_CHAT_RESERVA;
+    console.warn('[Chat] Sem permissão fora do webroot; usando pasta reserva:', PASTA_CHAT);
+  } catch (e2) {
+    console.error('[Chat] Não foi possível criar pasta de anexos:', e2.message);
+  }
+}
+
+// Anexos do chat: armazenamento DURAVEL no Supabase Storage (sobrevive a reinicio/deploy)
+const CHAT_BUCKET = 'chat-anexos';
+(async function ensureChatBucket() {
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const existe = (buckets || []).some(b => b.name === CHAT_BUCKET);
+    if (!existe) {
+      const { error } = await supabase.storage.createBucket(CHAT_BUCKET, { public: false });
+      if (error) console.warn('[Chat] Nao criei o bucket de anexos:', error.message);
+      else console.log('[Chat] Bucket de anexos criado:', CHAT_BUCKET);
+    }
+  } catch (e) { console.warn('[Chat] Storage indisponivel ao checar bucket:', e.message); }
+})();
+
+function chatIdNorm(clienteId) {
+  return String(clienteId || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 40);
+}
+
+// Quem está falando? 'empresa' (sessão/Basic), 'cliente' (token do portal) ou null
+function chatQuemE(req, clienteId) {
+  const t = req.query.t || (req.body && req.body.t);
+  if (t && tokenPortalValido(clienteId, t)) return 'cliente';
+  if (requestAutenticadaAdmin(req)) return 'empresa';
+  return null;
+}
+
+// Lista de mensagens
+app.get('/api/chat/:clienteId', async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const quem = chatQuemE(req, clienteId);
+    if (!quem) return res.status(403).json({ success: false, error: 'Acesso negado.' });
+    const { data, error } = await supabase.from('chat_mensagens')
+      .select('*').eq('cliente_id', String(clienteId))
+      .order('criado_em', { ascending: true }).limit(300);
+    if (error) throw error;
+    res.json({ success: true, quem, mensagens: data || [] });
+  } catch (e) {
+    console.error('[Chat] Erro ao listar:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Nova mensagem (texto e/ou anexos já enviados via /anexo)
+app.post('/api/chat/:clienteId/mensagem', async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const quem = chatQuemE(req, clienteId);
+    if (!quem) return res.status(403).json({ success: false, error: 'Acesso negado.' });
+    
+    // Se o admin autenticado estiver enviando a mensagem e declarar remetente='cliente'
+    // no body, nós permitimos (para simulação/teste da área do cliente pelo admin).
+    let remetente = quem;
+    if (quem === 'empresa' && req.body.remetente === 'cliente') {
+      remetente = 'cliente';
+    }
+
+    const mensagem = (req.body.mensagem || '').toString().slice(0, 4000).trim();
+    const anexos = Array.isArray(req.body.anexos) ? req.body.anexos.slice(0, 10).map(a => ({
+      id: String(a.id || ''), nome: String(a.nome || 'arquivo').slice(0, 120),
+      tipo: String(a.tipo || ''), tamanho: Number(a.tamanho) || 0
+    })) : [];
+    if (!mensagem && anexos.length === 0) {
+      return res.status(400).json({ success: false, error: 'Mensagem vazia.' });
+    }
+    const { data, error } = await supabase.from('chat_mensagens').insert({
+      cliente_id: String(clienteId), remetente,
+      mensagem: mensagem || null, anexos, lido: false
+    }).select().single();
+    if (error) throw error;
+
+    // E-mail: Heian->cliente quando a empresa envia; cliente->admin quando o cliente escreve (respeitando a soneca)
+    if (process.env.GMAIL_USER) {
+      if (quem === 'empresa') {
+        notificarClienteChat(clienteId, mensagem, anexos).catch(err =>
+          console.error('[Chat] Falha na notificação por e-mail (cliente):', err.message));
+      } else if (quem === 'cliente') {
+        getChatConfig().then(cfg => {
+          const pausado = cfg.pausadoAte && new Date(cfg.pausadoAte).getTime() > Date.now();
+          if (!pausado) {
+            notificarAdminChat(clienteId, mensagem, cfg.email).catch(err =>
+              console.error('[Chat] Falha na notificação por e-mail (admin):', err.message));
+          }
+        }).catch(() => {});
+      }
+    }
+    res.json({ success: true, mensagem: data });
+  } catch (e) {
+    console.error('[Chat] Erro ao enviar:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Upload de anexo (JSON base64) → devolve o id do arquivo
+app.post('/api/chat/:clienteId/anexo', async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const quem = chatQuemE(req, clienteId);
+    if (!quem) return res.status(403).json({ success: false, error: 'Acesso negado.' });
+    const { nome, conteudoBase64 } = req.body || {};
+    if (!nome || !conteudoBase64) return res.status(400).json({ success: false, error: 'Arquivo ausente.' });
+    const mimeMatch = String(conteudoBase64).match(/^data:([^;]+);base64,/);
+    const contentType = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+    const buf = Buffer.from(String(conteudoBase64).replace(/^data:[^;]+;base64,/, ''), 'base64');
+    if (buf.length === 0) return res.status(400).json({ success: false, error: 'Arquivo vazio.' });
+    if (buf.length > 15 * 1024 * 1024) return res.status(413).json({ success: false, error: 'Arquivo acima de 15 MB.' });
+
+    const nomeSeguro = String(nome).replace(/[^a-zA-Z0-9À-ÿ._ -]/g, '').replace(/\s+/g, '_').slice(0, 80) || 'arquivo';
+    const idArquivo = chatIdNorm(clienteId) + '_' + require('crypto').randomBytes(10).toString('hex') + '_' + nomeSeguro;
+    // Grava no Supabase Storage (duravel). Se falhar, cai pro disco local (melhor que perder).
+    const { error: upErr } = await supabase.storage.from(CHAT_BUCKET).upload(idArquivo, buf, { contentType: contentType, upsert: true });
+    if (upErr) {
+      console.error('[Chat] Falha no upload pro Storage, tentando disco local:', upErr.message);
+      fs.writeFileSync(path.join(PASTA_CHAT, idArquivo), buf);
+    }
+    res.json({ success: true, id: idArquivo, nome: nomeSeguro, tamanho: buf.length });
+  } catch (e) {
+    console.error('[Chat] Erro no upload:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Download autenticado de anexo (o prefixo do arquivo amarra ao cliente)
+app.get('/api/chat/:clienteId/anexo/:idArquivo', async (req, res) => {
+  const { clienteId, idArquivo } = req.params;
+  const quem = chatQuemE(req, clienteId);
+  if (!quem) return res.status(403).send('Acesso negado.');
+  const seguro = String(idArquivo).replace(/[^a-zA-Z0-9À-ÿ._-]/g, '');
+  if (!seguro || !seguro.startsWith(chatIdNorm(clienteId) + '_')) {
+    return res.status(403).send('Arquivo não pertence a este cliente.');
+  }
+  const nomeOriginal = seguro.split('_').slice(2).join('_') || 'arquivo';
+  // 1) Supabase Storage (duravel)
+  try {
+    const { data, error } = await supabase.storage.from(CHAT_BUCKET).download(seguro);
+    if (!error && data) {
+      const ab = await data.arrayBuffer();
+      res.setHeader('Content-Disposition', `attachment; filename="${nomeOriginal}"`);
+      return res.send(Buffer.from(ab));
+    }
+  } catch (e) { /* cai no fallback local */ }
+  // 2) Fallback: disco local (anexos antigos que ainda existam)
+  const caminho = path.join(PASTA_CHAT, seguro);
+  if (fs.existsSync(caminho)) {
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeOriginal}"`);
+    return res.sendFile(caminho);
+  }
+  return res.status(404).send('Arquivo não encontrado.');
+});
+
+// Marca como lidas as mensagens ENVIADAS PELO OUTRO lado
+app.post('/api/chat/:clienteId/ler', async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const quem = chatQuemE(req, clienteId);
+    if (!quem) return res.status(403).json({ success: false, error: 'Acesso negado.' });
+    const outro = quem === 'empresa' ? 'cliente' : 'empresa';
+    const { error } = await supabase.from('chat_mensagens')
+      .update({ lido: true })
+      .eq('cliente_id', String(clienteId)).eq('remetente', outro).eq('lido', false);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Apagar mensagem (admin) — qualquer mensagem daquele cliente
+app.delete('/api/chat/:clienteId/mensagem/:id', async (req, res) => {
+  try {
+    const { clienteId, id } = req.params;
+    if (chatQuemE(req, clienteId) !== 'empresa') return res.status(403).json({ success: false, error: 'Apenas o admin.' });
+    const { error } = await supabase.from('chat_mensagens').delete().eq('id', id).eq('cliente_id', String(clienteId));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Editar mensagem (admin) — só mensagens enviadas pela Heian (remetente=empresa)
+app.patch('/api/chat/:clienteId/mensagem/:id', async (req, res) => {
+  try {
+    const { clienteId, id } = req.params;
+    if (chatQuemE(req, clienteId) !== 'empresa') return res.status(403).json({ success: false, error: 'Apenas o admin.' });
+    const novo = (req.body.mensagem || '').toString().slice(0, 4000).trim();
+    if (!novo) return res.status(400).json({ success: false, error: 'Mensagem vazia.' });
+    const { error } = await supabase.from('chat_mensagens')
+      .update({ mensagem: novo })
+      .eq('id', id).eq('cliente_id', String(clienteId)).eq('remetente', 'empresa');
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Resumo para o admin: não lidas por cliente (badge da Central de Mensagens)
+app.get('/api/chat-resumo', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('chat_mensagens')
+      .select('cliente_id, remetente, lido, criado_em, mensagem')
+      .order('criado_em', { ascending: false }).limit(500);
+    if (error) throw error;
+    const porCliente = {};
+    (data || []).forEach(m => {
+      if (!porCliente[m.cliente_id]) {
+        porCliente[m.cliente_id] = { ultima: m.mensagem || '(anexo)', em: m.criado_em, naoLidas: 0 };
+      }
+      if (m.remetente === 'cliente' && !m.lido) porCliente[m.cliente_id].naoLidas++;
+    });
+    res.json({ success: true, conversas: porCliente });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// E-mail de aviso ao cliente (usa o transporter existente)
+// Config do chat (soneca do alerta + destinatario) — guardado em config/chat_config
+async function getChatConfig() {
+  try {
+    const { data } = await supabase.from('config').select('data').eq('id', 'chat_config').single();
+    return (data && data.data) || {};
+  } catch (e) { return {}; }
+}
+
+// E-mail de aviso ao ADMIN quando o cliente escreve
+async function notificarAdminChat(clienteId, mensagem, emailDestino) {
+  const to = (emailDestino || process.env.GMAIL_USER || '').trim();
+  if (!to) return;
+  let nome = 'um cliente';
+  try { const dados = await getClientDataHelper(clienteId); if (dados && dados.clientInfo && dados.clientInfo.nome) nome = dados.clientInfo.nome; } catch (e) {}
+  await transporter.sendMail({
+    from: `Heian Tour <${process.env.GMAIL_USER}>`,
+    to,
+    subject: `Nova mensagem de ${nome} — Heian Tour`,
+    html: `<div style="font-family:Georgia,serif;color:#2C1A1D;max-width:520px;margin:auto">
+      <h2 style="color:#6B1F2A">Nova mensagem no chat</h2>
+      <p><b>${nome}</b> enviou:</p>
+      <p style="background:#F8F3EB;border-left:3px solid #C4A35A;padding:12px 16px">${(mensagem || '(anexo)').replace(/</g, '&lt;')}</p>
+      <p><a href="https://www.heiantour.com/admin" style="background:#6B1F2A;color:#fff;padding:12px 22px;border-radius:99px;text-decoration:none">Abrir a Central de Mensagens</a></p>
+    </div>`
+  });
+}
+
+async function notificarClienteChat(clienteId, mensagem, anexos) {
+  const dados = await getClientDataHelper(clienteId).catch(() => null);
+  const email = dados?.clientInfo?.email || dados?.clientLocalInfo?.email;
+  if (!email) return;
+  const token = gerarTokenPortal(clienteId);
+  const link = `https://www.heiantour.com/cliente/${clientId_ou_slug(dados, clienteId)}${token ? '?t=' + token : ''}`;
+  await transporter.sendMail({
+    from: `Heian Tour <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: 'Você tem uma nova mensagem da Heian Tour',
+    html: `<div style="font-family:Georgia,serif;color:#2C1A1D;max-width:520px;margin:auto">
+      <h2 style="color:#6B1F2A">Nova mensagem da Heian Tour</h2>
+      <p style="background:#F8F3EB;border-left:3px solid #C4A35A;padding:12px 16px">${(mensagem || 'Você recebeu um novo documento.').replace(/</g, '&lt;')}</p>
+      ${anexos && anexos.length ? `<p>${anexos.length} anexo(s) disponível(is) no seu portal.</p>` : ''}
+      <p><a href="${link}" style="background:#6B1F2A;color:#fff;padding:12px 22px;border-radius:99px;text-decoration:none">Abrir meu portal</a></p>
+    </div>`
+  });
+}
+
+function clientId_ou_slug(dados, clienteId) {
+  const nome = dados?.clientInfo?.nome;
+  return nome ? gerarSlug(nome) : clienteId;
+}
+
+function arquivosDoVoucher(voucher) {
+  if (Array.isArray(voucher?.arquivos) && voucher.arquivos.length > 0) {
+    return voucher.arquivos;
+  }
+  if (voucher?.url) {
+    return [{
+      id: 'legacy',
+      url: voucher.url,
+      fileName: voucher.fileName || voucher.nome || 'voucher'
+    }];
+  }
+  return [];
+}
+
+function urlPublicaArquivoVoucher(clientId, voucherIndex, fileIndex, dataUrl, portalToken) {
+  const versao = require('crypto')
+    .createHash('sha256')
+    .update(String(dataUrl))
+    .digest('hex')
+    .slice(0, 16);
+  const query = new URLSearchParams({ v: versao });
+  if (portalToken) query.set('t', String(portalToken));
+  return `/api/public/client-voucher-file/${encodeURIComponent(clientId)}/${voucherIndex}/${fileIndex}?${query.toString()}`;
+}
+
+// O banco continua aceitando o formato legado em Base64, mas a resposta publica
+// nunca carrega esses megabytes dentro do JSON inicial. O arquivo e entregue por
+// uma rota protegida somente quando o navegador realmente precisar exibi-lo.
+function prepararDadosPortalLeves(data, clientId, portalToken) {
+  const local = data?.clientLocalInfo || {};
+  const vouchers = Array.isArray(local.vouchers) ? local.vouchers : [];
+  const vouchersLeves = vouchers.map((voucher, voucherIndex) => {
+    const arquivos = arquivosDoVoucher(voucher).map((arquivo, fileIndex) => {
+      const urlOriginal = String(arquivo?.url || '');
+      const url = urlOriginal.startsWith('data:')
+        ? urlPublicaArquivoVoucher(clientId, voucherIndex, fileIndex, urlOriginal, portalToken)
+        : urlOriginal;
+      return { ...arquivo, url };
+    });
+    return {
+      ...voucher,
+      arquivos,
+      url: voucher?.tipo === 'link'
+        ? voucher.url
+        : (arquivos[0]?.url || (String(voucher?.url || '').startsWith('data:') ? '' : voucher?.url || ''))
+    };
+  });
+
+  return {
+    ...data,
+    clientLocalInfo: {
+      ...local,
+      vouchers: vouchersLeves
+    }
   };
 }
 
 app.get('/cliente/:slug', (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
+});
+
+app.get('/api/public/client-voucher-file/:clientId/:voucherIndex/:fileIndex', async (req, res) => {
+  try {
+    const clientId = await resolverNotionIdReal(req.params.clientId);
+    if (!requestAutenticadaAdmin(req) && !tokenPortalValido(clientId, req.query.t)) {
+      return res.status(403).send('Acesso negado.');
+    }
+
+    const { data: localRow, error } = await supabase
+      .from('clientes_locais')
+      .select('data')
+      .eq('id', clientId)
+      .maybeSingle();
+    if (error) throw error;
+    const local = localRow?.data || {};
+    if (local.portalAtivo === false) return res.status(403).send('Portal encerrado.');
+
+    const voucherIndex = Number.parseInt(req.params.voucherIndex, 10);
+    const fileIndex = Number.parseInt(req.params.fileIndex, 10);
+    const voucher = Array.isArray(local.vouchers) ? local.vouchers[voucherIndex] : null;
+    const arquivo = voucher ? arquivosDoVoucher(voucher)[fileIndex] : null;
+    const dataUrl = String(arquivo?.url || '');
+    const match = dataUrl.match(/^data:([^;,]+)?(?:;[^,]*)?;base64,([\s\S]+)$/);
+    if (!match) return res.status(404).send('Arquivo nao encontrado.');
+
+    const tiposPermitidos = new Set([
+      'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+      'application/pdf', 'application/octet-stream'
+    ]);
+    const tipoOriginal = String(match[1] || 'application/octet-stream').toLowerCase();
+    const contentType = tiposPermitidos.has(tipoOriginal) ? tipoOriginal : 'application/octet-stream';
+    const conteudo = Buffer.from(match[2], 'base64');
+    if (!conteudo.length) return res.status(404).send('Arquivo vazio.');
+
+    const etag = `"${require('crypto').createHash('sha256').update(conteudo).digest('hex')}"`;
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+
+    const nome = String(arquivo.fileName || voucher.fileName || voucher.nome || 'voucher')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 120);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${nome || 'voucher'}"`);
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    res.setHeader('ETag', etag);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.send(conteudo);
+  } catch (error) {
+    console.error('Erro ao entregar arquivo de voucher:', error);
+    return res.status(500).send('Erro ao carregar arquivo.');
+  }
 });
 
 app.get('/api/public/client-data/:clientId', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const { clientId } = req.params;
     if (!requestAutenticadaAdmin(req) && !tokenPortalValido(clientId, req.query.t)) {
       return res.status(403).json({ success: false, error: 'Link inválido ou expirado. Solicite um novo link à Heian Tour.' });
     }
+
     const data = await getClientDataHelper(clientId);
+    if (data?.clientLocalInfo?.portalAtivo === false) {
+      return res.status(403).json({
+        success: false,
+        portalDesativado: true,
+        error: 'O acesso a este portal de viagem foi encerrado. Caso necessite de algo, entre em contato com a Heian Tour.'
+      });
+    }
+
+    const realClientId = await resolverNotionIdReal(clientId);
+    const dadosLeves = prepararDadosPortalLeves(data, realClientId, req.query.t);
     res.json({
       success: true,
-      ...data
+      portalAtivo: true,
+      ...dadosLeves
     });
   } catch (error) {
     console.error('Erro na API pública da Área do Cliente:', error);
     res.status(500).json({ success: false, error: 'Erro ao buscar dados do cliente', details: error.message });
   }
 });
+
+app.post('/api/public/client-data/:clientId/estadia', express.json(), async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { cidade, hotelNome, dataInicio, dataFim, noites, reservaObs } = req.body;
+
+    if (!requestAutenticadaAdmin(req) && !tokenPortalValido(clientId, req.query.t)) {
+      return res.status(403).json({ success: false, error: 'Link inválido ou expirado. Solicite um novo link à Heian Tour.' });
+    }
+
+    if (!cidade || !hotelNome) {
+      return res.status(400).json({ success: false, error: 'Cidade e Nome do Hotel são obrigatórios.' });
+    }
+
+    const realClientId = await resolverNotionIdReal(clientId);
+
+    const { data: row, error: erroLeitura } = await supabase.from('clientes_locais').select('data').eq('id', realClientId).maybeSingle();
+    if (erroLeitura) throw erroLeitura;
+    const dados = (row && row.data) ? row.data : { id: realClientId };
+    dados.estadias = normalizarEstadias(dados.estadias);
+
+    const dIniFmt = normalizarDataEstadiaISO(dataInicio);
+    const dFimFmt = normalizarDataEstadiaISO(dataFim);
+
+    const jaTemEstadia = (lista, e) => Array.isArray(lista) && lista.some(x =>
+      (x.hotel || '').trim().toLowerCase() === (e.hotel || '').trim().toLowerCase() &&
+      (x.dataInicio || '') === (e.dataInicio || '') &&
+      (x.dataFim || '') === (e.dataFim || '')
+    );
+
+    const novaEstadia = {
+      id: 'estadia_' + Date.now(),
+      cidade: cidade.trim(),
+      hotel: hotelNome.trim(),
+      dataInicio: dIniFmt,
+      dataFim: dFimFmt,
+      noites: parseInt(noites) || 0,
+      observacoes: reservaObs || 'Adicionado pelo cliente via Portal',
+      origem: 'cliente'
+    };
+
+    if (!jaTemEstadia(dados.estadias, novaEstadia)) dados.estadias.push(novaEstadia);
+
+    const salvo = await salvarClienteLocalCanonico(realClientId, { estadias: dados.estadias });
+    dados.estadias = salvo.dados.estadias;
+
+    let novoHotelCadastrado = false;
+    try {
+      const { data: rowHoteis } = await supabase.from('config').select('data').eq('id', 'hoteis').maybeSingle();
+      const listaHoteis = (rowHoteis && Array.isArray(rowHoteis.data)) ? rowHoteis.data : [];
+      
+      const nomeNorm = hotelNome.toLowerCase().trim();
+      const cidadeNorm = cidade.toLowerCase().trim();
+      const jaExiste = listaHoteis.some(h => {
+        const hN = (h['Nome do Hotel'] || '').toLowerCase().trim();
+        const hC = (h['Cidade'] || '').toLowerCase().trim();
+        const nomeCasa = hN === nomeNorm || (hN && nomeNorm && (hN.includes(nomeNorm) || nomeNorm.includes(hN)));
+        return hC === cidadeNorm && nomeCasa;
+      });
+
+      if (!jaExiste) {
+        const novoHotelItem = {
+          id: 'hotel_auto_' + Date.now(),
+          'Nome do Hotel': hotelNome.trim(),
+          'Cidade': cidade.trim(),
+          'Descrição': 'Hotel adicionado pelo cliente no Portal. Pendente de revisão de fotos e descrição.',
+          'Foto (URL)': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=600',
+          'Comodidades': 'Pendente de revisão',
+          'Link do Google Maps': `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelNome.trim() + ', ' + cidade.trim() + ', Japan')}`,
+          origem: 'cliente-portal',
+          pendenteRevisao: true
+        };
+        listaHoteis.push(novoHotelItem);
+        await supabase.from('config').upsert({ id: 'hoteis', data: listaHoteis, updated_at: new Date().toISOString() });
+        novoHotelCadastrado = true;
+      }
+    } catch (eHoteis) {
+      console.warn('Aviso ao sincronizar novo hotel para base interna:', eHoteis);
+    }
+
+    res.json({
+      success: true,
+      estadias: dados.estadias,
+      novaEstadia,
+      novoHotelCadastrado
+    });
+  } catch (err) {
+    console.error('Erro em POST /api/public/client-data/:clientId/estadia:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/public/client-data/:clientId/estadia/:estadiaId', async (req, res) => {
+  res.status(405).json({
+    success: false,
+    error: 'Alterações e exclusões de hospedagem são feitas somente pelo Admin em Editar Cliente.'
+  });
+});
+
+async function sincronizarHoteisNoNotion(notionPageId, estadias) {
+  if (!notionPageId) throw new Error('ID do cliente ausente ao sincronizar hotéis no Notion.');
+  if (!NOTION_TOKEN) throw new Error('Integração com o Notion não está configurada.');
+
+  const realId = await resolverNotionIdReal(notionPageId);
+  const textoHoteis = formatarEstadiasParaNotion(estadias);
+  const response = await fetch(`https://api.notion.com/v1/pages/${realId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      properties: {
+        Hotel: {
+          rich_text: textoHoteis ? [{ type: 'text', text: { content: textoHoteis } }] : []
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const detalhe = await response.json().catch(() => ({}));
+    throw new Error(`Notion recusou a sincronização de hotéis: ${detalhe.message || response.status}`);
+  }
+
+  const paginaAtualizada = await response.json();
+  await notionMirror.upsertPage('clientes', paginaAtualizada);
+  console.log(`[Notion Sync] Campo 'Hotel' atualizado para o cliente ${realId}.`);
+  return textoHoteis;
+}
 
 // Endpoint autenticado (admin) com os mesmos dados — usado pelo montador de roteiros,
 // que antes dependia da rota pública.
@@ -5744,6 +7947,9 @@ app.get('/api/clientes/:id/portal-link', async (req, res) => {
 
 app.get('/api/public/client-data/slug/:slug', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const { slug } = req.params;
     const now = Date.now();
 
@@ -5765,10 +7971,20 @@ app.get('/api/public/client-data/slug/:slug', async (req, res) => {
       }
       try {
         const data = await getClientDataHelper(slug);
+        if (data?.clientLocalInfo?.portalAtivo === false) {
+          return res.status(403).json({
+            success: false,
+            portalDesativado: true,
+            error: 'O acesso a este portal de viagem foi encerrado. Caso necessite de algo, entre em contato com a Heian Tour.'
+          });
+        }
         if (data && data.clientInfo) {
+          const realClientId = await resolverNotionIdReal(slug);
+          const dadosLeves = prepararDadosPortalLeves(data, realClientId, req.query.t);
           return res.json({
             success: true,
-            ...data
+            portalAtivo: true,
+            ...dadosLeves
           });
         }
       } catch (err) {
@@ -5782,14 +7998,281 @@ app.get('/api/public/client-data/slug/:slug', async (req, res) => {
     }
 
     const data = await getClientDataHelper(clientId);
+    if (data?.clientLocalInfo?.portalAtivo === false) {
+      return res.status(403).json({
+        success: false,
+        portalDesativado: true,
+        error: 'O acesso a este portal de viagem foi encerrado. Caso necessite de algo, entre em contato com a Heian Tour.'
+      });
+    }
+
+    const dadosLeves = prepararDadosPortalLeves(data, clientId, req.query.t);
     res.json({
       success: true,
-      ...data
+      portalAtivo: true,
+      ...dadosLeves
     });
   } catch (error) {
     console.error('Erro na API pública da Área do Cliente por slug:', error);
     res.status(500).json({ success: false, error: 'Erro ao buscar dados do cliente por slug', details: error.message });
   }
+});
+
+// FASE 2 — Excluir cliente (cascata, tudo REVERSÍVEL via lixeira). Arquiva no Notion o cliente
+// e seus lançamentos (Entradas/Saídas/Tasks) e faz soft-delete do roteiro/cotação no app.
+app.delete('/api/notion/cliente/:id', async (req, res) => {
+  try {
+    const clienteId = req.params.id;
+    if (!clienteId) return res.status(400).json({ success: false, error: 'clienteId ausente' });
+    if (!NOTION_TOKEN) return res.status(400).json({ success: false, error: 'Notion não configurado' });
+    const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
+    const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
+    const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+    const headers = { 'Authorization': `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' };
+
+    const queryRel = async (dbId, prop) => {
+      if (!dbId) return [];
+      try {
+        const wantedDb = String(dbId).replace(/-/g, '').toLowerCase();
+        const type = Object.keys(NOTION_DATABASES).find(key =>
+          String(NOTION_DATABASES[key] || '').replace(/-/g, '').toLowerCase() === wantedDb
+        );
+        if (!type) return [];
+        const wantedClient = String(clienteId).replace(/-/g, '').toLowerCase();
+        const pages = await notionMirror.getPages(type);
+        return pages.filter(item =>
+          Object.values(item.properties || {}).some(property =>
+            Array.isArray(property?.relation) &&
+            property.relation.some(rel => String(rel.id).replace(/-/g, '').toLowerCase() === wantedClient)
+          )
+        ).map(item => item.id);
+      } catch (e) { console.error('queryRel', dbId, e.message); return []; }
+    };
+    const arquivar = async (pageId) => {
+      try {
+        const r = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+          method: 'PATCH', headers, body: JSON.stringify({ archived: true })
+        });
+        return r.ok;
+      } catch (e) { console.error('arquivar', pageId, e.message); return false; }
+    };
+
+    const [entradas, saidas, tasks] = await Promise.all([
+      queryRel(NOTION_ENTRADAS_DB_ID, 'Cliente (Relação)'),
+      queryRel(NOTION_SAIDAS_DB_ID, '🎀 Clientes'),
+      queryRel(NOTION_TASKS_DB_ID, '🎀 Clientes')
+    ]);
+
+    const arquivados = { entradas: 0, saidas: 0, tasks: 0 };
+    for (const id of entradas) {
+      if (await arquivar(id)) {
+        arquivados.entradas++;
+        await notionMirror.removePage('entradas', id);
+      }
+    }
+    for (const id of saidas) {
+      if (await arquivar(id)) {
+        arquivados.saidas++;
+        await notionMirror.removePage('saidas', id);
+      }
+    }
+    for (const id of tasks) {
+      if (await arquivar(id)) {
+        arquivados.tasks++;
+        await notionMirror.removePage('tasks', id);
+      }
+    }
+    const clienteArquivado = await arquivar(clienteId);
+    if (clienteArquivado) await notionMirror.removePage('clientes', clienteId);
+
+    // Soft-delete roteiros + cotações vinculados no app (Supabase)
+    let roteirosDeletados = 0, cotacoesDeletadas = 0;
+    try {
+      const { data: rotRows } = await supabase.from('roteiros').select('nome, data');
+      for (const r of (rotRows || [])) {
+        const d = r.data; if (!d || d.deletado) continue;
+        if (d.notionClienteId === clienteId || (d.cliente && d.cliente.notionClienteId === clienteId)) {
+          d.deletado = true; d.deletadoEm = new Date().toISOString();
+          await supabase.from('roteiros').upsert({ nome: r.nome, data: d }, { onConflict: 'nome' });
+          roteirosDeletados++;
+        }
+      }
+    } catch (e) { console.error('soft-delete roteiros (excluir cliente):', e.message); }
+    try {
+      const { data: orcRows } = await supabase.from('orcamentos').select('id, data');
+      for (const o of (orcRows || [])) {
+        const d = o.data; if (!d || d.deletado) continue;
+        if (d.notionClienteId === clienteId || (d.cliente && d.cliente.notionClienteId === clienteId)) {
+          d.deletado = true; d.deletadoEm = new Date().toISOString();
+          await supabase.from('orcamentos').upsert({ id: String(o.id), data: d });
+          cotacoesDeletadas++;
+        }
+      }
+    } catch (e) { console.error('soft-delete orcamentos (excluir cliente):', e.message); }
+
+    // Soft-delete da FICHA LOCAL (clientes_locais). Sem isso a ficha/estadias fica órfã
+    // sob o ID do cliente apagado e a busca por nome volta a pescá-la (bug da Lipka de teste).
+    let fichaLocalDeletada = false;
+    try {
+      const { data: fRow } = await supabase.from('clientes_locais').select('data').eq('id', String(clienteId)).maybeSingle();
+      if (fRow && fRow.data) {
+        const fd = fRow.data; fd.deletado = true; fd.deletadoEm = new Date().toISOString();
+        await supabase.from('clientes_locais').upsert({ id: String(clienteId), data: fd });
+        fichaLocalDeletada = true;
+      }
+    } catch (e) { console.error('soft-delete ficha local (excluir cliente):', e.message); }
+
+    res.json({ success: true, clienteArquivado, arquivados, roteirosDeletados, cotacoesDeletadas, fichaLocalDeletada });
+  } catch (e) {
+    console.error('excluir cliente:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── FAXINA de fichas locais órfãs (clientes_locais sem cliente correspondente no Notion) ──
+// Órfã = linha em clientes_locais cujo ID não existe (mais) na base de Clientes do Notion.
+// Acontece quando um cliente é apagado DIRETO no Notion (o app não recebe webhook).
+// Compara sempre por ID normalizado (sem hífens) pra evitar falso-positivo de formato.
+async function _listarClientesNotion() {
+  // { ok, ids:Set<idNorm>, porNome:Map<nomeNorm,{id,nome}> }. Pagina TUDO.
+  // Se qualquer página falhar, ok=false — NUNCA tratar "não li o Notion" como "0 clientes".
+  if (!NOTION_CLIENTS_DB_ID) return { ok: false, ids: new Set(), porNome: new Map() };
+  const ids = new Set(); const porNome = new Map(); const lista = []; let cursor;
+  const nomeDe = (page) => {
+    const p = page.properties || {};
+    const prop = p['Nome do Cliente'] || p['Name'] || p['Nome'];
+    return (prop?.title?.map(t => t.plain_text).join('') || '').trim();
+  };
+  try {
+      const pages = await notionMirror.getPages('clientes');
+      for (const page of pages) {
+        ids.add(String(page.id).replace(/-/g, ''));
+        const nomeOrig = nomeDe(page);
+        const nn = nomeOrig.toLowerCase();
+        if (nomeOrig) lista.push({ id: page.id, nome: nomeOrig });
+        if (nn && !porNome.has(nn)) porNome.set(nn, { id: page.id, nome: nn });
+      }
+    lista.sort((a, b) => a.nome.localeCompare(b.nome));
+    return { ok: true, ids, porNome, lista };
+  } catch (e) {
+    console.error('[GC] listar clientes Notion:', e.message);
+    return { ok: false, ids: new Set(), porNome: new Map(), lista: [] };
+  }
+}
+
+// Classifica cada ficha cujo ID NÃO bate com cliente vivo:
+//  - "desalinhada": existe cliente vivo com o MESMO nome → é o mesmo cliente com ID trocado → RE-VINCULAR (não apagar)
+//  - "orfa": nem ID nem nome batem com cliente vivo → sobra segura de apagar
+function _classificarFichas(localRows, notion) {
+  const orfas = [], desalinhadas = [];
+  for (const r of (localRows || [])) {
+    if (notion.ids.has(String(r.id).replace(/-/g, ''))) continue; // ID bate com cliente vivo → ficha OK
+    const d = r.data || {};
+    if (d.deletado) continue; // já tratada (re-vinculada/excluída) → sai da faxina
+    const nomeNorm = (d.nome || d.clienteNome || '').toLowerCase().trim();
+    const base = { id: r.id, nome: (d.nome || d.clienteNome || '(sem nome)'), estadias: Array.isArray(d.estadias) ? d.estadias.length : 0, jaDeletado: !!d.deletado };
+    const vivo = nomeNorm ? notion.porNome.get(nomeNorm) : null;
+    if (vivo) desalinhadas.push({ ...base, alvoId: vivo.id, alvoNome: vivo.nome });
+    else orfas.push(base);
+  }
+  return { orfas, desalinhadas };
+}
+
+// PREVIEW (read-only) — separa órfãs de verdade x fichas desalinhadas
+app.get('/api/manutencao/fichas-orfas', async (req, res) => {
+  try {
+    const notion = await _listarClientesNotion();
+    if (!notion.ok) return res.status(502).json({ success: false, error: 'Não consegui ler a lista de clientes do Notion — abortando por segurança (pra não marcar cliente vivo como órfão).' });
+    const { data: localRows } = await supabase.from('clientes_locais').select('id, data');
+    const { orfas, desalinhadas } = _classificarFichas(localRows, notion);
+    res.json({ success: true, totalNotion: notion.ids.size, totalLocais: (localRows || []).length, orfas, desalinhadas, clientesVivos: notion.lista });
+  } catch (e) {
+    console.error('[GC] preview:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// LIMPAR — só órfãs de verdade. Recusa qualquer ficha cujo nome bata com cliente vivo (desalinhada).
+app.post('/api/manutencao/fichas-orfas/limpar', express.json(), async (req, res) => {
+  try {
+    const idsPedidos = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const hard = req.body?.hard === true;
+    if (!idsPedidos.length) return res.status(400).json({ success: false, error: 'Nenhum ID informado.' });
+
+    const notion = await _listarClientesNotion();
+    if (!notion.ok) return res.status(502).json({ success: false, error: 'Não consegui revalidar contra o Notion — abortando.' });
+
+    const resultado = { softDeletadas: 0, apagadas: 0, ignoradas: [] };
+    for (const id of idsPedidos) {
+      if (notion.ids.has(String(id).replace(/-/g, ''))) { resultado.ignoradas.push({ id, motivo: 'ID é de cliente vivo' }); continue; }
+      const { data: row } = await supabase.from('clientes_locais').select('data').eq('id', String(id)).maybeSingle();
+      const d = (row && row.data) ? row.data : { id };
+      const nomeNorm = (d.nome || d.clienteNome || '').toLowerCase().trim();
+      // TRAVA: nome bate com cliente vivo → é desalinhada, NÃO apaga (evita destruir dado real)
+      if (nomeNorm && notion.porNome.has(nomeNorm)) { resultado.ignoradas.push({ id, motivo: 'nome bate com cliente vivo — use Re-vincular' }); continue; }
+      if (hard) {
+        await supabase.from('clientes_locais').delete().eq('id', String(id));
+        resultado.apagadas++;
+      } else {
+        d.deletado = true; d.deletadoEm = new Date().toISOString(); d.deletadoMotivo = 'órfã (cliente inexistente no Notion)';
+        await supabase.from('clientes_locais').upsert({ id: String(id), data: d });
+        resultado.softDeletadas++;
+      }
+    }
+    res.json({ success: true, ...resultado });
+  } catch (e) {
+    console.error('[GC] limpar:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// RE-VINCULAR — funde a ficha desalinhada (fromId) na ficha do cliente vivo (toId) e some com a origem (soft).
+app.post('/api/manutencao/fichas-orfas/revincular', express.json(), async (req, res) => {
+  try {
+    const fromId = String(req.body?.fromId || ''); const toId = String(req.body?.toId || '');
+    if (!fromId || !toId) return res.status(400).json({ success: false, error: 'fromId e toId são obrigatórios.' });
+
+    const notion = await _listarClientesNotion();
+    if (!notion.ok) return res.status(502).json({ success: false, error: 'Não consegui validar contra o Notion — abortando.' });
+    if (!notion.ids.has(toId.replace(/-/g, ''))) return res.status(400).json({ success: false, error: 'toId não é um cliente vivo no Notion.' });
+    if (notion.ids.has(fromId.replace(/-/g, ''))) return res.status(400).json({ success: false, error: 'fromId é um cliente vivo — não é ficha desalinhada.' });
+
+    const { data: fromRow } = await supabase.from('clientes_locais').select('data').eq('id', fromId).maybeSingle();
+    if (!fromRow || !fromRow.data) return res.status(404).json({ success: false, error: 'Ficha de origem não encontrada.' });
+    const fromD = fromRow.data;
+    const { data: toRow } = await supabase.from('clientes_locais').select('data').eq('id', toId).maybeSingle();
+    const toD = (toRow && toRow.data) ? toRow.data : { id: toId };
+
+    // Merge de estadias com dedup (hotel+datas)
+    if (!Array.isArray(toD.estadias)) toD.estadias = [];
+    const chave = (e) => `${(e.hotel || '').trim().toLowerCase()}|${e.dataInicio || ''}|${e.dataFim || ''}`;
+    const existentes = new Set(toD.estadias.map(chave));
+    let estadiasMovidas = 0;
+    for (const e of (Array.isArray(fromD.estadias) ? fromD.estadias : [])) {
+      if (!existentes.has(chave(e))) { toD.estadias.push(e); existentes.add(chave(e)); estadiasMovidas++; }
+    }
+    // Preenche só os buracos do destino (não sobrescreve o que já existe lá)
+    for (const campo of ['vouchers', 'marcos', 'preferencias', 'fotoPerfil', 'viajantes', 'emails']) {
+      if ((toD[campo] == null || (Array.isArray(toD[campo]) && !toD[campo].length)) && fromD[campo] != null) toD[campo] = fromD[campo];
+    }
+    toD.id = toId;
+    await supabase.from('clientes_locais').upsert({ id: toId, data: toD });
+
+    // Origem vira soft-deleted (reversível)
+    fromD.deletado = true; fromD.deletadoEm = new Date().toISOString(); fromD.deletadoMotivo = `re-vinculada ao cliente ${toId}`;
+    await supabase.from('clientes_locais').upsert({ id: fromId, data: fromD });
+
+    res.json({ success: true, estadiasMovidas, totalEstadiasDestino: toD.estadias.length });
+  } catch (e) {
+    console.error('[GC] revincular:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Página simples de faxina (protegida como rota admin)
+app.get('/manutencao', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'manutencao.html'));
 });
 
 app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
@@ -5799,32 +8282,24 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
     const NOTION_SAIDAS_DB_ID = process.env.NOTION_SAIDAS_DB_ID;
     const NOTION_ENTRADAS_DB_ID = process.env.NOTION_ENTRADAS_DB_ID;
 
-    if (!NOTION_TOKEN || !NOTION_TASKS_DB_ID || !NOTION_SAIDAS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
+    if (!NOTION_TASKS_DB_ID || !NOTION_SAIDAS_DB_ID || !NOTION_ENTRADAS_DB_ID) {
       return res.status(400).json({ error: 'Configuração do Notion incompleta no arquivo .env.' });
     }
 
     const queryNotionDB = async (dbId, filterProp) => {
-      const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          filter: {
-            property: filterProp,
-            relation: {
-              contains: clientId
-            }
-          }
-        })
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Erro ao consultar base ${dbId}: ${errText}`);
-      }
-      return await response.json();
+      const wantedDb = String(dbId || '').replace(/-/g, '').toLowerCase();
+      const type = Object.keys(NOTION_DATABASES).find(key =>
+        String(NOTION_DATABASES[key] || '').replace(/-/g, '').toLowerCase() === wantedDb
+      );
+      const wantedClient = String(clientId).replace(/-/g, '').toLowerCase();
+      const pages = type ? await notionMirror.getPages(type) : [];
+      const results = pages.filter(item =>
+        Object.values(item.properties || {}).some(prop =>
+          Array.isArray(prop?.relation) &&
+          prop.relation.some(rel => String(rel.id).replace(/-/g, '').toLowerCase() === wantedClient)
+        )
+      );
+      return { results };
     };
 
     const [entradasData, saidasData, tasksData, calCfg] = await Promise.all([
@@ -5932,6 +8407,39 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
       }
     });
 
+    // Resolve clientInfo e valorTotal da cotação
+    let clientInfo = null;
+    try {
+      const clientPage = await notionMirror.getPage('clientes', clientId);
+      if (clientPage) {
+        const p = clientPage.properties;
+        const getTitle = (prop) => prop?.title?.map(t => t.plain_text).join('') || '';
+        const getNumber = (prop) => prop?.number || 0;
+        const getRollupNumber = (prop) => prop?.rollup?.number || 0;
+        const getFormulaNumber = (prop) => prop?.formula?.number || 0;
+        const getFormulaString = (prop) => prop?.formula?.string || prop?.select?.name || '';
+        clientInfo = {
+          id: clientPage.id,
+          nome: getTitle(p['Nome da Família'] || p['Nome']),
+          valorTotal: getNumber(p['Valor Total']),
+          totalPago: getRollupNumber(p['Total Pago']),
+          saldoPagar: getFormulaNumber(p['Saldo a Pagar']),
+          statusPagamento: getFormulaString(p['Status de pagamento'])
+        };
+      }
+    } catch (e) {}
+
+    let resolvedValorTotal = clientInfo ? (clientInfo.valorTotal || 0) : 0;
+    if (resolvedValorTotal <= 0) {
+      resolvedValorTotal = await valorPacoteDaCotacao(clientId, clientInfo ? clientInfo.nome : '');
+      if (resolvedValorTotal > 0 && clientId) {
+        syncNotionClienteValorTotal(clientId, resolvedValorTotal);
+      }
+    }
+
+    const realSaldo = Math.max(0, Math.round(resolvedValorTotal - totalRecebido));
+    const statusPgto = realSaldo <= 0 ? 'Pago' : (totalRecebido > 0 ? 'Parcial' : 'Pendente');
+
     res.json({
       success: true,
       summary: {
@@ -5944,6 +8452,14 @@ app.get('/api/dashboard/notion-data/:clientId', async (req, res) => {
         custoGuiasPendente,
         custoGuiasTotal: custoGuiasPago + custoGuiasPendente,
         caixaAtual: totalRecebido - totalDespesas - custoGuiasPago
+      },
+      clientInfo: {
+        id: clientId,
+        nome: clientInfo ? clientInfo.nome : 'Cliente',
+        valorTotal: resolvedValorTotal,
+        totalPago: totalRecebido,
+        saldoPagar: realSaldo,
+        statusPagamento: statusPgto
       },
       details: {
         entradas,
@@ -5969,11 +8485,32 @@ app.listen(PORT, () => {
   console.log('║  Para fechar: Ctrl + C                   ║');
   console.log('╚══════════════════════════════════════════╝\n');
 
+  // Permite testes locais do servidor sem abrir navegador nem disparar jobs.
+  if (process.env.HEIAN_TEST_MODE === '1') return;
+
+  // Supabase é a fonte de leitura. O Notion é atualizado em segundo plano e também
+  // pode avisar mudanças imediatamente pelo webhook.
+  const mirrorPollMs = Math.max(
+    60 * 1000,
+    Number(process.env.NOTION_MIRROR_POLL_MS) || 5 * 60 * 1000
+  );
+  const atualizarEspelhoNotion = () => notionMirror.refreshAll()
+    .then(result => console.log('[Notion Mirror] Espelho Supabase atualizado:', result))
+    .then(() => reconstruirCacheSlugs())
+    .catch(error => console.error('[Notion Mirror] Falha na atualização:', error.message));
+  setTimeout(atualizarEspelhoNotion, 750);
+  setInterval(atualizarEspelhoNotion, mirrorPollMs);
+
   // Abre automaticamente no browser (Windows e Mac)
   const { exec } = require('child_process');
   const url = `http://localhost:${PORT}`;
   const cmd = process.platform === 'darwin' ? `open ${url}` : `start ${url}`;
   exec(cmd);
+
+  // Backup diário automático da Base no Google Sheets
+  agendarBackupDiarioSheets();
+  setTimeout(() => processarFilaSheets().catch(e => console.error('[Sheets Outbox] Falha:', e.message)), 5000);
+  setInterval(() => processarFilaSheets().catch(e => console.error('[Sheets Outbox] Falha:', e.message)), 5 * 60 * 1000);
 
   // Inicializa o agendador de lembretes e notificações de e-mails
   console.log('[Email Init] Inicializando agendador de notificações automáticas por e-mail...');

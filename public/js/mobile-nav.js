@@ -10,6 +10,11 @@
 
   /* ── Navegação: barra inferior espelha a sidebar ── */
   function irParaPagina(pg) {
+    // Entrar por aqui sempre mostra a RAIZ da seção (lista), nunca um detalhe preso
+    ['page-clientes','page-roteiros','page-meus','page-colaboradores'].forEach(function (id) {
+      var p = document.getElementById(id);
+      if (p) p.classList.remove('show-detail');
+    });
     var link = document.querySelector('.sidebar-nav a[data-page="' + pg + '"]');
     if (link) { link.click(); }
     else if (typeof window.navToPage === 'function') { window.navToPage(pg); }

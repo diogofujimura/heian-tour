@@ -196,10 +196,10 @@ hr{border-color:var(--l-line) !important}
 .rb-card-head{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;user-select:none}
 .rb-card-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
 .rb-ico-seq{background:var(--l-wine-soft);color:var(--l-wine)}
-.rb-ico-transporte{background:var(--l-gold-soft);color:var(--l-gold)}
-.rb-ico-experiencia{background:var(--l-wine-soft);color:var(--l-wine)}
-.rb-ico-texto{background:var(--l-surf);color:var(--l-t2)}
-.rb-ico-info{background:#EAF1F6;color:#456}
+.rb-ico-transporte{background:#e8f4fd;color:#2b82c9}
+.rb-ico-experiencia{background:rgba(196,163,90,0.08);color:var(--l-gold)}
+.rb-ico-texto{background:#f1f5f9;color:#64748b}
+.rb-ico-info{background:#f0f4f8;color:#475569}
 .rb-card-meta{flex:1;min-width:0}
 .rb-card-meta .t{font-size:13px;font-weight:600;color:var(--l-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rb-card-meta .s{font-size:11px;color:var(--l-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -210,6 +210,37 @@ hr{border-color:var(--l-line) !important}
 /* dentro do corpo, neutraliza as bordas/fundos coloridos antigos p/ ficar limpo */
 .rb-card-body>div[style*="border-left"]{border-left:0 !important;background:transparent !important;padding-left:0 !important;margin-bottom:0 !important}
 .rb-flag{font-size:10px;font-weight:700;color:var(--l-gold);margin-left:6px}
+.rb-card-actions {
+  display: none;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 16px;
+  flex-wrap: wrap;
+}
+.rb-card.open .rb-card-actions {
+  display: flex;
+}
+.btn-cad-rapido {
+  font-family: Jost, sans-serif;
+  background: white;
+  border: 1px solid rgba(154, 51, 64, 0.3);
+  color: var(--l-wine);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-cad-rapido:hover {
+  background: var(--l-wine);
+  color: white;
+  border-color: var(--l-wine);
+  box-shadow: 0 2px 6px rgba(154, 51, 64, 0.15);
+}
 
 /* dia-card: cabeçalho mais suave (não vermelho cheio) */
 .dia-card.card{border-radius:var(--l-radius) !important;border:1px solid var(--l-line) !important}

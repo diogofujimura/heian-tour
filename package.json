@@ -7,6 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@google/genai": "^2.10.0",
     "@notionhq/client": "^5.22.0",
     "@supabase/supabase-js": "^2.107.0",
     "dotenv": "^17.4.2",
@@ -15,7 +16,7 @@
     "jimp": "^1.6.1",
     "jsdom": "^29.1.1",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^8.0.11",
+    "nodemailer": "^9.0.3",
     "pdf-parse": "^2.4.5"
   }
 }

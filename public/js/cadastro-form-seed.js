@@ -44,7 +44,7 @@
             subcampos: [{ id: 'dataInicio', label: 'Data de Chegada (Previsão)' }, { id: 'dataFim', label: 'Data de Retorno (Previsão)' }],
             destino: 'coluna', notionProp: 'Período da Viagem', notionTipo: 'date' },
           { id: 'cidadesPretendeVisitar', label: 'Cidades que pretendem visitar', tipo: 'texto', obrigatorio: false, sistema: false,
-            placeholder: 'Ex: Tóquio, Quioto, Osaka, Hakone, Hiroshima...', destino: 'perfil',
+            placeholder: 'Ex: Tokyo, Kyoto, Osaka, Hakone, Hiroshima...', destino: 'perfil',
             perfilSecao: '⛩️ Perfil de Viagem & Preferências', perfilFormato: 'paragrafo', perfilRotulo: 'Cidades que pretende visitar: ' },
           { id: 'necessidadesEspeciais', label: 'Necessidades Especiais ou Restrições', tipo: 'textolongo', obrigatorio: false, sistema: true,
             placeholder: 'Alergias graves, restrições alimentares, mobilidade reduzida...', destino: 'coluna', notionProp: 'Necessidades Especiais', notionTipo: 'rich_text' },

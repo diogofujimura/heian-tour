@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manutenção — Heian Tour</title>
+  <style>
+    :root{
+      --primary:#8e1c1c; --primary-dark:#560b0b; --gold:#c5a059;
+      --ink:#231f1b; --ink-mid:#5c544e; --ink-lt:#9c9085;
+      --bg:#fbf9f6; --border:rgba(142,28,28,0.12); --warm:#fff;
+      --ff-display:'Outfit',system-ui,sans-serif; --ff-body:'Inter',system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff-body);padding:28px 18px}
+    .wrap{max-width:860px;margin:0 auto}
+    h1{font-family:var(--ff-display);color:var(--primary);font-size:24px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+    .sub{color:var(--ink-mid);font-size:13.5px;margin:0 0 22px;line-height:1.55}
+    .card{background:var(--warm);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(142,28,28,0.04);margin-bottom:18px}
+    h2{font-family:var(--ff-display);font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+    h2 .count{font-size:12px;background:rgba(142,28,28,.1);color:var(--primary);border-radius:20px;padding:2px 10px}
+    .h2sub{font-size:12.5px;color:var(--ink-mid);margin:0 0 12px;line-height:1.5}
+    .stat{display:inline-flex;flex-direction:column;gap:2px;background:#faf7f2;border:1px solid var(--border);border-radius:12px;padding:10px 16px;margin:0 10px 8px 0}
+    .stat b{font-family:var(--ff-display);font-size:20px;color:var(--primary)}
+    .stat span{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-lt)}
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+    th{text-align:left;color:var(--ink-lt);font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;border-bottom:2px solid var(--border)}
+    td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    .idmono{font-family:ui-monospace,monospace;font-size:11px;color:var(--ink-lt)}
+    .badge{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block}
+    .b-est{background:rgba(197,160,89,.14);color:#8a6d24}
+    .b-del{background:#eee;color:#777}
+    .b-alvo{background:rgba(20,120,60,.1);color:#1c6b3a}
+    button{font-family:var(--ff-body);cursor:pointer;border:none;border-radius:99px;font-weight:700;font-size:12.5px;padding:9px 18px}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 6px 16px rgba(142,28,28,.22)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-gold{background:linear-gradient(135deg,#c9a24a,#a07c26);color:#fff}
+    .btn-ghost{background:#f1eee9;color:var(--ink-mid)}
+    .row-actions{margin-top:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    label.chk{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-mid);cursor:pointer}
+    .empty{text-align:center;padding:26px 16px;color:var(--ink-mid)}
+    .empty .big{font-size:28px;margin-bottom:6px}
+    .msg{margin:16px 0 0;padding:11px 14px;border-radius:10px;font-size:13px;display:none}
+    .msg.ok{background:#eef7ee;color:#2b6a2b;border:1px solid #cfe6cf;display:block}
+    .msg.err{background:#fcecec;color:#a12;border:1px solid #f2c9c9;display:block}
+    .danger-tog{font-size:12px;color:var(--ink-lt)}
+    .relsel{padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;max-width:230px;width:100%}
+    .note{font-size:12px;color:var(--ink-lt);margin-top:10px}
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="wrap">
+    <h1>🧹 Faxina de Fichas Locais</h1>
+    <p class="sub">Fichas locais (estadias, vouchers…) cujo <b>ID não bate</b> com nenhum cliente atual do Notion. Elas se dividem em dois casos, tratados diferente pra <b>nunca apagar dado de cliente real</b>.</p>
+
+    <div id="stats" class="card" style="padding:16px 20px"></div>
+    <div id="msg" class="msg"></div>
+
+    <!-- DESALINHADAS -->
+    <div class="card">
+      <h2>🔗 Desalinhadas <span class="count" id="cDes">0</span></h2>
+      <p class="h2sub">Mesmo cliente, ID trocado — existe um cliente <b>vivo</b> no Notion com o mesmo nome. <b>Não se apaga:</b> re-vincule pra juntar as estadias na ficha do ID certo (a origem some, de forma reversível).</p>
+      <div id="desContent"><div class="empty">…</div></div>
+    </div>
+
+    <!-- ÓRFÃS -->
+    <div class="card">
+      <h2>🗑️ Órfãs de verdade <span class="count" id="cOrf">0</span></h2>
+      <p class="h2sub">Nem o ID nem o nome batem com cliente vivo. Pode ser sobra de cliente apagado (seguro limpar) <b>ou</b> um cliente que <b>mudou de nome</b>/foi readicionado — nesse caso escolha o cliente vivo à direita e <b>Re-vincule</b> em vez de apagar. Remoção padrão é reversível.</p>
+      <div id="orfContent"><div class="empty">…</div></div>
+      <div class="row-actions" id="orfActions" style="display:none">
+        <button class="btn-primary" id="btnLimpar" onclick="limpar()">Limpar selecionadas</button>
+        <label class="chk danger-tog"><input type="checkbox" id="hardMode"> Apagar de vez (irreversível)</label>
+      </div>
+    </div>
+
+    <button class="btn-ghost" onclick="carregar()">↻ Recarregar</button>
+    <p class="note">Nada aqui toca no Notion. As remoções e re-vínculos mexem só nas fichas locais (Supabase) e, por padrão, são reversíveis.</p>
+  </div>
+
+<script>
+let orfas=[], desalinhadas=[], clientesVivos=[];
+async function carregar(){
+  msg('');
+  document.getElementById('desContent').innerHTML='<div class="empty">⏳ Carregando…</div>';
+  document.getElementById('orfContent').innerHTML='<div class="empty">⏳ Carregando…</div>';
+  document.getElementById('orfActions').style.display='none';
+  try{
+    const r=await fetch('/api/manutencao/fichas-orfas',{headers:{'Accept':'application/json'}});
+    const d=await r.json();
+    if(!d.success) throw new Error(d.error||'Falha ao consultar.');
+    orfas=d.orfas||[]; desalinhadas=d.desalinhadas||[]; clientesVivos=d.clientesVivos||[];
+    document.getElementById('stats').innerHTML=
+      `<div class="stat"><b>${d.totalNotion}</b><span>clientes Notion</span></div>`+
+      `<div class="stat"><b>${d.totalLocais}</b><span>fichas locais</span></div>`+
+      `<div class="stat"><b>${desalinhadas.length}</b><span>desalinhadas</span></div>`+
+      `<div class="stat"><b>${orfas.length}</b><span>órfãs</span></div>`;
+    document.getElementById('cDes').textContent=desalinhadas.length;
+    document.getElementById('cOrf').textContent=orfas.length;
+    renderDes(); renderOrf();
+  }catch(e){ msg(e.message,'err'); }
+}
+function renderDes(){
+  const c=document.getElementById('desContent');
+  if(!desalinhadas.length){ c.innerHTML='<div class="empty"><div class="big">✅</div>Nenhuma ficha desalinhada.</div>'; return; }
+  const rows=desalinhadas.map((o,i)=>`
+    <tr>
+      <td><b>${esc(o.nome)}</b></td>
+      <td>${o.estadias>0?`<span class="badge b-est">${o.estadias} estadia(s)</span>`:'<span style="color:var(--ink-lt)">—</span>'}</td>
+      <td><span class="badge b-alvo">→ ${esc(o.alvoNome)}</span></td>
+      <td class="idmono">${esc(o.id)}</td>
+      <td style="text-align:right"><button class="btn-gold" onclick="revincular(${i})">Re-vincular</button></td>
+    </tr>`).join('');
+  c.innerHTML=`<table><thead><tr><th>Ficha</th><th>Estadias</th><th>Cliente vivo (destino)</th><th>ID da ficha</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function optsClientes(preId){
+  return ['<option value="">— escolher cliente vivo —</option>']
+    .concat(clientesVivos.map(c=>`<option value="${esc(c.id)}" ${c.id===preId?'selected':''}>${esc(c.nome)}</option>`)).join('');
+}
+function renderOrf(){
+  const c=document.getElementById('orfContent');
+  if(!orfas.length){ c.innerHTML='<div class="empty"><div class="big">✨</div>Nenhuma órfã de verdade.</div>'; document.getElementById('orfActions').style.display='none'; return; }
+  const rows=orfas.map((o,i)=>{
+    const pre=bestGuess(o.nome);
+    return `
+    <tr>
+      <td><input type="checkbox" class="sel" data-i="${i}" ${o.jaDeletado?'':'checked'}></td>
+      <td><b>${esc(o.nome)}</b>${o.jaDeletado?' <span class="badge b-del">já excluída</span>':''}<div class="idmono">${esc(o.id)}</div></td>
+      <td>${o.estadias>0?`<span class="badge b-est">${o.estadias} estadia(s)</span>`:'<span style="color:var(--ink-lt)">—</span>'}</td>
+      <td>
+        <select id="rels${i}" class="relsel">${optsClientes(pre)}</select>
+        <button class="btn-gold" style="margin-top:6px" onclick="revincularManual(${i})">Re-vincular</button>
+      </td>
+    </tr>`;
+  }).join('');
+  c.innerHTML=`<table><thead><tr><th></th><th>Ficha órfã</th><th>Estadias</th><th>Ou re-vincular a um cliente vivo</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('orfActions').style.display='flex';
+}
+async function revincularManual(i){
+  const o=orfas[i];
+  const sel=document.getElementById('rels'+i);
+  const toId=sel.value;
+  if(!toId){ msg('Escolha o cliente vivo de destino no seletor.','err'); return; }
+  const nomeAlvo=sel.options[sel.selectedIndex].text;
+  if(!confirm(`Re-vincular "${o.nome}" → "${nomeAlvo}"?\n\nAs estadias vão para a ficha desse cliente (sem duplicar) e a órfã é marcada como excluída (reversível).`)) return;
+  try{
+    const r=await fetch('/api/manutencao/fichas-orfas/revincular',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({fromId:o.id,toId})});
+    const d=await r.json();
+    if(!d.success) throw new Error(d.error||'Falha ao re-vincular.');
+    msg(`Re-vinculada: ${d.estadiasMovidas} estadia(s) movida(s) (destino ficou com ${d.totalEstadiasDestino}).`,'ok');
+    await carregar();
+  }catch(e){ msg(e.message,'err'); }
+}
+function lev(a,b){a=a.toLowerCase();b=b.toLowerCase();const m=a.length,n=b.length;const dp=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return dp[m][n];}
+function bestGuess(nome){ if(!clientesVivos.length) return ''; let best=null,bd=99; for(const c of clientesVivos){const d=lev(nome||'',c.nome); if(d<bd){bd=d;best=c;}} return (best && bd<=3)?best.id:''; }
+async function revincular(i){
+  const o=desalinhadas[i];
+  if(!confirm(`Re-vincular "${o.nome}"?\n\nAs estadias vão para a ficha do cliente vivo "${o.alvoNome}" (sem duplicar) e esta ficha é marcada como excluída (reversível).`)) return;
+  try{
+    const r=await fetch('/api/manutencao/fichas-orfas/revincular',{
+      method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({fromId:o.id,toId:o.alvoId})
+    });
+    const d=await r.json();
+    if(!d.success) throw new Error(d.error||'Falha ao re-vincular.');
+    msg(`Re-vinculada: ${d.estadiasMovidas} estadia(s) movida(s) (destino ficou com ${d.totalEstadiasDestino}).`,'ok');
+    await carregar();
+  }catch(e){ msg(e.message,'err'); }
+}
+async function limpar(){
+  const sel=[...document.querySelectorAll('.sel:checked')].map(c=>orfas[+c.dataset.i].id);
+  if(!sel.length){ msg('Selecione ao menos uma órfã.','err'); return; }
+  const hard=document.getElementById('hardMode').checked;
+  if(!confirm(hard?`APAGAR DE VEZ ${sel.length} ficha(s)? Irreversível.`:`Excluir ${sel.length} ficha(s)? (reversível)`)) return;
+  const btn=document.getElementById('btnLimpar'); btn.disabled=true; btn.textContent='Limpando…';
+  try{
+    const r=await fetch('/api/manutencao/fichas-orfas/limpar',{
+      method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({ids:sel,hard})
+    });
+    const d=await r.json();
+    if(!d.success) throw new Error(d.error||'Falha ao limpar.');
+    const n=(d.softDeletadas||0)+(d.apagadas||0);
+    let t=`${n} ficha(s) tratada(s)`;
+    if(d.ignoradas&&d.ignoradas.length) t+=` · ${d.ignoradas.length} ignorada(s) por segurança`;
+    msg(t,'ok'); await carregar();
+  }catch(e){ msg(e.message,'err'); }
+  finally{ btn.disabled=false; btn.textContent='Limpar selecionadas'; }
+}
+function msg(txt,t){ const m=document.getElementById('msg'); if(!txt){m.style.display='none';m.className='msg';return;} m.className='msg '+t; m.textContent=txt; m.style.display='block'; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+carregar();
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+/* ============================================================================
+   HEIAN TOUR — MOBILE APP LAYER (só ≤768px; zero efeito no desktop)
+   Deixa o admin com cara de app nativo: app bars compactas, ações em ícone,
+   tabs em chips, dia compacto com menu ⋮, "+ bloco" único com bottom sheet,
+   edição de bloco em tela cheia e toolbar de texto compacta.
+   Camada 100% aditiva — nenhuma regra fora do media query.
+   ========================================================================== */
+@media (max-width: 768px) {
+
+  /* ---- Performance: blur de vidro é pesadíssimo em celular (compositor).
+     Desligar backdrop-filter no mobile também conserta position:fixed
+     (blur cria containing block). Fundos já são quase opacos. ---- */
+  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+  /* ---- Quadro de clientes: página precisa rolar (conteúdo transborda pro body hidden) ---- */
+  #page-clientes.modo-quadro { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .kanban-board-scroll, #kanbanBoard { overflow: visible !important; }
+
+  /* ---- Card do roteiro ativo (tab Roteiros do cliente): título em cima, botões embaixo ---- */
+  #roteiroActivePreviewHeader { flex-direction: column !important; align-items: stretch !important; gap: 10px; }
+  #roteiroActiveTitle { font-size: 14px !important; line-height: 1.35; }
+  #roteiroActivePreviewHeader > div { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; }
+  #roteiroActivePreviewHeader > div .btn-secondary { flex: 1 1 45%; justify-content: center;
+    font-size: 11.5px !important; padding: 8px 6px !important; white-space: nowrap; }
+
+  /* ---- Preview do roteiro: flex + overflow:hidden cortava o documento (não rolava) ---- */
+  .preview-container { display: block !important; }
+  .preview-container .pdf-doc { height: auto !important; }
+  .preview-toolbar > span { display: none !important; }
+  .preview-toolbar { padding: 8px 10px !important; gap: 6px !important; }
+  .preview-toolbar > div { flex: 1; flex-wrap: wrap !important; justify-content: flex-start; gap: 6px !important; min-width: 0; }
+  #btnClosePreview { order: -2; }
+  #rbExportControls { order: -1; gap: 6px !important; }
+  .preview-toolbar .btn-secondary, .preview-toolbar button { font-size: 11px !important; padding: 6px 8px !important; white-space: nowrap; }
+
+  /* ---- Geral: sem scrollbars visíveis, títulos de 1 linha ---- */
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+  .pane-content h1, .pane-content-inner h1 { font-size: 20px !important; line-height: 1.25 !important; }
+  .pane-content h2, .pane-content-inner h2 { font-size: 18px !important; line-height: 1.3 !important; }
+
+  /* ---- Ficha do cliente: painel mobile, ações táteis e sem aperto ---- */
+  #clientesDetailWrapper { padding: 8px !important; }
+  .client-overview-shell { margin-bottom: 18px !important; padding: 9px 9px 0 !important; border-radius: 18px !important; }
+  .client-overview-shell::before { left: 22px !important; width: 82px !important; }
+  .client-detail-header { padding: 14px !important; gap: 14px !important; border-radius: 14px !important; }
+  .client-profile-summary { width: 100%; gap: 12px !important; align-items: flex-start !important; }
+  .client-avatar-container { width: 54px !important; height: 54px !important; flex: 0 0 54px !important;
+    border-radius: 17px !important; border-width: 3px !important; }
+  .client-avatar-container img { width: 100% !important; height: 100% !important; }
+  .client-section-eyebrow, .client-actions-label { font-size: 9px !important; margin-bottom: 5px !important; letter-spacing: .12em !important; }
+  .client-info-meta h2 { font-size: 20px !important; line-height: 1.12 !important; margin: 0 0 9px !important;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .client-badges-row { gap: 6px !important; }
+  .client-status-badge, .client-portal-control { min-height: 28px !important; padding: 5px 8px !important;
+    border-radius: 8px !important; font-size: 9px !important; }
+  .client-status-badge { max-width: 100% !important; }
+  .client-actions-section { width: 100%; padding: 13px 0 0 !important; border-left: 0 !important;
+    border-top: 1px solid rgba(132,97,50,.14) !important; }
+  .client-actions-bar { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important; margin-top: 0 !important; }
+  .client-actions-bar button { display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 0 !important; min-height: 58px !important; gap: 5px !important; padding: 8px 4px !important;
+    border-radius: 11px !important; font-size: 0 !important; white-space: normal !important; }
+  .client-actions-bar button > span { display: none !important; }
+  .client-actions-bar button .v-icon { width: 18px !important; height: 18px !important; margin: 0 !important; }
+  .client-actions-bar button::after { content: attr(data-mob-label); font-size: 10px; font-weight: 650; line-height: 1.1;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .client-actions-bar .btn-primary::after { color: #fff; }
+
+  /* ---- Jornada: barra geral + etapas em grade legível ---- */
+  .client-journey-card { padding: 15px 14px !important; border-radius: 14px !important; }
+  .client-journey-head { margin-bottom: 10px !important; }
+  .client-journey-subtitle { font-size: 10.5px !important; max-width: 210px; }
+  .client-journey-count strong { font-size: 20px !important; }
+  .client-journey-meter { margin-bottom: 14px !important; }
+  .client-journey-steps { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important; }
+  .client-journey-step { flex-direction: row !important; align-items: center !important; justify-content: flex-start !important;
+    min-height: 34px; padding: 6px 8px; gap: 8px; border: 1px solid rgba(132,97,50,.12); border-radius: 9px;
+    background: rgba(255,255,255,.72); }
+  .client-journey-rail { display: none !important; }
+  .client-journey-dot { width: 18px !important; height: 18px !important; flex: 0 0 18px !important; }
+  .client-journey-label { max-width: none !important; margin: 0 !important; font-size: 10px !important; line-height: 1.15 !important;
+    text-align: left !important; }
+
+  /* ---- Tabs da ficha: grade, sem rolagem horizontal ---- */
+  .tabs-client-nav { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    overflow: visible !important; gap: 6px !important; margin: 8px 0 0 !important; padding: 7px 0 9px !important;
+    border-bottom: none !important; }
+  .tab-client-btn { display: flex !important; flex: initial !important; min-width: 0 !important; min-height: 44px !important;
+    justify-content: center !important; white-space: normal !important; border: 1px solid rgba(132,97,50,.17) !important;
+    border-radius: 10px !important; padding: 7px 6px !important; gap: 5px !important; font-size: 11px !important;
+    line-height: 1.1 !important; background: rgba(255,255,255,.72) !important; }
+  .tab-client-btn .v-icon { width: 14px !important; height: 14px !important; flex: 0 0 14px !important; }
+  .tab-client-btn.active { background: var(--crimson, #7A1E2B) !important; color: #fff !important;
+    border-color: var(--crimson, #7A1E2B) !important; box-shadow: 0 6px 13px rgba(122,30,43,.16); }
+  .tab-client-btn.active svg { stroke: #fff !important; }
+  .tab-client-btn.active::after { display: none !important; }
+
+  /* ---- Editor de roteiro: cabeçalho do dia compacto ---- */
+  #editRoteiroDiasList .dia-card { padding: 14px !important; }
+  #editRoteiroDiasList .dia-card > div:first-child { padding: 8px 10px !important; margin: -14px -14px 12px !important;
+    flex-wrap: nowrap !important; gap: 4px; position: relative; }
+  #editRoteiroDiasList .dia-card > div:first-child > div:first-child { flex-wrap: nowrap !important; min-width: 0; flex: 1; }
+  #editRoteiroDiasList .dia-card .dia-toggle-btn { width: 24px !important; height: 24px !important; margin-right: 6px !important; font-size: 11px !important; }
+  #editRoteiroDiasList .dia-card > div:first-child span { font-size: 13px !important; }
+  #editRoteiroDiasList .dia-card > div:first-child input[type="number"] { width: 34px !important; font-size: 13px !important; padding: 1px 2px !important; margin-right: 6px !important; }
+  #editRoteiroDiasList .dia-card > div:first-child input[type="date"] { width: 108px !important; font-size: 11.5px !important; padding: 1px 3px !important; }
+  #editRoteiroDiasList .dia-card > div:first-child > div:first-child > span:last-child { display: none !important; }
+  /* controles originais do dia ficam dentro do menu ⋮ */
+  .mob-daymenu-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1; }
+  .mob-daymenu { position: absolute; top: calc(100% + 4px); right: 8px; z-index: 500; background: #fff;
+    border: 1px solid var(--border, #E0D5BF); border-radius: 12px; box-shadow: 0 8px 24px rgba(40,25,10,0.18); padding: 10px; min-width: 190px; }
+  .mob-daymenu > div { display: flex !important; flex-direction: column; align-items: stretch !important; gap: 8px !important; }
+  .mob-daymenu label { justify-content: center; margin: 0 !important; color: var(--crimson, #7A1E2B) !important;
+    background: rgba(122,30,43,0.07) !important; border-color: rgba(122,30,43,0.25) !important; }
+  .mob-daymenu .btn-secondary { color: var(--ink, #3E3527) !important; border-color: var(--border, #ddd) !important;
+    background: #fff !important; padding: 8px 10px !important; font-size: 12.5px !important; }
+  .mob-daymenu > div > div { display: flex !important; gap: 8px !important; margin: 0 !important; }
+  .mob-daymenu > div > div .btn-secondary { flex: 1; }
+  .mob-daymenu .btn-secondary::after { font-size: 12px; }
+  .mob-daymenu > div > div .btn-secondary:nth-child(1)::after { content: " Subir dia"; }
+  .mob-daymenu > div > div .btn-secondary:nth-child(2)::after { content: " Descer dia"; }
+  .mob-daymenu > div > .btn-secondary:last-child { color: #A32D2D !important; border-color: #F0D4D4 !important; }
+  .mob-daymenu > div > .btn-secondary:last-child::after { content: " Excluir dia"; }
+
+  /* ---- Blocos (rb-card): linha de lista compacta ---- */
+  .rb-card-head { padding: 9px 10px !important; gap: 8px !important; }
+  .rb-card-head .rb-card-actions { display: none !important; }
+  .rb-card-chev { font-size: 0 !important; }
+  .rb-card-chev::after { content: '›'; font-size: 17px; color: #B4A88E; }
+
+  /* ---- Edição de bloco em tela cheia ---- */
+  /* backdrop-filter cria containing block e quebra position:fixed; desliga só com bloco aberto */
+  #roteirosContentInner:has(.rb-card.open), .dia-card:has(.rb-card.open),
+  .pane-content:has(.rb-card.open), .card:has(.rb-card.open) {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .rb-card.open .rb-card-body { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 3000; overflow-y: auto;
+    background: var(--paper, #FAF5EA); padding: 60px 14px calc(env(safe-area-inset-bottom, 0px) + 30px) !important; margin: 0 !important; }
+  .mob-blk-bar { display: none; }
+  .rb-card.open .rb-card-body .mob-blk-bar { display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 3010;
+    align-items: center; gap: 10px; background: #FFFDF8; border-bottom: 1px solid #E8DFCE; padding: 9px 12px; }
+  .mob-blk-bar .mob-blk-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--crimson, #7A1E2B);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mob-blk-bar .mob-blk-close, .mob-blk-bar .mob-blk-ok { border: none !important; cursor: pointer; border-radius: 50% !important;
+    width: 32px !important; height: 32px !important; min-width: 32px !important; max-width: 32px !important;
+    flex: 0 0 32px !important; padding: 0 !important; margin: 0 !important;
+    display: inline-flex !important; align-items: center; justify-content: center; font-size: 15px !important; }
+  .mob-blk-bar .mob-blk-close { background: #F3EADA; color: var(--crimson, #7A1E2B); }
+  .mob-blk-bar .mob-blk-ok { background: var(--crimson, #7A1E2B); color: #F6E9D8; }
+  .mob-blk-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .mob-blk-actions .rb-card-actions { display: flex !important; flex-direction: row !important;
+    justify-content: flex-start !important; align-items: center !important; gap: 6px; flex-wrap: wrap;
+    margin: 0 !important; width: 100% !important; }
+  .mob-blk-actions .btn-cad-rapido { font-size: 11px !important; padding: 6px 10px !important;
+    white-space: nowrap; width: auto !important; border-radius: 99px !important; }
+  .rb-card.open .rb-card-body > div[style*="border-left"] { border-left: none !important; padding-left: 0 !important; background: transparent !important; }
+  .rb-card.open .rb-card-body .btn-icon { display: none !important; }
+  .rb-card.open .rb-card-body > div[style*="border-left"] > div:first-child { justify-content: flex-end !important; }
+  .rb-card.open .rb-card-body > div[style*="border-left"] > div:first-child > strong { display: none !important; }
+
+  /* grids internos dos blocos empilham */
+  .rb-card-body div[style*="grid-template-columns:1fr 1fr 1fr 1fr"] { grid-template-columns: 1fr 1fr !important; }
+
+  /* ---- "+ Adicionar bloco" único + bottom sheet ---- */
+  .mob-addrow { display: none !important; }
+  .mob-addblock { display: flex !important; align-items: center; justify-content: center; gap: 6px; width: 100%;
+    margin-top: 14px; padding: 10px; font-size: 13px; color: var(--crimson, #7A1E2B); background: rgba(122,30,43,0.04);
+    border: 1px dashed rgba(122,30,43,0.35); border-radius: 12px; cursor: pointer; }
+  .mobx-sheet { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 4000; }
+  .mobx-sheet[hidden] { display: none; }
+  .mob-sheet-bg { position: absolute; inset: 0; background: rgba(30,15,8,0.45); }
+  .mob-sheet-panel { position: absolute; left: 0; right: 0; bottom: 0; background: #FFFDF8;
+    border-radius: 18px 18px 0 0; padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 18px); }
+  .mob-sheet-grip { width: 36px; height: 4px; border-radius: 99px; background: #D9CDB4; margin: 0 auto 12px; }
+  .mob-sheet-title { font-size: 13.5px; font-weight: 600; color: var(--ink, #3E3527); margin: 0 0 12px; }
+  .mob-sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mob-sheet-item { display: flex; align-items: center; gap: 10px; border: 1px solid #EAE1CF; border-radius: 12px;
+    padding: 10px 12px; background: #fff; cursor: pointer; font-size: 12.5px; color: var(--ink, #3E3527); text-align: left; }
+  .mob-sheet-item svg { width: 17px; height: 17px; flex: none; }
+  .mob-sheet-item.full { grid-column: 1 / 3; }
+
+  /* ---- Sheet de datalist (iOS nao mostra datalist nativo) ---- */
+  .mob-dl-filtro { width: 100%; margin: 0 0 10px; padding: 10px 12px !important; font-size: 14px !important;
+    border: 1px solid #E0D5BF !important; border-radius: 10px !important; background: #fff !important; }
+  .mob-dl-lista { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .mob-dl-item { text-align: left; background: #fff; border: 1px solid #EAE1CF; border-radius: 10px;
+    padding: 11px 12px; font-size: 13px; color: var(--ink, #3E3527); cursor: pointer; width: 100%; }
+  .mob-dl-item:active { background: #F9F2E4; }
+  .mob-dl-vazio { font-size: 12.5px; color: #8A7C63; text-align: center; padding: 14px 0; margin: 0; }
+  .mob-dl-usar { width: 100%; margin-top: 10px; padding: 11px; font-size: 13px; border-radius: 10px;
+    border: 1px dashed rgba(122,30,43,0.4); background: rgba(122,30,43,0.05); color: var(--crimson, #7A1E2B);
+    cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #mobSheetDatalist .mob-sheet-panel { max-height: 72vh; }
+
+  /* ---- Sheet de atracoes + dropdown legado nunca aparece no mobile ---- */
+  #dropdownAtracoesGlobal { display: none !important; }
+  .mob-atr-lista { max-height: 48vh; overflow-y: auto; border: 1px solid #EFE7D6; border-radius: 10px; background: #fff; }
+  .mob-atr-lista > div { max-height: none !important; }
+  .mob-atr-concluir { width: 100%; margin-top: 10px; padding: 11px; font-size: 13px; border-radius: 10px;
+    border: none; background: var(--crimson, #7A1E2B); color: #F6E9D8; cursor: pointer; }
+  #mobSheetAtracoes .mob-sheet-panel { max-height: 76vh; }
+
+  /* ---- Barra fixa de salvar do editor ---- */
+  #page-roteiros.rb-editing #roteirosContentInner,
+  #page-roteiros.rb-editing .card:has(#roteiroEditorAcoes),
+  #page-roteiros.rb-editing .pane-content {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  #page-roteiros.rb-editing #roteiroEditorAcoes { position: fixed; left: 0; right: 0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 58px); z-index: 900; margin: 0 !important;
+    background: #FFFDF8; border-top: 1px solid #E8DFCE; padding: 8px 10px !important;
+    display: flex !important; flex-wrap: nowrap !important; gap: 8px !important; }
+  #page-roteiros.rb-editing #roteiroEditorAcoes > div:first-child { display: none; }
+  #roteiroEditorBotoes { flex: 1; flex-wrap: nowrap !important; gap: 6px !important; }
+  #roteiroAutoSaveIndicator, #btnVerPerfilClienteRoteiro, #btnEnviarEmailRoteiro,
+  #btnGerarRoteiroIA, #roteiroCotacaoActions { display: none !important; }
+  #btnDesfazerEdicaoRoteiro { font-size: 0 !important; padding: 8px !important; flex: none; }
+  #btnDesfazerEdicaoRoteiro .v-icon { width: 16px !important; height: 16px !important; margin: 0 !important; }
+  #btnSalvarVisualizarRoteiro { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; flex: none; }
+  #btnSalvarEdicaoRoteiro { flex: 1; font-size: 13px !important; padding: 8px 10px !important; white-space: nowrap; }
+  #btnCancelarEdicaoRoteiro { font-size: 0 !important; padding: 8px !important; flex: none; width: 34px; }
+  /* Voltar para Clientes: ícone só no mobile (senão o texto estoura a barra e corta o Salvar) */
+  #btnVoltarClientesRoteiro { font-size: 0 !important; padding: 8px !important; flex: none; }
+  #btnVoltarClientesRoteiro .v-icon { width: 16px !important; height: 16px !important; margin: 0 !important; }
+  #btnCancelarEdicaoRoteiro::after { content: "\2715"; font-size: 14px; }
+  #btnSalvarVisualizarRoteiro { font-size: 11px !important; }
+  #page-roteiros.rb-editing .pane-content-inner { padding-bottom: 130px !important; }
+
+  /* ---- Toolbar do texto livre (Quill) compacta ---- */
+  .ql-toolbar { padding: 3px 4px !important; }
+  .ql-toolbar button { width: 26px !important; height: 26px !important; padding: 4px !important; }
+  .ql-toolbar button svg { width: 15px !important; height: 15px !important; }
+  .ql-toolbar .ql-picker { font-size: 12px !important; height: 26px !important; }
+  .ql-toolbar .ql-picker-label { padding: 2px 6px !important; }
+  .ql-toolbar .ql-formats { margin-right: 6px !important; }
+  .ql-container { font-size: 13px !important; }
+  .ql-editor { min-height: 130px; }
+
+  /* chips de atração: drag por toque */
+  .chip-atracao > span:first-child { padding: 4px 6px; margin: -4px 0 -4px -4px; touch-action: none; }
+  .mob-chip-dragging { opacity: 0.5; }
+  .mob-chip-over { outline: 2px dashed var(--crimson, #7A1E2B); outline-offset: 2px; }
+
+  /* controles ▲▼✕ dos elementos (fallback sem rb-card) mais discretos */
+  .dia-card .btn-icon { width: 26px; height: 26px; padding: 2px !important; border-radius: 6px; }
+
+  /* ---- Listas e cards genéricos: respiro menor, nada vazando ---- */
+  .pane-content, .pane-content-inner, .dia-card, .card { max-width: 100%; }
+  .card { overflow-x: hidden; }
+  #clientTabContent .btn-secondary, #clientTabContent .btn-primary { font-size: 12px !important; padding: 7px 11px !important; }
+  #roteirosPaneContent .btn-primary, #roteirosPaneContent .btn-secondary { font-size: 12px; }
+}
+
+/* Celulares compactos: privilegia leitura e áreas de toque em vez de 3 colunas estreitas. */
+@media (max-width: 350px) {
+  .client-actions-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .tabs-client-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .tab-client-btn[data-tab="vouchers"] {
+    grid-column: 1 / -1;
+  }
+}

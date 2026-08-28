@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heian Tour — Planejamento de Transportes (Green Car) Japão 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6b1d28;
+      --primary-dark: #4a121b;
+      --gold: #c5a059;
+      --bg: #fdfbf7;
+      --card-bg: #ffffff;
+      --text: #1a1a1a;
+      --text-muted: #444444;
+      --border: #dfd7cc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px 12px;
+      line-height: 1.4;
+    }
+
+    .container {
+      max-width: 940px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      padding: 20px 28px;
+      position: relative;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gold);
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: 0.95;
+      font-weight: 500;
+    }
+
+    .actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 12px 28px;
+      background: #fcf9f5;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .content {
+      padding: 18px 24px 24px;
+    }
+
+    .table-wrapper {
+      width: 100%;
+      margin-bottom: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      text-align: left;
+    }
+
+    /* LARGURAS DAS COLUNAS (TOTAL: 100%) */
+    col.c-data     { width: 10.5%; }
+    col.c-hora     { width: 6.5%; }
+    col.c-trecho   { width: 23.5%; }
+    col.c-tipo     { width: 14.5%; }
+    col.c-reserva  { width: 9.0%; }
+    col.c-val-1    { width: 8.5%; }
+    col.c-val-2    { width: 8.5%; }
+    col.c-taxa     { width: 9.5%; }
+    col.c-total    { width: 9.5%; }
+
+    th {
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 9px 5px;
+      font-weight: 600;
+      font-size: 10.5px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      text-align: center;
+      word-wrap: break-word;
+    }
+
+    th.th-left { text-align: left; padding-left: 8px; }
+    th.th-right { text-align: right; padding-right: 8px; }
+
+    td {
+      padding: 7px 5px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-size: 11px;
+      word-wrap: break-word;
+    }
+
+    tr:nth-child(even) {
+      background-color: #faf7f2;
+    }
+
+    .td-date {
+      font-weight: 600;
+      color: var(--primary);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .td-hora {
+      text-align: center;
+      white-space: nowrap;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .td-trecho {
+      font-weight: 600;
+      padding-left: 8px;
+    }
+
+    .td-tipo {
+      font-size: 10.5px;
+    }
+
+    .badge-sim {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #e6f4ea;
+      color: #137333;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 9.5px;
+    }
+
+    .badge-nao {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #f1f3f4;
+      color: #5f6368;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 9.5px;
+    }
+
+    .badge-green {
+      display: inline-block;
+      padding: 2px 5px;
+      background: #e6f4ea;
+      color: #0d652d;
+      border: 1px solid #b7e1cd;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 9.5px;
+    }
+
+    .center { text-align: center; }
+
+    .val {
+      text-align: right;
+      padding-right: 8px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .val strong {
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, #faf6f0, #f4ece1);
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--primary);
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card h3 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .summary-item .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+
+    .summary-item .value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    .notes-box {
+      background: #faf8f5;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+    }
+
+    .notes-box h4 {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .notes-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .notes-list li {
+      font-size: 10.2px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 5px;
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .notes-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .notes-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ─── REGRAS DE IMPRESSÃO (A4 COM FONTE AMPLIADA E NÍTIDA) ─── */
+    @page {
+      size: A4 portrait;
+      margin: 5mm 5mm 5mm 5mm;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #fff;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .container {
+        box-shadow: none;
+        border: none;
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 0;
+      }
+      .actions-bar {
+        display: none !important;
+      }
+      .header {
+        padding: 10px 14px;
+      }
+      .header h1 {
+        font-size: 16px;
+      }
+      .header p {
+        font-size: 10px;
+      }
+      .content {
+        padding: 8px 4px;
+      }
+      .table-wrapper {
+        margin-bottom: 8px;
+      }
+      table {
+        font-size: 9.5px;
+      }
+      th {
+        padding: 5px 2px;
+        font-size: 8.8px;
+        background-color: #6b1d28 !important;
+        color: #fff !important;
+      }
+      td {
+        padding: 4px 2px;
+        font-size: 9px;
+      }
+      .td-tipo {
+        font-size: 8.8px;
+      }
+      .badge-sim, .badge-nao, .badge-green {
+        font-size: 8.2px;
+        padding: 1px 3px;
+      }
+      .summary-card {
+        padding: 8px 12px;
+        margin-bottom: 6px;
+      }
+      .summary-card h3 {
+        font-size: 11px;
+        margin-bottom: 3px;
+      }
+      .summary-item .label {
+        font-size: 9px;
+      }
+      .summary-item .value {
+        font-size: 13.5px;
+      }
+      .notes-box {
+        padding: 7px 10px;
+      }
+      .notes-box h4 {
+        font-size: 9.5px;
+        margin-bottom: 3px;
+      }
+      .notes-list li {
+        font-size: 8.6px;
+        line-height: 1.35;
+        margin-bottom: 3px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>Heian Tour — Planejamento de Transportes (Green Car)</h1>
+      <p>Viagem Japão 2026 · Casal Lisa e Artur (2 Passageiros Adultos · Primeira Classe Green Car)</p>
+    </div>
+
+    <div class="actions-bar">
+      <button class="btn btn-secondary" onclick="copiarTabela()">📋 Copiar Tabela</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Salvar em PDF (1 Folha)</button>
+    </div>
+
+    <div class="content">
+      <div class="table-wrapper" id="tabelaTransportes">
+        <table>
+          <colgroup>
+            <col class="c-data">
+            <col class="c-hora">
+            <col class="c-trecho">
+            <col class="c-tipo">
+            <col class="c-reserva">
+            <col class="c-val-1">
+            <col class="c-val-2">
+            <col class="c-taxa">
+            <col class="c-total">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Horário</th>
+              <th class="th-left">Trecho</th>
+              <th class="th-left">Tipo / Classe</th>
+              <th>Reserva?</th>
+              <th class="th-right">1 Pax</th>
+              <th class="th-right">2 Pax</th>
+              <th class="th-right">Taxa Heian</th>
+              <th class="th-right">Total Final</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-date">10/09/2026</td>
+              <td class="td-hora">07:30</td>
+              <td class="td-trecho">Tokyo (Asakusa) ➔ Nikko</td>
+              <td class="td-tipo">Tobu Revaty <span class="badge-sim">Reservado</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 1.920</td>
+              <td class="val">¥ 3.840</td>
+              <td class="val">¥ 3.000</td>
+              <td class="val"><strong>¥ 6.840</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">10/09/2026</td>
+              <td class="td-hora">18:00</td>
+              <td class="td-trecho">Nikko ➔ Tokyo (Asakusa)</td>
+              <td class="td-tipo">Tobu Revaty <span class="badge-sim">Reservado</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 1.920</td>
+              <td class="val">¥ 3.840</td>
+              <td class="val">¥ 3.000</td>
+              <td class="val"><strong>¥ 6.840</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">14/09/2026</td>
+              <td class="td-hora">10:00</td>
+              <td class="td-trecho">Tokyo ➔ Mishima</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 6.470</td>
+              <td class="val">¥ 12.940</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 18.940</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">14/09/2026</td>
+              <td class="td-hora">~11:00</td>
+              <td class="td-trecho">Mishima ➔ Fuji Speedway Hotel</td>
+              <td class="td-tipo">Shuttle / Táxi Local</td>
+              <td class="center"><span class="badge-nao">Não (Local)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">16/09/2026</td>
+              <td class="td-hora">10:00</td>
+              <td class="td-trecho">Mishima ➔ Kyoto</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 14.570</td>
+              <td class="val">¥ 29.140</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 35.140</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">21/09/2026</td>
+              <td class="td-hora">10:00</td>
+              <td class="td-trecho">Kyoto ➔ Osaka</td>
+              <td class="td-tipo">Trem JR Rapid</td>
+              <td class="center"><span class="badge-nao">Não (IC)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">06:20</td>
+              <td class="td-trecho">Shin-Osaka ➔ Okayama</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 8.730</td>
+              <td class="val">¥ 17.460</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 23.460</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">07:20</td>
+              <td class="td-trecho">Okayama ➔ Porto de Uno</td>
+              <td class="td-tipo">Trem JR Uno</td>
+              <td class="center"><span class="badge-nao">Não (IC)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">08:22</td>
+              <td class="td-trecho">Porto de Uno ➔ Naoshima</td>
+              <td class="td-tipo">Balsa Shikoku Kisen</td>
+              <td class="center"><span class="badge-nao">Não (IC)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">17:35</td>
+              <td class="td-trecho">Naoshima ➔ Porto de Uno</td>
+              <td class="td-tipo">Balsa Shikoku Kisen</td>
+              <td class="center"><span class="badge-nao">Não (IC)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">18:15</td>
+              <td class="td-trecho">Porto de Uno ➔ Okayama</td>
+              <td class="td-tipo">Trem JR Uno</td>
+              <td class="center"><span class="badge-nao">Não (IC)</span></td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+              <td class="val">—</td>
+            </tr>
+            <tr>
+              <td class="td-date">23/09/2026</td>
+              <td class="td-hora">19:15</td>
+              <td class="td-trecho">Okayama ➔ Shin-Osaka</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 8.730</td>
+              <td class="val">¥ 17.460</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 23.460</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">24/09/2026</td>
+              <td class="td-hora">07:30</td>
+              <td class="td-trecho">Shin-Osaka ➔ Hiroshima</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 18.260</td>
+              <td class="val">¥ 36.520</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 42.520</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">24/09/2026</td>
+              <td class="td-hora">18:00</td>
+              <td class="td-trecho">Hiroshima ➔ Shin-Osaka</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 14.610</td>
+              <td class="val">¥ 29.220</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 35.220</strong></td>
+            </tr>
+            <tr>
+              <td class="td-date">25/09/2026</td>
+              <td class="td-hora">10:00</td>
+              <td class="td-trecho">Shin-Osaka ➔ Tokyo</td>
+              <td class="td-tipo">Shinkansen <span class="badge-green">Green Car</span></td>
+              <td class="center"><span class="badge-sim">Sim</span></td>
+              <td class="val">¥ 19.590</td>
+              <td class="val">¥ 39.180</td>
+              <td class="val">¥ 6.000</td>
+              <td class="val"><strong>¥ 45.180</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="summary-card">
+        <h3>Resumo de Faturamento — Green Car (2 Passageiros)</h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="label">Passagens Green Car (9 Trechos)</span>
+            <span class="value">¥ 189.600</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Taxa Heian Tour (Assessoria)</span>
+            <span class="value">¥ 48.000</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Total dos Transportes</span>
+            <span class="value" style="color: var(--primary);">¥ 237.600 JPY</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes-box">
+        <h4>Informações e Diretrizes Operacionais:</h4>
+        <ul class="notes-list">
+          <li><strong>Variação de Tarifas Oficiais:</strong> Os valores dos bilhetes de trem são referenciais oficiais da malha ferroviária japonesa e podem sofrer pequenas variações (para mais ou para menos) no ato da emissão, em função da sazonalidade tarifária da JR (baixa/alta temporada) e da data exata de abertura das reservas.</li>
+          <li><strong>Trens para Nikko (Tobu Revaty):</strong> O valor contratado acima refere-se à taxa expressa com reserva de assento antecipada (<em>Limited Express Seat</em>). A tarifa básica de transporte (~¥ 1.400 por pessoa) é paga diretamente no dia do embarque encostando o Cartão IC nas catracas ou via passe turístico.</li>
+          <li><strong>Rotas Locais (Não Reserváveis / IC):</strong> Os trechos marcados como <em>Não (IC)</em> são deslocamentos regionais e balsas que não exigem reserva de assento prévia. Eles são pagos de forma fluida diretamente no Japão no momento do embarque, utilizando o saldo do Cartão IC (Suica/Pasmo/ICOCA) ou em dinheiro na catraca/píer.</li>
+          <li><strong>Primeira Classe (Green Car):</strong> Todos os trajetos em trem-bala (Shinkansen) serão emitidos em classe Green Car (poltronas mais amplas e ambiente reservado VIP). O expresso de Nikko opera em classe reservada única de alto conforto.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function copiarTabela() {
+      const tabela = document.getElementById('tabelaTransportes');
+      const range = document.createRange();
+      range.selectNode(tabela);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      try {
+        document.execCommand('copy');
+        alert('Tabela copiada com sucesso! Você pode colar no WhatsApp, e-mail ou Word.');
+      } catch (err) {
+        alert('Selecione a tabela e use Ctrl+C para copiar.');
+      }
+      window.getSelection().removeAllRanges();
+    }
+  </script>
+</body>
+</html>

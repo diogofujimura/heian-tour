@@ -1,4 +1,121 @@
 
+window.calcularRotaAutomaticaDia = function(dia) {
+  if (!dia) return '';
+  const chainCidades = [];
+  (dia.elementos || []).forEach(el => {
+    if (el.tipo === 'transporte') {
+      if (el.cidadeOrigem) chainCidades.push(String(el.cidadeOrigem).trim());
+      if (el.cidadeDestino) chainCidades.push(String(el.cidadeDestino).trim());
+    } else if (el.tipo === 'sequencia' && el.cidade) {
+      chainCidades.push(String(el.cidade).trim());
+    }
+  });
+  const limpa = [];
+  chainCidades.forEach(c => {
+    if (c && (!limpa.length || limpa[limpa.length - 1].toLowerCase() !== c.toLowerCase())) {
+      limpa.push(c);
+    }
+  });
+  return limpa.join(' \u2192 ');
+};
+
+window.obterPrecoTransporte = function(el) {
+  if (!el) return 0;
+  
+  const tipo = String(el.tipoTransporte || '').trim().toLowerCase();
+  const linha = String(el.linha || '').trim().toLowerCase();
+  const ctg = String(el.categoria || '').trim().toLowerCase();
+
+  // Táxi, Aplicativo GO, Carro, Van ou Transporte a Pé / Variável nunca devem herdar preço de trem ou estimativas genéricas
+  if (tipo.includes('taxi') || tipo.includes('táxi') || tipo.includes('carro') || tipo.includes('app go') || 
+      linha.includes('app go') || linha.includes('táxi') || linha.includes('taxi') || 
+      ctg.includes('variável') || ctg.includes('variavel') || ctg.includes('por conta')) {
+    return 0;
+  }
+
+  // Se o elemento tiver valor explícito próprio
+  if (el.preco_jpy != null && Number(el.preco_jpy) > 0) return Number(el.preco_jpy);
+  if (el.valorAdulto != null && Number(el.valorAdulto) > 0) return Number(el.valorAdulto);
+  if (el.valor != null && Number(el.valor) > 0) return Number(el.valor);
+  
+  if (typeof state !== 'undefined' && state && state.transportesDB && Array.isArray(state.transportesDB)) {
+    // 1. Busca estrita por ID (se houver trechoId e o tipo coincidir)
+    if (el.trechoId && el.trechoId !== 'custom') {
+      const matchId = state.transportesDB.find(t => String(t.id) === String(el.trechoId));
+      if (matchId) {
+        const mTipo = String(matchId.tipo || '').toLowerCase();
+        const mLinha = String(matchId.linha || '').toLowerCase();
+        // Se o tipo mudou no card (ex: era trem e virou táxi), ignora o ID antigo
+        if (!tipo || mTipo.includes(tipo) || tipo.includes(mTipo) || (!linha || mLinha.includes(linha) || linha.includes(mLinha))) {
+          return Number(matchId.preco_jpy) || 0;
+        }
+      }
+    }
+    
+    const orig = String(el.cidadeOrigem || '').trim().toLowerCase();
+    const dest = String(el.cidadeDestino || '').trim().toLowerCase();
+
+    // 2. Busca estrita: precisa bater Trecho E (Tipo E/OU Linha com exatidão)
+    const match = state.transportesDB.find(t => {
+      const tTrecho = String(t.trecho || '').toLowerCase();
+      const tTipo = String(t.tipo || '').toLowerCase();
+      const tLinha = String(t.linha || '').toLowerCase();
+      const bateTrecho = (orig && dest && tTrecho.includes(orig) && tTrecho.includes(dest));
+      if (!bateTrecho) return false;
+
+      // Precisa bater o tipo de transporte (ex: Trem só bate com Trem, Shinkansen com Shinkansen)
+      const bateTipo = tipo && tTipo && (tTipo.includes(tipo) || tipo.includes(tTipo));
+      const bateLinha = linha && tLinha && (tLinha.includes(linha) || linha.includes(tLinha));
+      
+      return (bateTipo && (!linha || bateLinha)) || (bateLinha);
+    });
+
+    if (match && match.preco_jpy) return Number(match.preco_jpy);
+  }
+  return 0;
+};
+
+window.obterPrecoExperiencia = function(el) {
+  if (!el) return 0;
+  if (el.preco_jpy != null && Number(el.preco_jpy) > 0) return Number(el.preco_jpy);
+  if (el.valorAdulto != null && Number(el.valorAdulto) > 0) return Number(el.valorAdulto);
+  if (el.valor != null && Number(el.valor) > 0) return Number(el.valor);
+
+  if (typeof state !== 'undefined' && state && state.experienciasDB && Array.isArray(state.experienciasDB)) {
+    if (el.experienciaId && el.experienciaId !== 'custom') {
+      const matchId = state.experienciasDB.find(e => String(e.id) === String(el.experienciaId));
+      if (matchId) return Number(matchId.preco_jpy) || 0;
+    }
+    const nome = (el.nomeExp || el.nome || '').trim().toLowerCase();
+    if (nome && nome.length > 3) {
+      const match = state.experienciasDB.find(e => {
+        const en = (e.nome || '').toLowerCase().trim();
+        return en === nome || (en.length > 4 && (en.includes(nome) || nome.includes(en)));
+      });
+      if (match && match.preco_jpy) return Number(match.preco_jpy);
+    }
+  }
+  return 0;
+};
+
+window.obterPrecoAtracao = function(atrNome) {
+  if (!atrNome) return '';
+  const atr = window.buscarAtracaoNoMapa ? window.buscarAtracaoNoMapa(atrNome) : null;
+  if (!atr) return '';
+  const p = atr['Preço (Ingresso)'] || atr['Preço'] || atr['preco'] || '';
+  if (!p || p === '—' || p.toLowerCase().includes('gratuito') || p.toLowerCase().includes('grátis') || p === '0' || p === '¥0') {
+    return '';
+  }
+  const limpo = String(p).trim();
+  if (/^\d+$/.test(limpo)) {
+    return `~¥${Number(limpo).toLocaleString('pt-BR')}`;
+  }
+  if (!limpo.startsWith('~') && !limpo.startsWith('¥') && !limpo.toLowerCase().includes('yen')) {
+    return `~${limpo}`;
+  }
+  return limpo;
+};
+
 window.formatPeriodo = function(d1, d2) {
     if (!d1 && !d2) return '';
     const f1 = d1 ? d1.split('-').reverse().slice(0, 2).join('/') : '';
@@ -174,6 +291,8 @@ window.autoSaveRoteiro = function() {
         body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm })
       });
       if (res.status === 409) {
+        let _err = null; try { _err = await res.json(); } catch (e) {}
+        if (_err && _err.error === 'reducao') { if (indicator) { indicator.textContent = '⚠ Alteração retida (segurança)'; indicator.style.opacity = '1'; } return; }
         if (indicator) { indicator.textContent = 'Conflito de edição!'; indicator.style.opacity = '1'; }
         if (!window.__conflitoRoteiroAvisado) {
           window.__conflitoRoteiroAvisado = true;
@@ -187,7 +306,7 @@ window.autoSaveRoteiro = function() {
           if (j && j.id) roteiroEmEdicao.id = j.id;
           if (j && j.atualizadoEm) roteiroEmEdicao.atualizadoEm = j.atualizadoEm;
         } catch (e) { /* resposta sem json não impede o fluxo */ }
-        dbRotas[nameToSave] = roteiroEmEdicao;
+        dbRotas[nameToSave] = JSON.parse(JSON.stringify(roteiroEmEdicao));
         window._lastSavedRoteiroSig = window.roteiroSignature();
         if (indicator) { 
            indicator.textContent = 'Salvo automaticamente'; 
@@ -259,14 +378,13 @@ async function carregarBases() {
     preencherSelectRoteiros();
     criarDatalistCidades();
     
-    if (window.location.hash.replace('#', '') === 'roteiros') {
-      const lastRoteiro = localStorage.getItem('heian_last_roteiro');
-      if (lastRoteiro && dbRotas && dbRotas[lastRoteiro]) {
-        const select = document.getElementById('selectRoteiroBase');
-        if (select) {
-          select.value = lastRoteiro;
-          select.dispatchEvent(new Event('change'));
-        }
+    const isRoteiroPage = (window.location.hash.replace('#', '') === 'roteiros' || localStorage.getItem('heian_last_page') === 'roteiros');
+    const lastRoteiroNome = localStorage.getItem('heian_last_roteiro_nome') || localStorage.getItem('heian_last_roteiro');
+
+    if (isRoteiroPage && lastRoteiroNome && dbRotas && dbRotas[lastRoteiroNome]) {
+      if (typeof navToPage === 'function') navToPage('roteiros');
+      if (typeof window.editarRoteiroCard === 'function') {
+        window.editarRoteiroCard(lastRoteiroNome);
       }
     }
   } catch (err) {
@@ -352,7 +470,7 @@ function criarPopover() {
     <div class="popover-desc" id="popDesc">Descrição detalhada...</div>
     <div class="popover-preco" id="popPreco">
       <span>Preço:</span>
-      <strong class="preco-brt">Grátis</strong>
+      <strong class="preco-brt">Gratuito</strong>
     </div>
     <div class="popover-funcionamento" id="popFuncionamento" style="display:none; margin-top:8px; font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(107,31,42,0.06); border:1px solid rgba(107,31,42,0.12); color:var(--crimson);">
       <span style="font-weight:700;">⚠️ Funcionamento:</span>
@@ -436,12 +554,40 @@ window.atualizarDatalists = function(idx, eIdx) {
     Object.values(window.blocosRoteiro).forEach(bc => Object.keys(bc).forEach(nome => blocosDisponiveis.add(nome)));
   }
   Array.from(blocosDisponiveis).sort().forEach(nome => dlRotas.appendChild(new Option(nome)));
-  const atracoes = new Set();
+  // Agrupar atrações por bairro
+  const atracoesPorBairro = {};
   dbAtracoes.forEach(a => {
+    if (!a) return;
     if (cidade && a['Cidade'] && a['Cidade'].toLowerCase() !== cidade.toLowerCase()) return;
-    if (a['Nome da Atração']) atracoes.add(a['Nome da Atração']);
+    if (!a['Nome da Atração']) return;
+    
+    const bairro = a['Bairro'] || 'Outros / Sem Bairro';
+    if (!atracoesPorBairro[bairro]) atracoesPorBairro[bairro] = [];
+    
+    if (!atracoesPorBairro[bairro].some(x => x['Nome da Atração'] === a['Nome da Atração'])) {
+      atracoesPorBairro[bairro].push(a);
+    }
   });
-  Array.from(atracoes).sort().forEach(a => dlAtr.appendChild(new Option(a)));
+
+  // Ordenar bairros
+  const bairrosOrdenados = Object.keys(atracoesPorBairro).sort((x, y) => {
+    if (x === 'Outros / Sem Bairro') return 1;
+    if (y === 'Outros / Sem Bairro') return -1;
+    return x.localeCompare(y);
+  });
+
+  // Preencher datalist formatado e agrupado
+  bairrosOrdenados.forEach(bairro => {
+    const itens = atracoesPorBairro[bairro].sort((x, y) => x['Nome da Atração'].localeCompare(y['Nome da Atração']));
+    itens.forEach(item => {
+      const nome = item['Nome da Atração'];
+      const isBairroLabel = (item['Bairro'] && item['Bairro'].toLowerCase() === nome.toLowerCase()) || nome.toLowerCase().includes('bairro');
+      
+      const label = isBairroLabel ? '(Bairro)' : '(Atração)';
+      const textoFormatado = `📍 ${bairro} | ${nome} ${label}`;
+      dlAtr.appendChild(new Option(textoFormatado, textoFormatado));
+    });
+  });
 };;
 
 window.selecionarBlocoRoteiro = function(idx, eIdx, nomeRota) {
@@ -563,7 +709,7 @@ function renderizarRoteiro(roteiroNome) {
               <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
           </div>`;
       } else if (el.tipo === 'experiencia') {
         const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; Viajantes: ${pText}` : `Viajantes: ${pText}`) : '';
@@ -574,11 +720,12 @@ function renderizarRoteiro(roteiroNome) {
               <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
             </div>
             <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
-            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
+            <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
           </div>`;
       } else if (el.tipo === 'sequencia') {
-        const tituloRota = el.nomeDaRota || 'Sequência';
-        const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
+        const semNomeRota = !el.nomeDaRota;
+        const tituloRota = el.nomeDaRota || (el.cidade ? 'Passeio em ' + el.cidade : 'Passeio do dia');
+        const cidadeText = (el.cidade && !semNomeRota) ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
         let atracoesHTML = `<div class="dia-atracoes">${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}</div>`;
         return `
           <div style="margin-bottom:12px; position:relative">
@@ -691,6 +838,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         if (el.compradoHeian !== false && el.tipoTransporte) {
           const v = window.currentEditingVouchers ? window.currentEditingVouchers.find(x => {
             if (!x.atracaoNome) return false;
+            if (el.refId) return x.atracaoNome === 'ref:' + el.refId;
             const target = x.atracaoNome.toLowerCase();
             return target === `transporte:${el.tipoTransporte.toLowerCase()}` || target.includes(el.tipoTransporte.toLowerCase());
           }) : null;
@@ -701,7 +849,8 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
           } else {
             const suggestionsName = `Bilhete - ${el.tipoTransporte}`;
             const suggestionsDate = el.data || dataDoDiaStr || '';
-            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'transporte:${el.tipoTransporte.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
+            const _vkeyT = el.refId ? ('ref:' + el.refId) : ('transporte:' + el.tipoTransporte);
+            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', '${String(_vkeyT).replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
             voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Falta o bilhete! Clique para upload rápido."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-alert-triangle"></use></svg> Sem Ingresso</span>`;
           }
         } else if (el.compradoHeian !== false) {
@@ -736,6 +885,7 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
         if (el.compradoHeian !== false && el.nomeExp) {
           const v = window.currentEditingVouchers ? window.currentEditingVouchers.find(x => {
             if (!x.atracaoNome) return false;
+            if (el.refId) return x.atracaoNome === 'ref:' + el.refId;
             const target = x.atracaoNome.toLowerCase();
             return target === `experiencia:${el.nomeExp.toLowerCase()}` || target.includes(el.nomeExp.toLowerCase()) || target === `atracao:${el.nomeExp.toLowerCase()}`;
           }) : null;
@@ -746,7 +896,8 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
           } else {
             const suggestionsName = `Ingresso - ${el.nomeExp}`;
             const suggestionsDate = el.dataDoTour || el.data || dataDoDiaStr || '';
-            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', 'experiencia:${el.nomeExp.replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
+            const _vkeyE = el.refId ? ('ref:' + el.refId) : ('experiencia:' + el.nomeExp);
+            const actionClick = `window.uploadRapidoVoucherAdmin('${clienteId}', '${String(_vkeyE).replace(/'/g, "\\'")}', '${suggestionsName.replace(/'/g, "\\'")}', '${suggestionsDate}')`;
             voucherBadge = `<span onclick="event.stopPropagation(); ${actionClick}" style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="Falta o ingresso! Clique para upload rápido."><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-alert-triangle"></use></svg> Sem Ingresso</span>`;
           }
         } else if (el.compradoHeian !== false) {
@@ -774,8 +925,9 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
             ${instrucaoAdicional}
           </div>`;
       } else if (el.tipo === 'sequencia') {
-        const tituloRota = el.nomeDaRota || 'Sequência';
-        const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
+        const semNomeRota = !el.nomeDaRota;
+        const tituloRota = el.nomeDaRota || (el.cidade ? 'Passeio em ' + el.cidade : 'Passeio do dia');
+        const cidadeText = (el.cidade && !semNomeRota) ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
         let atracoesHTML = `<div class="dia-atracoes">${el.atracoesDoDia.map(atr => criarChipAtracaoHTML(atr)).join('')}</div>`;
         return `
           <div style="margin-bottom:12px; position:relative">
@@ -818,16 +970,90 @@ window.renderizarRoteiroNoElemento = function(roteiroNome, timeline) {
 function criarChipAtracaoHTML(nomeAtracao) {
   const match = window.buscarAtracaoNoMapa(nomeAtracao);
   const isMissing = !match ? 'missing' : '';
-  // Guarda o nome real no data-id para recuperar depois
-  return `<div class="chip-atracao ${isMissing}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}">${nomeAtracao}</div>`;
+  
+  let extraClass = '';
+  let isBairro = false;
+  if (match) {
+    const bairro = match['Bairro'] || '';
+    isBairro = (bairro && bairro.toLowerCase() === nomeAtracao.toLowerCase()) || nomeAtracao.toLowerCase().includes('bairro');
+  } else {
+    isBairro = nomeAtracao.toLowerCase().includes('bairro');
+  }
+  
+  let prefixo = '';
+  if (isBairro) {
+    extraClass += ' bairro';
+    prefixo = '• ';
+  } else {
+    extraClass += ' sub-atracao';
+    prefixo = '› ';
+  }
+  
+  return `<div class="chip-atracao ${isMissing}${extraClass}" data-id="${nomeAtracao.replace(/"/g, '&quot;')}" onclick="if(window.abrirModalEdicaoAtracao) window.abrirModalEdicaoAtracao('${nomeAtracao.replace(/'/g, "\\\\'")}')" style="cursor:pointer;">${prefixo}${nomeAtracao}</div>`;
 }
 
 function showPopover(e) {
-  const chip = e.target;
+  const chip = e.currentTarget || e.target;
   const nome = chip.getAttribute('data-id');
   const atracao = window.buscarAtracaoNoMapa(nome);
   
-  const popover = document.getElementById('atracaoPopover');
+  let popover = document.getElementById('atracaoPopover');
+  if (!popover) {
+    popover = document.createElement('div');
+    popover.className = 'atracao-popover';
+    popover.id = 'atracaoPopover';
+    popover.innerHTML = `
+      <div class="popover-foto-container" style="position:relative; width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px;">
+        <img id="popFoto" class="popover-foto" src="" alt="Atração" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div class="popover-bairro" id="popBairro" style="font-size: 10px; text-transform: uppercase; color: var(--gold-dk); letter-spacing: 0.05em; margin-bottom: 4px;">Bairro</div>
+      <div class="popover-titulo" id="popTitulo" style="font-family: var(--ff-display); font-size: 19px; color: var(--crimson); margin-bottom: 8px; font-weight: 500;">Nome da Atração</div>
+      <div class="popover-desc" id="popDesc" style="font-size: 12px; color: var(--ink-mid); line-height: 1.5; margin-bottom: 12px;">Descrição resumida...</div>
+      <div class="popover-preco" id="popPreco" style="font-size: 13px; font-weight: 500; color: var(--ink); border-top: 1px solid rgba(196, 163, 90, 0.12); padding-top: 10px; display: flex; justify-content: space-between;">
+        <span>Preço:</span>
+        <strong>Gratuito</strong>
+      </div>
+      <div class="popover-funcionamento" id="popFuncionamento" style="display:none; margin-top:8px; font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(107,31,42,0.06); border:1px solid rgba(107,31,42,0.12); color:var(--crimson);">
+        <span id="popFuncionamentoTexto"></span>
+      </div>
+      <a id="popMapsAdminBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; padding:7px 12px; background:#2563eb; color:white; border-radius:8px; font-weight:600; font-size:11.5px; text-decoration:none; box-sizing:border-box;">
+        <span>📍 Abrir no Google Maps ↗</span>
+      </a>
+      <button id="popEditarBtn" type="button" style="margin-top:8px; width:100%; padding:7px 12px; border:1px solid var(--crimson); background:var(--crimson); color:#fff; border-radius:8px; font-size:11.5px; font-weight:500; cursor:pointer;">Editar atração</button>
+    `;
+    document.body.appendChild(popover);
+    var _pe = document.getElementById('popEditarBtn');
+    if (_pe) _pe.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var n = popover.dataset.atr;
+      if (window.__closeChipPopover) window.__closeChipPopover();
+      if (window.abrirModalEdicaoAtracao) window.abrirModalEdicaoAtracao(n);
+    });
+  }
+  // Garante o botão Editar e Maps mesmo quando o popover foi criado por criarPopover()
+  if (popover && !document.getElementById('popMapsAdminBtn')) {
+    var _pmB = document.createElement('a');
+    _pmB.id = 'popMapsAdminBtn';
+    _pmB.target = '_blank';
+    _pmB.rel = 'noopener noreferrer';
+    _pmB.setAttribute('style', 'display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; padding:7px 12px; background:#2563eb; color:white; border-radius:8px; font-weight:600; font-size:11.5px; text-decoration:none; box-sizing:border-box;');
+    _pmB.innerHTML = '<span>📍 Abrir no Google Maps ↗</span>';
+    popover.appendChild(_pmB);
+  }
+  if (popover && !document.getElementById('popEditarBtn')) {
+    var _peB = document.createElement('button');
+    _peB.id = 'popEditarBtn';
+    _peB.type = 'button';
+    _peB.textContent = 'Editar atração';
+    _peB.setAttribute('style', 'margin-top:8px; width:100%; padding:7px 12px; border:1px solid var(--crimson); background:var(--crimson); color:#fff; border-radius:8px; font-size:11.5px; font-weight:500; cursor:pointer;');
+    _peB.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var n = popover.dataset.atr;
+      if (window.__closeChipPopover) window.__closeChipPopover();
+      if (window.abrirModalEdicaoAtracao) window.abrirModalEdicaoAtracao(n);
+    });
+    popover.appendChild(_peB);
+  }
   const fotoEl = document.getElementById('popFoto');
   
   if (fotoEl) {
@@ -882,11 +1108,21 @@ function showPopover(e) {
     } else if (popFunc) {
       popFunc.style.display = 'none';
     }
+
+    const mapsAdminBtn = document.getElementById('popMapsAdminBtn');
+    if (mapsAdminBtn) {
+      const mUrl = atracao['Link do Google Maps'] || atracao['Google Maps'] || atracao.linkMaps || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((atracao['Nome da Atração'] || nome) + ' ' + (atracao['Bairro'] || '') + ' ' + (atracao['Cidade'] || 'Tokyo') + ' Japan')}`;
+      mapsAdminBtn.href = mUrl;
+    }
   } else {
     // Fallback para atrações que estão na rota mas não têm cadastro detalhado
     document.getElementById('popBairro').textContent = 'Ponto de Interesse';
     document.getElementById('popTitulo').textContent = nome;
     document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
+    const mapsAdminBtn = document.getElementById('popMapsAdminBtn');
+    if (mapsAdminBtn) {
+      mapsAdminBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nome + ' Japan')}`;
+    }
     document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-lt)">Sem dados</strong>`;
     if (popFunc) popFunc.style.display = 'none';
   }
@@ -906,13 +1142,29 @@ function showPopover(e) {
 
   popover.style.top = topPos + 'px';
   popover.style.left = leftPos + 'px';
+  popover.dataset.atr = nome;
+  popover.style.pointerEvents = 'none';
   popover.classList.add('visible');
 }
 
 function hidePopover() {
   const popover = document.getElementById('atracaoPopover');
-  popover.classList.remove('visible');
+  if (popover) popover.classList.remove('visible');
 }
+
+window.__openChipPopover = function(chip){
+  if (!chip) return;
+  showPopover({ currentTarget: chip });
+  var _p = document.getElementById('atracaoPopover');
+  if (_p) { _p.style.pointerEvents = 'auto'; }  // card clicável (hover mantém none)
+};
+window.__closeChipPopover = function(){ hidePopover(); };
+document.addEventListener('click', function(e){
+  var pop = document.getElementById('atracaoPopover');
+  if (!pop || !pop.classList.contains('visible')) return;
+  if (e.target.closest && (e.target.closest('.atracao-popover') || e.target.closest('.chip-seq'))) return;
+  hidePopover();
+});
 
 // ── MODO EDIÇÃO DE ROTEIRO ──────────────────────────────────────────────────
 let roteiroEmEdicao = { cliente: {nome:'', adultos:2, criancas:0, dataOrcamento:''}, dias: [] };
@@ -1017,7 +1269,7 @@ window.novoRoteiro = function() {
           nomeParaExibir = nome;
       }
 
-      const MESES_PDF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const MESES_PDF = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
       const formatPeriodo = (d1, d2) => {
         if (!d1 && !d2) return '';
         const parse = s => { const p = String(s).split('-'); return { y: +p[0], m: +p[1], d: +p[2] }; };
@@ -1031,7 +1283,7 @@ window.novoRoteiro = function() {
         return `${p.d} de ${MESES_PDF[p.m - 1]} de ${p.y}`;
       };
 
-      const txtPessoas = (cliente.adultos ? `${cliente.adultos} Adultos` : '') + (cliente.criancas > 0 ? `, ${cliente.criancas} Crianças` : '');
+      const txtPessoas = (cliente.adultos ? `${cliente.adultos} ${Number(cliente.adultos) > 1 ? 'adultos' : 'adulto'}` : '') + (cliente.criancas > 0 ? `, ${cliente.criancas} ${Number(cliente.criancas) > 1 ? 'crianças' : 'criança'}` : '');
       
       const diasHtml = diasArray.map((diaOrig, index) => {
         const dia = migrarDiaParaNovaEstrutura(diaOrig);
@@ -1058,8 +1310,9 @@ window.novoRoteiro = function() {
           } else if (el.tipo === 'texto') {
             return el.conteudo ? `<div style="font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
           } else if (el.tipo === 'sequencia') {
-            const tituloRota = el.nomeDaRota || 'Sequência';
-            const cidadeText = el.cidade ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
+            const semNomeRota = !el.nomeDaRota;
+            const tituloRota = el.nomeDaRota || (el.cidade ? 'Passeio em ' + el.cidade : 'Passeio do dia');
+            const cidadeText = (el.cidade && !semNomeRota) ? `<span style="color:var(--gold-dk); font-weight:600; font-size:11px; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
             const incluirDesc = document.getElementById('chkIncluirDescricoesPdf')?.checked;
             
             let atracoesHTML = '';
@@ -1071,6 +1324,8 @@ window.novoRoteiro = function() {
                 desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
                 const bairro = atr ? (atr['Bairro'] || '') : '';
                 const isBairro = bairro && bairro.toLowerCase() === atrNome.toLowerCase();
+                const precoAtr = window.obterPrecoAtracao ? window.obterPrecoAtracao(atrNome) : '';
+                const precoAtrHtml = precoAtr ? ` <span style="font-weight:600; color:#854d0e; font-size:11.5px;">· ${precoAtr} / pessoa</span>` : '';
                 
                 if (isBairro) {
                   const baseSpacing = idxAtr === 0 ? 'margin-top:4px;' : 'margin-top:12px;';
@@ -1079,7 +1334,7 @@ window.novoRoteiro = function() {
                   atracoesHTML += `
                     <div style="${baseSpacing} ${bgStyle}">
                       <strong style="font-size:14px; color:var(--ink-dark); display:block;">
-                        ${atrNome}
+                        ${atrNome}${precoAtrHtml}
                       </strong>
                       ${desc !== 'Visitação livre.' ? `<div style="font-size:11px; color:var(--text-main); margin-top:2px; line-height:1.4;">${desc}</div>` : ''}
                     </div>`;
@@ -1087,13 +1342,17 @@ window.novoRoteiro = function() {
                   atracoesHTML += `
                     <div style="font-size:12px; color:var(--text-main); margin-bottom:4px; line-height:1.4; padding-left:11px; text-indent:-11px;">
                       <span style="display:inline-block; width:5px; height:5px; background:var(--gold); border-radius:50%; margin-right:6px; vertical-align:middle; position:relative; top:-1px;"></span>
-                      <strong>${atrNome}</strong>${desc !== 'Visitação livre.' ? ` <span style="color:var(--text-sec);">— ${desc}</span>` : ''}
+                      <strong>${atrNome}</strong>${precoAtrHtml}${desc !== 'Visitação livre.' ? ` <span style="color:var(--text-sec);">— ${desc}</span>` : ''}
                     </div>`;
                 }
               });
               atracoesHTML += '</div>';
             } else if (el.atracoesDoDia) {
-               atracoesHTML = `<div style="font-size:12px; color:var(--text-sec); margin-top:4px; border-left:2px solid var(--gold-lt); padding-left:10px;">${el.atracoesDoDia.join(' + ')}</div>`;
+              const atrTags = el.atracoesDoDia.map(atrNome => {
+                const pAtr = window.obterPrecoAtracao ? window.obterPrecoAtracao(atrNome) : '';
+                return pAtr ? `${atrNome} (${pAtr}/pessoa)` : atrNome;
+              });
+              atracoesHTML = `<div style="font-size:12px; color:var(--text-sec); margin-top:4px; border-left:2px solid var(--gold-lt); padding-left:10px;">${atrTags.join(' + ')}</div>`;
             }
             
             return `
@@ -1115,24 +1374,33 @@ window.novoRoteiro = function() {
             const h = el.horario ? `${el.horario}` : '';
             const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
             
+            const precoVal = window.obterPrecoTransporte ? window.obterPrecoTransporte(el) : 0;
+            const linhaEstimativa = precoVal > 0 ? `<div style="font-size:11.5px; color:#78350f; font-weight:600; margin-top:4px;">Estimativa: ~¥${precoVal.toLocaleString('pt-BR')} / pessoa</div>` : '';
+
             return `
               <div style="margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
                 <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
                   <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
-                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
+                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
+                ${linhaEstimativa}
               </div>`;
           } else if (el.tipo === 'experiencia') {
             const pText = window.formatarPessoas ? window.formatarPessoas(el) : (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; ${pText}` : `${pText}`) : '';
             const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
+            
+            const precoVal = window.obterPrecoExperiencia ? window.obterPrecoExperiencia(el) : 0;
+            const linhaEstimativa = precoVal > 0 ? `<div style="font-size:11.5px; color:#78350f; font-weight:600; margin-top:4px;">Estimativa: ~¥${precoVal.toLocaleString('pt-BR')} / pessoa</div>` : '';
+
             return `
               <div style="margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
                 <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
                   <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
                 </div>
                 <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
-                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Emitido p/ Heian</span>' : ''}</div>
+                <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
+                ${linhaEstimativa}
               </div>`;
           }
           return '';
@@ -1145,7 +1413,9 @@ window.novoRoteiro = function() {
         }
         // Rota de cidades do dia (com setas quando ha deslocamento)
         let rotaCidades = '';
-        {
+        if (typeof window.calcularRotaAutomaticaDia === 'function') {
+          rotaCidades = window.calcularRotaAutomaticaDia(dia);
+        } else {
           const chainCidades = [];
           (dia.elementos || []).forEach(el => {
             if (el.tipo === 'transporte') {
@@ -1159,12 +1429,18 @@ window.novoRoteiro = function() {
           chainCidades.forEach(c => { if (c && (!limpa.length || limpa[limpa.length - 1].toLowerCase() !== c.toLowerCase())) limpa.push(c); });
           rotaCidades = limpa.join(' \u2192 ');
         }
-  
+
+        const tituloFinal = (dia.titulo && String(dia.titulo).trim()) ? String(dia.titulo).trim() : rotaCidades;
+
+        const rotuloDia = dataText 
+          ? `${dataText} (Dia ${dia.numeroDia || (index + 1)})${tituloFinal ? ' — ' + tituloFinal : ''}` 
+          : `Dia ${dia.numeroDia || (index + 1)}${tituloFinal ? ' — ' + tituloFinal : ''}`;
+
         return `
           <div class="dia-card">
             <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
               <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center; flex-wrap:wrap;">
-                <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">Dia ${dia.numeroDia || (index + 1)}${rotaCidades ? ' \u2014 ' + rotaCidades : ''}${dataText ? ' \u2014 ' + dataText : ''}</span>
+                <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">${rotuloDia}</span>
                 ${badgeGuiado}
                 ${badgeDeslocamento}
                 ${badgeExperiencia}
@@ -1179,11 +1455,15 @@ window.novoRoteiro = function() {
         <div class="pdf-doc">
           <div class="pdf-cover">
             <img src="/assets/logo.png" class="pdf-cover-logo" alt="Heian Tour" onerror="this.style.display='none'">
-            <div class="pdf-cover-divider"></div>
             <div class="pdf-cover-label">Roteiro de Viagem</div>
             <div class="pdf-cover-title">${nomeParaExibir}</div>
             ${Object.keys(cliente).length > 0 ? `<div class="pdf-cover-meta">
-              ${formatPeriodo(cliente.dataOrcamento, cliente.dataFim) ? `<div class="pdf-cover-meta-item"><div class="pdf-cover-meta-label">Período</div><div class="pdf-cover-meta-value">${formatPeriodo(cliente.dataOrcamento, cliente.dataFim)}</div></div>` : ''}
+              ${(() => {
+                const pInicio = cliente.dataInicio || (diasArray && diasArray.length > 0 && diasArray.find(d => d.data)?.data) || cliente.dataOrcamento;
+                const pFim = cliente.dataFim || (diasArray && diasArray.length > 0 && [...diasArray].reverse().find(d => d.data)?.data);
+                const perStr = formatPeriodo(pInicio, pFim);
+                return perStr ? `<div class="pdf-cover-meta-item"><div class="pdf-cover-meta-label">Período</div><div class="pdf-cover-meta-value">${perStr}</div></div>` : '';
+              })()}
               
               ${txtPessoas ? `<div class="pdf-cover-meta-item"><div class="pdf-cover-meta-label">Passageiros</div><div class="pdf-cover-meta-value">${txtPessoas}</div></div>` : ''}
             </div>` : ''}
@@ -1215,6 +1495,11 @@ window.novoRoteiro = function() {
         </div>
       `;
       
+      try {
+        window.__previewScrollY = window.scrollY || (document.scrollingElement && document.scrollingElement.scrollTop) || 0;
+        window.__previewScrollEls = [];
+        document.querySelectorAll('#page-roteiros .pane-content, #page-roteiros .pane-content-inner, #editRoteiroDiasList').forEach(function (elc) { window.__previewScrollEls.push([elc, elc.scrollTop]); });
+      } catch (e) {}
       document.getElementById('previewOverlay').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       
@@ -1224,10 +1509,9 @@ window.novoRoteiro = function() {
 
   document.getElementById('btnCancelarEdicaoRoteiro').addEventListener('click', fecharEditorRoteiro);
 
-  document.getElementById('btnAddDiaRoteiro').addEventListener('click', () => {
-    roteiroEmEdicao.dias.push({ cidade: '', elementos: [] });
-    renderEditDias();
-  });
+  document.getElementById('btnAddDiaRoteiro').addEventListener('click', () => { if(typeof window.adicionarDiaFim==='function') window.adicionarDiaFim(); });
+  var _btnDiaIni = document.getElementById('btnAddDiaInicioRoteiro');
+  if(_btnDiaIni) _btnDiaIni.addEventListener('click', () => { if(typeof window.adicionarDiaInicio==='function') window.adicionarDiaInicio(); });
 
   document.getElementById('btnGerarDiasAutomaticamente').addEventListener('click', () => {
     const dataInicioStr = document.getElementById('rotClienteData').value;
@@ -1272,6 +1556,7 @@ window.novoRoteiro = function() {
   });
 
   document.getElementById('btnSalvarVisualizarRoteiro').addEventListener('click', async () => {
+    window.__salvarSemFechar = true; // pré-visualizar não deve fechar o editor
     document.getElementById('btnSalvarEdicaoRoteiro').click();
     setTimeout(() => {
         const btnPreview = document.getElementById('btnGerarRoteiro');
@@ -1283,6 +1568,8 @@ window.novoRoteiro = function() {
   });
 
   document.getElementById('btnSalvarEdicaoRoteiro').addEventListener('click', async () => {
+    // Se veio do "Pré-visualizar (Salva)", persiste mas NÃO fecha o editor.
+    const manterAberto = window.__salvarSemFechar; window.__salvarSemFechar = false;
     const novoNome = document.getElementById('editRoteiroNome').value.trim();
     if (!novoNome) return alert('Dê um nome ao roteiro.');
     if (!roteiroEmEdicao.dias || roteiroEmEdicao.dias.length === 0) return alert('Adicione pelo menos um dia ao roteiro.');
@@ -1324,10 +1611,21 @@ window.novoRoteiro = function() {
     }
 
     if (res.status === 409) {
-      const errData = await res.json();
-      alert(errData.message || 'Este roteiro foi alterado em outra sessão. Recarregue a página antes de salvar.');
-      btn.textContent = 'Salvar Roteiro'; btn.disabled = false;
-      return;
+      const errData = await res.json().catch(() => ({}));
+      if (errData && errData.error === 'reducao') {
+        const okReduzir = confirm('Atenção: este salvamento reduz bastante o roteiro (de ' + errData.nOld + ' para ' + errData.nNew + ' itens). Isso costuma ser acidente de uma aba desatualizada.\n\nConfirma que você REALMENTE quer salvar a versão menor?');
+        if (!okReduzir) { btn.textContent = 'Salvar Roteiro'; btn.disabled = false; return; }
+        const chaveForce = roteiroEmEdicao.id || novoNome;
+        res = await fetch(`/api/roteiros/${encodeURIComponent(chaveForce)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm, _permitirReducao: true })
+        });
+      } else {
+        alert(errData.message || 'Este roteiro foi alterado em outra sessão. Recarregue a página antes de salvar.');
+        btn.textContent = 'Salvar Roteiro'; btn.disabled = false;
+        return;
+      }
     }
 
     if (res.ok) {
@@ -1336,12 +1634,18 @@ window.novoRoteiro = function() {
         if (j && j.id) roteiroEmEdicao.id = j.id;
         if (j && j.atualizadoEm) roteiroEmEdicao.atualizadoEm = j.atualizadoEm;
       } catch (e) { /* segue */ }
-      dbRotas[novoNome] = roteiroEmEdicao;
+      dbRotas[novoNome] = JSON.parse(JSON.stringify(roteiroEmEdicao));
       roteiroOriginalNome = novoNome;
       if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
       preencherSelectRoteiros(novoNome);
-      fecharEditorRoteiro();
-      renderizarRoteiro(novoNome);
+      if (manterAberto) {
+        // fluxo do "Pré-visualizar (Salva)": mantém o editor aberto (e o scroll)
+        // pra que ao fechar a pré-visualização o usuário volte exatamente onde estava.
+        if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
+      } else {
+        fecharEditorRoteiro();
+        renderizarRoteiro(novoNome);
+      }
       
       // Atualiza também o select de cotações, se a função existir no app.js
       if (typeof preencherSelectRoteiroVinculado === 'function') {
@@ -1356,6 +1660,14 @@ window.novoRoteiro = function() {
 }
 
 function abrirEditorRoteiro(nome) {
+  // Salva no localStorage para auto-restaurar após F5
+  if (nome && nome !== 'Novo Roteiro') {
+    try {
+      localStorage.setItem('heian_last_roteiro_nome', nome);
+      localStorage.setItem('heian_last_roteiro_em_edicao', 'true');
+    } catch(e) {}
+  }
+
   // Cada roteiro começa com todos os dias expandidos
   if (window.__diasColapsados) window.__diasColapsados.clear();
   // No celular (master-detail), abrir o editor precisa trocar da lista para o detalhe
@@ -1415,6 +1727,9 @@ function abrirEditorRoteiro(nome) {
   window.renderRotEstadias(); updateRoteiroHeader();
 
   document.getElementById('roteiroTimeline').style.display = 'none';
+  // Esconde o cabeçalho de preview (título do último roteiro VISUALIZADO). Sem isto ele fica
+  // pendurado no topo do editor mostrando o roteiro ERRADO (bug do "Lucas e Sofia" em todos).
+  const _phEdit = document.getElementById('roteiroPreviewHeader'); if (_phEdit) _phEdit.style.display = 'none';
   document.getElementById('roteiroEditContainer').style.display = 'block';
   
   // Esconde botoes da header
@@ -1429,13 +1744,25 @@ function abrirEditorRoteiro(nome) {
   if (roteiroEmEdicao && roteiroEmEdicao.cliente && roteiroEmEdicao.cliente.notionClienteId && typeof syncClienteAtivo === 'function') {
       syncClienteAtivo(roteiroEmEdicao.cliente.notionClienteId);
   }
+
+  // Abrir/reabrir NUNCA deve gravar: remarca o baseline DEPOIS de todas as
+  // normalizacoes e do render, pro autosave disparado na abertura ser pulado.
+  if (typeof window.marcarBaselineRoteiro === 'function') window.marcarBaselineRoteiro();
 }
 
 function fecharEditorRoteiro() {
+  try { localStorage.removeItem('heian_last_roteiro_em_edicao'); } catch(e) {}
   document.getElementById('roteiroEditContainer').style.display = 'none';
   document.getElementById('roteiroTimeline').style.display = 'block';
   
   const val = window.roteiroAtualVisualizado;
+  // Mantém o cabeçalho de preview coerente com o roteiro realmente visualizado (nunca stale).
+  const _phClose = document.getElementById('roteiroPreviewHeader');
+  const _ptClose = document.getElementById('roteiroPreviewTitle');
+  if (_phClose && _ptClose) {
+    if (val) { _ptClose.textContent = val; _phClose.style.display = 'flex'; }
+    else { _phClose.style.display = 'none'; }
+  }
   document.getElementById('btnEditarRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnExcluirRoteiro').style.display = val ? 'inline-block' : 'none';
   document.getElementById('btnGerarRoteiro').style.display = 'inline-block';
@@ -1453,6 +1780,25 @@ function fecharEditorRoteiro() {
     }
   }
 }
+
+// Botão "Voltar para Clientes" no editor de roteiro (espelho do da cotação). Volta pra ficha do
+// cliente vinculado, na aba Roteiros. Se não houver cliente, só vai pra lista de clientes.
+window.voltarParaClientesDeRoteiro = function() {
+  try { localStorage.removeItem('heian_last_roteiro_em_edicao'); } catch(e) {}
+  var clienteId = (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao) ? roteiroEmEdicao.notionClienteId : null;
+  if (clienteId) {
+    if (typeof navToPage === 'function') navToPage('clientes');
+    if (typeof window.abrirDetalhesCliente === 'function') {
+      window.abrirDetalhesCliente(clienteId);
+      setTimeout(function () {
+        var btnTab = document.querySelector('.tab-client-btn[data-tab="roteiros"]');
+        if (btnTab) btnTab.click();
+      }, 150);
+    }
+  } else if (typeof navToPage === 'function') {
+    navToPage('clientes');
+  }
+};
 
 window.atualizarBotoesCotacao = function() {
     const actionsDiv = document.getElementById('roteiroCotacaoActions');
@@ -1475,7 +1821,14 @@ window.atualizarBotoesCotacao = function() {
         return;
     }
     
-    const existingCotacao = state.orcamentosDB.find(o => o && o.orcRoteiroVinculado === roteiroNome);
+    // FASE 2 — detecta a cotação vinculada por NOME e também por roteiroId (cotações como a do
+    // Haddad têm orcRoteiroVinculado vazio, só roteiroId) — sem isto o botão mostraria "Gerar"
+    // e criaria uma cotação DUPLICADA ao lado da que já existe.
+    const _rid = (typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao) ? roteiroEmEdicao.id : null;
+    const existingCotacao = state.orcamentosDB.find(o => o && !o.deletado && (
+        o.orcRoteiroVinculado === roteiroNome ||
+        (_rid && (o.roteiroId === _rid || o.orcRoteiroVinculado === _rid))
+    ));
     
     if (existingCotacao) {
         actionsDiv.innerHTML = `
@@ -1512,11 +1865,68 @@ window.toggleTodosDias = function () {
 function resumoDoDia(dia) {
   const els = dia.elementos || [];
   const partes = [];
+  
+  // Extrai as cidades únicas
   const cidades = [...new Set(els.filter(e => e.tipo === 'sequencia' && e.cidade).map(e => e.cidade))];
-  if (cidades.length) partes.push(cidades.join(' · '));
-  const n = els.length;
-  partes.push(n === 0 ? 'vazio' : (n === 1 ? '1 item' : n + ' itens'));
-  return partes.join(' — ');
+  if (cidades.length) partes.push(`<span style="font-weight: 600; color: var(--ink-dark);">${cidades.join(' · ')}</span>`);
+  
+  if (els.length === 0) {
+    partes.push('<span style="font-size: 11px; color: var(--ink-lt); letter-spacing: 0.02em;">dia vazio</span>');
+  } else {
+    // Mapeamento dos SVGs mini
+    const svgMini = {
+      sequencia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>',
+      transporte: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path></svg>',
+      experiencia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path></svg>',
+      texto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+      info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+    };
+    
+    // Mapeamento de cores correspondentes
+    const coresMini = {
+      sequencia: { bg: 'rgba(142, 28, 28, 0.07)', color: 'var(--l-wine)' },
+      transporte: { bg: '#e8f4fd', color: '#2b82c9' },
+      experiencia: { bg: 'rgba(196, 163, 90, 0.08)', color: 'var(--l-gold)' },
+      texto: { bg: '#f1f5f9', color: '#64748b' },
+      info: { bg: '#f0f4f8', color: '#475569' }
+    };
+    
+    const nomesTipo = {
+      sequencia: 'Sequência',
+      transporte: 'Transporte',
+      experiencia: 'Experiência',
+      texto: 'Texto Livre',
+      info: 'Info Encontro'
+    };
+
+    const iconsHtml = els.map(e => {
+      const core = coresMini[e.tipo] || { bg: '#f1f5f9', color: '#64748b' };
+      const svg = svgMini[e.tipo] || '';
+      const nome = nomesTipo[e.tipo] || e.tipo;
+      
+      let labelExtra = nome;
+      if (e.tipo === 'sequencia' && e.atracoesDoDia && e.atracoesDoDia.length) {
+        labelExtra = `Sequência: ${e.atracoesDoDia.slice(0, 3).join(', ')}${e.atracoesDoDia.length > 3 ? '...' : ''}`;
+      } else if (e.tipo === 'texto' && e.conteudoHtml) {
+        const txtLimpo = e.conteudoHtml.replace(/<[^>]*>/g, '').substring(0, 40).trim();
+        labelExtra = `Texto Livre: ${txtLimpo || '(vazio)'}`;
+      } else if (e.tipo === 'info' && e.local) {
+        labelExtra = `Info Encontro: ${e.hora || '09:00'} - ${e.local}`;
+      } else if (e.tipo === 'transporte' && e.veiculo) {
+        labelExtra = `Transporte: ${e.veiculo} (${e.origem || ''} → ${e.destino || ''})`;
+      } else if (e.tipo === 'experiencia' && e.nomeExp) {
+        labelExtra = `Ticket/Exp: ${e.nomeExp}`;
+      }
+      
+      return `<div title="${labelExtra.replace(/"/g, '&quot;')}" style="width:23px; height:23px; border-radius:6px; background:${core.bg}; color:${core.color}; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; vertical-align:middle; margin-right:3px;">${svg}</div>`;
+    }).join('');
+    
+    const countHtml = `<span style="font-size:11px; color:var(--ink-lt); margin-left: 6px; font-weight:500; vertical-align:middle;">(${els.length} ${els.length === 1 ? 'item' : 'itens'})</span>`;
+    
+    partes.push(`<div style="display:inline-flex; align-items:center; vertical-align:middle;">${iconsHtml}${countHtml}</div>`);
+  }
+  
+  return partes.join(' <span style="color: var(--border); margin: 0 4px; vertical-align:middle;">—</span> ');
 }
 
 function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave(); 
@@ -1560,7 +1970,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
               ${controles}
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px">
-              <div class="field" style="margin:0"><label style="font-size:10px;color:var(--gold-dk)">Data</label><input type="date" value="${el.dataDoTour}" onchange="updElementoEdit(${idx}, ${eIdx}, 'dataDoTour', this.value)"></div>
+              <div class="field" style="margin:0"><label style="font-size:10px;color:var(--gold-dk)">Data</label>${window.hdField(el.dataDoTour, 'data-hd="tour" data-hd-idx="' + idx + '" data-hd-eidx="' + eIdx + '"', false, (dia.data || window.hdHintDia(idx)))}</div>
               <div class="field" style="margin:0"><label style="font-size:10px;color:var(--gold-dk)">Horário</label><input type="time" value="${el.horarioEncontro}" onchange="updElementoEdit(${idx}, ${eIdx}, 'horarioEncontro', this.value)"></div>
               <div class="field" style="margin:0"><label style="font-size:10px;color:var(--gold-dk)">Duração</label><select onchange="updElementoEdit(${idx}, ${eIdx}, 'duracaoTour', this.value)">
                   <option value="4h" ${el.duracaoTour==='4h'?'selected':''}>4h</option>
@@ -1623,23 +2033,26 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
               <div class="field" style="margin:0; display:flex; align-items:flex-end;">
                 <button type="button" title="Fazer este item seguir o numero de pessoas do cliente" onclick="itemSeguirCliente(${idx}, ${eIdx})" style="height:34px;border:1px solid var(--border,#ddd);background:#fff;border-radius:4px;font-size:11px;cursor:pointer;padding:0 8px;color:var(--ink-mid,#666);white-space:nowrap;">&#8635; seguir cliente</button>
               </div>
-              <div class="field" style="margin:0; display:flex; flex-wrap:wrap; align-items:flex-end">
-                <label style="font-size:11px; display:flex; flex-wrap:wrap; align-items:center; cursor:pointer; height:34px; padding:0 8px; border-radius:4px; font-weight:600; border:1px solid ${el.compradoHeian !== false ? 'var(--gold)' : '#ccc'}; background:${el.compradoHeian !== false ? 'var(--gold)' : '#fff'}; color:${el.compradoHeian !== false ? 'white' : 'var(--text-sec)'}">
-                  <input type="checkbox" ${el.compradoHeian !== false ? 'checked' : ''} onchange="updElementoEdit(${idx}, ${eIdx}, 'compradoHeian', this.checked)" style="margin-right:6px"> EMITIDO P/ HEIAN
-                </label>
+              <div class="field" style="margin:0; display:flex; flex-direction:column; justify-content:flex-end; min-width:220px;">
+                <label style="font-size:10px;color:var(--ink-mid);font-weight:600;margin-bottom:2px;">Responsabilidade / Status</label>
+                ${(() => {
+                  const _modo = (el.isSemReserva === true || (el.categoria === 'Sem Reserva' && el.compradoHeian === false)) 
+                    ? 'ic_card' 
+                    : (el.compradoHeian === false ? 'cliente' : 'heian');
+                  const _bd = _modo === 'ic_card' ? '#0284c7' : (_modo === 'heian' ? '#16a34a' : '#ea580c');
+                  const _bg = _modo === 'ic_card' ? '#f0f9ff' : (_modo === 'heian' ? '#f0fdf4' : '#fff7ed');
+                  const _txt = _modo === 'ic_card' ? '#0369a1' : (_modo === 'heian' ? '#15803d' : '#c2410c');
+                  return `
+                    <select onchange="updResponsabilidadeTransporte(${idx}, ${eIdx}, this.value)" style="min-height:36px; height:36px; font-size:12px; font-weight:700; border-radius:6px; padding:4px 10px; border:1.5px solid ${_bd}; background:${_bg}; color:${_txt}; cursor:pointer; line-height:normal; box-sizing:border-box;">
+                      <option value="heian" ${_modo === 'heian' ? 'selected' : ''}>🛡️ Incluso Heian (Emissão Heian)</option>
+                      <option value="cliente" ${_modo === 'cliente' ? 'selected' : ''}>👤 Compra pelo Viajante (Reserva)</option>
+                      <option value="ic_card" ${_modo === 'ic_card' ? 'selected' : ''}>💳 Cartão IC (Sem Reserva / Catraca)</option>
+                    </select>
+                  `;
+                })()}
               </div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
-              <div class="field" style="margin:0">
-                <label style="font-size:10px;color:var(--ink-mid)">Aviso Pré-Compra (Ex: comprar com 1 mês de antecedência)</label>
-                <input type="text" placeholder="Instrução pré-compra..." value="${el.instrucoesPreCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPreCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
-              </div>
-              <div class="field" style="margin:0">
-                <label style="font-size:10px;color:var(--ink-mid)">Instruções Pós-Compra (Ex: como pegar na estação)</label>
-                <input type="text" placeholder="Instrução pós-compra..." value="${el.instrucoesPosCompra || ''}" oninput="updElementoEdit(${idx}, ${eIdx}, 'instrucoesPosCompra', this.value)" style="width:100%; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px;">
-              </div>
-            </div>
-            ${el.tipoTransporte ? `<div style="font-size:11px; margin-top:8px; color:var(--text-sec)">Selecionado: <strong>${el.tipoTransporte}</strong> (${el.linha}) - ${el.categoria} ${el.tempo ? `<strong style="color:var(--gold-dk); margin-left:8px;">${el.tempo}</strong>` : ''}</div>` : ''}
+            ${el.tipoTransporte ? `<div style="font-size:11.5px; margin-top:8px; color:var(--text-sec); display:flex; align-items:center; gap:8px;"><span>Selecionado: <strong>${el.tipoTransporte}</strong> (${el.linha}) — ${el.categoria}</span> ${el.tempo ? `<strong style="color:var(--gold-dk);">⏱️ ${el.tempo}</strong>` : ''}</div>` : ''}
           </div>`;
       } else if (el.tipo === 'experiencia') {
         const controles = `<span style="cursor:pointer; font-size:12px; margin-right:8px; color:var(--ink-mid)" onclick="moverElemento(${idx}, ${eIdx}, -1)">▲</span>` +
@@ -1705,7 +2118,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
           let warnIcon = '';
           
           if (chk.fechado) {
-            extraClass = ' fechada';
+            extraClass += ' fechada';
             if (chk.tipoBloqueio === 'semanal') {
               warnIcon = '';
               warnTitle = ` (fecha às ${chk.diaSemanaNome.toLowerCase()}s)`;
@@ -1715,15 +2128,31 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
             }
           }
           
-          const missingClass = !window.buscarAtracaoNoMapa(atr) ? 'missing' : '';
+          const match = window.buscarAtracaoNoMapa(atr);
+          let isBairro = false;
+          if (match) {
+            const bairro = match['Bairro'] || '';
+            isBairro = (bairro && bairro.toLowerCase() === atr.toLowerCase()) || atr.toLowerCase().includes('bairro');
+          } else {
+            isBairro = atr.toLowerCase().includes('bairro');
+          }
           
-          return `<div class="chip-atracao ${missingClass}${extraClass}"
-                title="${atr}${warnTitle}"
-                draggable="true" 
-                ondragstart="dragStartAtracao(event, ${idx}, ${eIdx}, ${aIdx})"
-                ondragover="dragOverAtracao(event)"
-                ondrop="dropAtracao(event, ${idx}, ${eIdx}, ${aIdx})">
-            <span style="cursor:grab; margin-right:4px; opacity:0.5; user-select:none">⋮⋮</span>${warnIcon}${atr}${warnTitle}<span style="margin-left:8px; cursor:pointer; color:#ff4444" onclick="delAtracaoBloco(${idx}, ${eIdx}, ${aIdx})">✕</span>
+          let prefixo = '';
+          if (isBairro) {
+            extraClass += ' bairro';
+            prefixo = '• ';
+          } else {
+            extraClass += ' sub-atracao';
+            prefixo = '› ';
+          }
+          
+          const missingClass = !match ? 'missing' : '';
+          
+          return `<div class="chip-atracao chip-seq ${missingClass}${extraClass}"
+                data-id="${atr.replace(/"/g, '&quot;')}"
+                data-aidx="${aIdx}"
+                title="${atr}${warnTitle}">
+            <span class="chip-grip" style="cursor:grab; margin-right:4px; opacity:0.5; user-select:none">⋮⋮</span><span class="chip-label" style="cursor:pointer;">${warnIcon}${prefixo}${atr}${warnTitle}</span><span class="chip-x" style="margin-left:8px; cursor:pointer; color:#ff4444" onclick="delAtracaoBloco(${idx}, ${eIdx}, ${aIdx})">✕</span>
           </div>`;
         }).join('');
         elementosHtml += `
@@ -1738,9 +2167,9 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
               <div class="field" style="margin:0"><input type="text" list="datalistCidades" autocomplete="off" placeholder="Cidade" value="${el.cidade || ''}" onchange="updElementoEdit(${idx}, ${eIdx}, 'cidade', this.value); atualizarDatalists(${idx}, ${eIdx})"></div>
               <div class="field" style="margin:0"><input type="text" list="dlRotas_${idx}_${eIdx}" autocomplete="off" placeholder="Título (ex: Asakusa + Ueno)" value="${el.nomeDaRota || ''}" onchange="selecionarBlocoRoteiro(${idx}, ${eIdx}, this.value)"></div>
             </div>
-            <div class="dia-atracoes" style="margin-bottom:8px; min-height:30px" ondragover="dragOverAtracao(event)" ondrop="dropAtracaoBlock(event, ${idx}, ${eIdx})">${atracoesHtml}</div>
+            <div class="dia-atracoes" data-didx="${idx}" data-eidx="${eIdx}" style="margin-bottom:8px; min-height:30px">${atracoesHtml}</div>
             <div class="field" style="margin:0">
-              <input type="text" list="dlAtracoes_${idx}_${eIdx}" placeholder="+ Adicionar atração" onchange="addAtracaoBloco(${idx}, ${eIdx}, this.value); this.value=''" >
+              <input type="text" placeholder="+ Adicionar atração" onfocus="window.abrirDropdownAtracoesGlobal(this, ${idx}, ${eIdx})" oninput="window.filtrarDropdownAtracoesGlobal(this, ${idx}, ${eIdx})" onblur="window.fecharDropdownAtracoesGlobal(this)" autocomplete="off" style="width:100%;">
             </div>
           </div>`;
       }
@@ -1762,25 +2191,35 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
 
     const colapsado = window.__diasColapsados.has(idx);
     if (colapsado) card.classList.add('dia-colapsado');
+
+    const rotaSugerida = (typeof window.calcularRotaAutomaticaDia === 'function') ? window.calcularRotaAutomaticaDia(dia) : '';
+    const tituloVal = (dia.titulo !== undefined && dia.titulo !== null) ? String(dia.titulo) : '';
+
     card.innerHTML = `
-      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin:-20px -20px 16px -20px; border-radius:8px 8px 0 0; padding:12px 20px; background:var(--crimson); color:white">
-        <div style="display:flex; flex-wrap:wrap; align-items:center;">
-          <button type="button" class="dia-toggle-btn" onclick="toggleDiaColapsado(${idx})" title="${colapsado ? 'Expandir dia' : 'Recolher dia'}" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:6px; width:30px; height:30px; margin-right:10px; cursor:pointer; font-size:13px; flex:none;">${colapsado ? '▸' : '▾'}</button>
-          <span style="margin:0; font-family:var(--ff-display); color:white; font-size:18px; margin-right: 6px;">Dia</span>
-          <input type="number" min="1" max="99" value="${dia.numeroDia || (idx + 1)}" onchange="updDiaEdit(${idx}, 'numeroDia', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 4px; font-size: 16px; font-family:var(--ff-display); font-weight: bold; width: 44px; margin-right: 12px; text-align:center;" />
-          <input type="date" value="${dataValue}" onchange="updDiaEdit(${idx}, 'data', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 6px; font-size: 13px; font-weight: bold; width: 130px; font-family: inherit; color-scheme: dark;" />
-          <span style="font-size: 14px; font-weight: 600; margin-left: 6px;">${dataText}</span>
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin:-20px -20px 16px -20px; border-radius:8px 8px 0 0; padding:10px 16px; background:var(--crimson); color:white; gap:8px;">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; flex:1; min-width:280px;">
+          <button type="button" class="dia-toggle-btn" onclick="toggleDiaColapsado(${idx})" title="${colapsado ? 'Expandir dia' : 'Recolher dia'}" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:6px; width:28px; height:28px; cursor:pointer; font-size:12px; flex:none;">${colapsado ? '▸' : '▾'}</button>
+          <span style="margin:0; font-family:var(--ff-display); color:white; font-size:16px;">Dia</span>
+          <input type="number" min="1" max="99" value="${dia.numeroDia || (idx + 1)}" onchange="updDiaEdit(${idx}, 'numeroDia', this.value)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; border-radius: 4px; padding: 2px 4px; font-size: 15px; font-family:var(--ff-display); font-weight: bold; width: 40px; text-align:center;" />
+          ${window.hdField(dataValue, 'data-hd="dia" data-hd-idx="' + idx + '"', true, window.hdHintDia(idx))}
+          <span style="font-size: 13px; font-weight: 600;">${dataText}</span>
+          <input type="text" 
+            value="${tituloVal.replace(/"/g, '&quot;')}" 
+            placeholder="${(rotaSugerida || 'Título / Rota do dia (automático)').replace(/"/g, '&quot;')}" 
+            oninput="updDiaEdit(${idx}, 'titulo', this.value)" 
+            style="flex:1; min-width:180px; max-width:440px; background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.45); color:#fff; border-radius:4px; padding:4px 8px; font-size:13px; font-weight:600;" 
+            title="Personalize o título ou cidades deste dia. Deixe vazio para usar a rota automática." />
         </div>
         <div style="display:flex; flex-wrap:wrap; align-items:center;">
-          <label style="font-size:12px; margin-right:12px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; padding:4px 12px; border-radius:16px; font-weight:600; background:${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.2)'}; color:${dia.tourGuiado ? 'var(--crimson)' : '#fff'}; border: 1px solid ${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.4)'}">
+          <label style="font-size:12px; margin-right:8px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; padding:3px 10px; border-radius:16px; font-weight:600; background:${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.2)'}; color:${dia.tourGuiado ? 'var(--crimson)' : '#fff'}; border: 1px solid ${dia.tourGuiado ? '#fff' : 'rgba(255,255,255,0.4)'}">
             <input type="checkbox" ${dia.tourGuiado ? 'checked' : ''} onchange="updDiaEdit(${idx}, 'tourGuiado', this.checked)" style="margin-right:6px; accent-color:var(--crimson)">
              ${dia.tourGuiado ? 'TOUR GUIADO' : 'Tour Guiado'}
           </label>
           <div style="display:flex; flex-wrap:wrap; gap: 4px; margin-right: 8px;">
-            <button class="btn-secondary" onclick="moverDia(${idx}, 'up')" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para cima">↑</button>
-            <button class="btn-secondary" onclick="moverDia(${idx}, 'down')" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para baixo">↓</button>
+            <button class="btn-secondary" onclick="moverDia(${idx}, 'up')" style="padding:3px 7px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para cima">↑</button>
+            <button class="btn-secondary" onclick="moverDia(${idx}, 'down')" style="padding:3px 7px; font-size:12px; border-color:white; color:white; background:transparent" title="Mover para baixo">↓</button>
           </div>
-          <button class="btn-secondary" onclick="delDia(${idx})" style="padding:4px 8px; font-size:12px; border-color:white; color:white; background:transparent" title="Excluir Dia">✕</button>
+          <button class="btn-secondary" onclick="delDia(${idx})" style="padding:3px 7px; font-size:12px; border-color:white; color:white; background:transparent" title="Excluir Dia">✕</button>
         </div>
       </div>
       
@@ -1788,12 +2227,12 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
       <div class="dia-card-body">
       ${elementosHtml}
       
-      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; flex-wrap:wrap">
-        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'sequencia')">+ Sequência</button>
-        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'texto')">+ Texto Livre</button>
-        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'info')">+ Info Encontro</button>
-        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px" onclick="adicionarElemento(${idx}, 'transporte')">+ Transporte</button>
-        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; color:var(--purple); border-color:var(--purple)" onclick="adicionarElemento(${idx}, 'experiencia')">+ Tickets & Experiências</button>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;">
+        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; display:inline-flex; align-items:center; justify-content:center;" onclick="adicionarElemento(${idx}, 'sequencia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px; display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg> Sequência</button>
+        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; display:inline-flex; align-items:center; justify-content:center;" onclick="adicionarElemento(${idx}, 'texto')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Texto Livre</button>
+        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; display:inline-flex; align-items:center; justify-content:center;" onclick="adicionarElemento(${idx}, 'info')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px; display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Info Encontro</button>
+        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; display:inline-flex; align-items:center; justify-content:center;" onclick="adicionarElemento(${idx}, 'transporte')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px; display: inline-block; vertical-align: middle;"><rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path></svg> Transporte</button>
+        <button class="btn-secondary" style="flex:1; border-style:dashed; min-width:120px; color:var(--purple); border-color:var(--purple); display:inline-flex; align-items:center; justify-content:center;" onclick="adicionarElemento(${idx}, 'experiencia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path></svg> Tickets & Experiências</button>
       </div>
       </div>
     `;
@@ -1814,6 +2253,7 @@ function renderEditDias() { updateRoteiroHeader(); triggerRoteiroAutoSave();
           console.warn("Erro ao atualizar botões de cotação:", e);
       }
   }
+  if (typeof attachChipEvents === 'function') attachChipEvents();
 }
 
 window.updRotCliente = function(field, val) {
@@ -1823,18 +2263,31 @@ window.updRotCliente = function(field, val) {
   triggerRoteiroAutoSave();
 };
 
+// Mes sugerido ao abrir o calendario de um DIA vazio: inicio da viagem + o offset do dia.
+window.hdHintDia = function(idx){
+  try{
+    var c = roteiroEmEdicao && roteiroEmEdicao.cliente;
+    var base = (c && c.dataInicio) ? c.dataInicio : ((roteiroEmEdicao && roteiroEmEdicao.dias && roteiroEmEdicao.dias[0] && roteiroEmEdicao.dias[0].data) || '');
+    if(!base || base.length!==10 || base.charAt(4)!=='-') return '';
+    var d=new Date(base+'T00:00:00'); d.setDate(d.getDate()+(idx||0));
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }catch(e){ return ''; }
+};
+
 window.updDiaEdit = function(diaIdx, field, val) {
     if (!roteiroEmEdicao || !roteiroEmEdicao.dias[diaIdx]) return;
-    roteiroEmEdicao.dias[diaIdx][field] = val;
+    const diaAtual = roteiroEmEdicao.dias[diaIdx];
+    const antigaPropria = (field === 'data') ? diaAtual.data : null;
+    diaAtual[field] = val;
     
     // Ao marcar Tour Guiado, adiciona Info de Encontro automaticamente se não houver
     if (field === 'tourGuiado' && val === true) {
-      const elementos = roteiroEmEdicao.dias[diaIdx].elementos || [];
+      const elementos = diaAtual.elementos || [];
       const jaTemInfo = elementos.some(el => el.tipo === 'info');
       if (!jaTemInfo) {
-        roteiroEmEdicao.dias[diaIdx].elementos.unshift({
+        diaAtual.elementos.unshift({
           tipo: 'info',
-          dataDoTour: '',
+          dataDoTour: diaAtual.data || '',
           horarioEncontro: '',
           duracaoTour: '6h',
           localEncontro: ''
@@ -1844,7 +2297,102 @@ window.updDiaEdit = function(diaIdx, field, val) {
       return;
     }
     
-    if (field === 'data') renderEditDias();
+    if (field === 'data') {
+      // CASCATA: editar a data de um dia empurra os dias seguintes em sequencia (+1 cada).
+      // Voce ainda ajusta qualquer dia manualmente (e a cascata segue a partir dele).
+      if (val && val.length===10 && val.charAt(4)==='-') {
+        (diaAtual.elementos || []).forEach(el => { if (el.tipo === 'info' && (!el.dataDoTour || el.dataDoTour === antigaPropria)) el.dataDoTour = val; });
+        const base = new Date(val + 'T00:00:00');
+        for (let j = diaIdx + 1; j < roteiroEmEdicao.dias.length; j++) {
+          const dj = roteiroEmEdicao.dias[j], antiga = dj.data;
+          const nd = new Date(base); nd.setDate(nd.getDate() + (j - diaIdx));
+          const iso = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0');
+          dj.data = iso;
+          (dj.elementos || []).forEach(el => { if (el.tipo === 'info' && (!el.dataDoTour || el.dataDoTour === antiga)) el.dataDoTour = iso; });
+        }
+      }
+      renderEditDias();
+    }
+};
+
+// Re-sequencia as datas dos dias pela POSICAO (consecutivas), ancorando na data
+// mais antiga existente (ou no inicio da viagem). Usado ao reordenar/excluir dias:
+// o conjunto de datas fica fixo as posicoes e o CONTEUDO e que se move.
+window.resequenciarDatasDias = function(){
+  try{
+    var dias = roteiroEmEdicao && roteiroEmEdicao.dias;
+    if(!dias || !dias.length) return;
+    var c = roteiroEmEdicao.cliente;
+    var validas = dias.map(function(d){return d.data;}).filter(function(x){return x && x.length===10 && x.charAt(4)==='-';}).sort();
+    var base = validas.length ? validas[0] : ((c && c.dataInicio && c.dataInicio.length===10) ? c.dataInicio : '');
+    if(!base) return;
+    var b = new Date(base + 'T00:00:00');
+    for(var j=0;j<dias.length;j++){
+      var dj = dias[j], antiga = dj.data;
+      var nd = new Date(b); nd.setDate(nd.getDate()+j);
+      var iso = nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
+      dj.data = iso;
+      (dj.elementos||[]).forEach(function(el){ if(el.tipo==='info' && (!el.dataDoTour || el.dataDoTour===antiga)) el.dataDoTour = iso; });
+    }
+  }catch(e){ console.error('resequenciar', e); }
+};
+
+function _isoAddDias(iso, n){
+  var d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _isoBR(iso){ if(!iso||iso.length!==10) return iso||''; var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+// HIBRIDO: se o novo dia estende ALEM do periodo ja definido do cliente, pergunta uma vez
+// se deve atualizar a chegada/partida. So pergunta quando o limite existe e foi ultrapassado.
+function _sincronizarPeriodoHibrido(qual, novaData){
+  if(!novaData || novaData.length!==10) return;
+  var c = roteiroEmEdicao.cliente; if(!c){ c = roteiroEmEdicao.cliente = {}; }
+  if(qual==='inicio'){
+    if(c.dataInicio && c.dataInicio.length===10 && novaData < c.dataInicio){
+      if(confirm('A viagem agora começa em ' + _isoBR(novaData) + ' (antes era ' + _isoBR(c.dataInicio) + ').\nAtualizar a data de CHEGADA do cliente?')){
+        c.dataInicio = novaData;
+        var el=document.getElementById('rotClienteData'); if(el) el.value=novaData;
+        if(typeof window.autoSaveRoteiro==='function') window.autoSaveRoteiro();
+      }
+    }
+  } else {
+    if(c.dataFim && c.dataFim.length===10 && novaData > c.dataFim){
+      if(confirm('A viagem agora termina em ' + _isoBR(novaData) + ' (antes era ' + _isoBR(c.dataFim) + ').\nAtualizar a data de PARTIDA do cliente?')){
+        c.dataFim = novaData;
+        var el=document.getElementById('rotClienteDataFim'); if(el) el.value=novaData;
+        if(typeof window.autoSaveRoteiro==='function') window.autoSaveRoteiro();
+      }
+    }
+  }
+}
+
+// Adiciona um dia NO FIM, ja com a data do ultimo dia +1 (ou a chegada, se for o 1o).
+window.adicionarDiaFim = function(){
+  if(!roteiroEmEdicao.dias) roteiroEmEdicao.dias=[];
+  var dias = roteiroEmEdicao.dias, ult=null;
+  for(var i=dias.length-1;i>=0;i--){ if(dias[i].data && dias[i].data.length===10){ ult=dias[i].data; break; } }
+  var c=roteiroEmEdicao.cliente;
+  var novaData = ult ? _isoAddDias(ult,1) : ((c && c.dataInicio && c.dataInicio.length===10) ? c.dataInicio : '');
+  dias.push({ cidade:'', data: novaData, elementos: [] });
+  renderEditDias();
+  if(typeof window.autoSaveRoteiro==='function') window.autoSaveRoteiro();
+  _sincronizarPeriodoHibrido('fim', novaData);
+};
+
+// Adiciona um dia NO INICIO, com a data do 1o dia -1. NAO cascateia: os dias existentes
+// mantem suas datas; so ganha um dia mais cedo na frente.
+window.adicionarDiaInicio = function(){
+  if(!roteiroEmEdicao.dias) roteiroEmEdicao.dias=[];
+  var dias = roteiroEmEdicao.dias, prim=null;
+  for(var i=0;i<dias.length;i++){ if(dias[i].data && dias[i].data.length===10){ prim=dias[i].data; break; } }
+  var c=roteiroEmEdicao.cliente;
+  var novaData = prim ? _isoAddDias(prim,-1) : ((c && c.dataInicio && c.dataInicio.length===10) ? _isoAddDias(c.dataInicio,-1) : '');
+  dias.unshift({ cidade:'', data: novaData, elementos: [] });
+  if(window.__diasColapsados){ var novo=new Set(); window.__diasColapsados.forEach(function(i){ novo.add(i+1); }); window.__diasColapsados=novo; }
+  renderEditDias();
+  if(typeof window.autoSaveRoteiro==='function') window.autoSaveRoteiro();
+  _sincronizarPeriodoHibrido('inicio', novaData);
 };
 
 window.moverDia = function(idx, direcao) {
@@ -1870,6 +2418,7 @@ window.moverDia = function(idx, direcao) {
     trocaColapso(idx, idx+1);
   }
   
+  if (typeof window.resequenciarDatasDias === 'function') window.resequenciarDatasDias();
   renderEditDias();
 };
 
@@ -1884,6 +2433,7 @@ window.delDia = function(idx) {
   }
   if (confirm("Tem certeza que deseja remover este dia inteiro?")) {
     roteiroEmEdicao.dias.splice(idx, 1);
+    if (typeof window.resequenciarDatasDias === 'function') window.resequenciarDatasDias();
     renderEditDias();
   }
 };
@@ -2082,6 +2632,25 @@ window.formatarPessoas = function(el) {
   return text.join(', ');
 };
 
+window.updResponsabilidadeTransporte = function(idx, eIdx, modo) {
+  const el = roteiroEmEdicao.dias[idx].elementos[eIdx];
+  if (!el) return;
+  if (modo === 'heian') {
+    el.compradoHeian = true;
+    el.isSemReserva = false;
+    if (el.categoria === 'Sem Reserva') el.categoria = 'Reservado';
+  } else if (modo === 'cliente') {
+    el.compradoHeian = false;
+    el.isSemReserva = false;
+    if (el.categoria === 'Sem Reserva') el.categoria = 'Reservado';
+  } else if (modo === 'ic_card') {
+    el.compradoHeian = false;
+    el.isSemReserva = true;
+    el.categoria = 'Sem Reserva';
+  }
+  renderEditDias();
+};
+
 window.selecionarTransporte = function(idx, eIdx, idTransp) {
   const el = roteiroEmEdicao.dias[idx].elementos[eIdx];
   
@@ -2105,16 +2674,20 @@ window.selecionarTransporte = function(idx, eIdx, idTransp) {
   }
 
   const processar = (transportes) => {
-    const t = transportes.find(x => x.id == idTransp);
+    const t = transportes.find(x => String(x.id) === String(idTransp));
     if (t) {
       el.trechoId = t.id;
       el.tipoTransporte = t.tipo;
       el.linha = t.linha;
       el.categoria = t.categoria;
       el.tempo = t.tempo;
-      el.instrucoesPreCompra = t.compra || '';
-      el.instrucoesPosCompra = t.uso || '';
-      /* pax herda do cliente por padrao */
+      // Se for Cartão IC / Sem Reserva, sugere compra do cliente por padrão
+      if (t.categoria === 'Sem Reserva' || (t.tipo && t.tipo.toLowerCase().includes('ic card'))) {
+        el.compradoHeian = false;
+      }
+      // Mantém os campos de override limpos para a Base Mestre ser dinâmica
+      el.instrucoesPreCompra = '';
+      el.instrucoesPosCompra = '';
       /* pax herda do cliente por padrao */
       renderEditDias();
     }
@@ -2141,21 +2714,64 @@ window.atualizarOpcoesExperiencia = function(idx, eIdx) {
   if (!sel) return;
   
   sel.innerHTML = '<option value="">Carregando...</option>';
-  
+
+  // Cidade do dia: da sequência do dia (ou do próprio dia) — para priorizar
+  // as experiências daquela cidade no select
+  const normCid = (x) => (x || '').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  let cidadeDia = normCid(dia.cidade);
+  let cidadeDiaNome = dia.cidade || '';
+  (dia.elementos || []).forEach(e2 => {
+    if (!cidadeDia && e2.tipo === 'sequencia' && e2.cidade) {
+      cidadeDia = normCid(e2.cidade);
+      cidadeDiaNome = e2.cidade;
+    }
+  });
+
   const processarExperiencias = (experiencias) => {
     sel.innerHTML = '<option value="">Selecione...</option>';
     let count = 0;
+    const daCidade = [];
+    const outras = [];
     experiencias.forEach(ex => {
       const nome = (ex.nome || '').toLowerCase();
-      if (!filtro || nome.includes(filtro)) {
+      const cidade = (ex.cidade || '').toLowerCase();
+      const tipo = (ex.tipo || '').toLowerCase();
+      
+      // Permitir busca pelo nome da experiencia, cidade ou tipo
+      if (filtro && !nome.includes(filtro) && !cidade.includes(filtro) && !tipo.includes(filtro)) return;
+      
+      const cidEx = normCid(ex.cidade);
+      const casaCidade = !cidadeDia || !cidEx || cidEx === 'multi' ||
+        cidEx.includes(cidadeDia) || cidadeDia.includes(cidEx);
+      (casaCidade ? daCidade : outras).push(ex);
+    });
+    const addOpts = (lista, grupoLabel) => {
+      if (!lista.length) return;
+      let alvo = sel;
+      if (grupoLabel) {
+        alvo = document.createElement('optgroup');
+        alvo.label = grupoLabel;
+        sel.appendChild(alvo);
+      }
+      lista.forEach(ex => {
         const opt = document.createElement('option');
         opt.value = ex.id;
-        opt.textContent = ex.nome + ' | ' + ex.tipo;
+        opt.textContent = ex.nome + ' | ' + ex.tipo + (ex.cidade ? ' | ' + ex.cidade : '');
         if (ex.id == el.expId) opt.selected = true;
-        sel.appendChild(opt);
+        alvo.appendChild(opt);
         count++;
-      }
-    });
+      });
+    };
+    
+    // Sempre agrupa por cidade (Destaques da cidade do dia no topo) mesmo se houver filtro
+    if (cidadeDia) {
+      const labelGrupo = cidadeDiaNome ? `Destaques em ${cidadeDiaNome}` : 'Destaques na Cidade';
+      addOpts(daCidade, labelGrupo);
+      addOpts(outras, 'Outras cidades / regiões');
+    } else {
+      addOpts(daCidade.concat(outras), null);
+    }
     if (count === 0 && filtro) {
        sel.innerHTML = '<option value="">Nenhuma opção encontrada...</option>';
     } else if (count === 0) {
@@ -2233,7 +2849,7 @@ window.adicionarElemento = function(idx, tipo) {
   } else if (tipo === 'texto') {
     roteiroEmEdicao.dias[idx].elementos.push({ refId: Date.now() + Math.random().toString(36).substr(2, 5), tipo: 'texto', conteudo: '' });
   } else if (tipo === 'info') {
-    roteiroEmEdicao.dias[idx].elementos.push({ refId: Date.now() + Math.random().toString(36).substr(2, 5), tipo: 'info', dataDoTour: '', horarioEncontro: '', duracaoTour: '6h', localEncontro: '' });
+    roteiroEmEdicao.dias[idx].elementos.push({ refId: Date.now() + Math.random().toString(36).substr(2, 5), tipo: 'info', dataDoTour: (roteiroEmEdicao.dias[idx].data || ''), horarioEncontro: '', duracaoTour: '6h', localEncontro: '' });
   } else if (tipo === 'transporte') {
     roteiroEmEdicao.dias[idx].elementos.push({ refId: Date.now() + Math.random().toString(36).substr(2, 5), 
         tipo: 'transporte', cidadeOrigem: '', cidadeDestino: '', trechoId: null,
@@ -2266,8 +2882,14 @@ window.itemSeguirCliente = function(idx, eIdx) {
   if (typeof window.autoSaveRoteiro === 'function') window.autoSaveRoteiro();
 };
 
-window.addAtracaoBloco = function(idx, eIdx, nome) {
-  if(!nome.trim()) return;
+window.addAtracaoBloco = function(idx, eIdx, nomeRaw) {
+  if(!nomeRaw || !nomeRaw.trim()) return;
+  
+  let nome = nomeRaw.trim();
+  if (nome.includes('|')) {
+    nome = nome.split('|')[1].trim();
+  }
+  nome = nome.replace(/\(Atração\)/g, '').replace(/\(Bairro\)/g, '').trim();
   
   const dia = roteiroEmEdicao.dias[idx];
   if (dia && dia.data) {
@@ -2299,9 +2921,12 @@ window.attachChipEvents = function() {
   document.querySelectorAll('.chip-atracao').forEach(chip => {
     chip.removeEventListener('mouseenter', showPopover);
     chip.removeEventListener('mouseleave', hidePopover);
-    chip.addEventListener('mouseenter', showPopover);
-    chip.addEventListener('mouseleave', hidePopover);
+    if (!chip.classList.contains('chip-seq')) {
+      chip.addEventListener('mouseenter', showPopover);
+      chip.addEventListener('mouseleave', hidePopover);
+    }
   });
+  if (typeof window.initDragAtracoes === 'function') window.initDragAtracoes();
 };
 
 
@@ -2389,8 +3014,8 @@ window.renderRotEstadias = function() {
       </div>
       <div class="form-grid-4">
         <div class="field"><label>Cidade</label><input type="text" value="${est.cidade}" placeholder="Ex: Tokyo" oninput="updRotEstadia(${est.id},'cidade',this.value)"></div>
-        <div class="field"><label>Data Início</label><input type="date" value="${est.dataInicio}" oninput="updRotEstadia(${est.id},'dataInicio',this.value)"></div>
-        <div class="field"><label>Data Fim</label><input type="date" value="${est.dataFim}" oninput="updRotEstadia(${est.id},'dataFim',this.value)"></div>
+        <div class="field"><label>Data Início</label>${window.hdField(est.dataInicio, 'data-hd="estadia" data-hd-id="' + est.id + '" data-hd-f="dataInicio"')}</div>
+        <div class="field"><label>Data Fim</label>${window.hdField(est.dataFim, 'data-hd="estadia" data-hd-id="' + est.id + '" data-hd-f="dataFim"')}</div>
         <div class="field"><label>Hotel</label><input type="text" value="${est.hotel}" placeholder="Ex: The Celestine Tokyo" oninput="updRotEstadia(${est.id},'hotel',this.value)"></div>
       </div>`;
     cont.appendChild(div);
@@ -2450,7 +3075,7 @@ window.triggerRoteiroAutoSave = function() {
     if (indicator) { indicator.textContent = 'Salvando...'; indicator.style.opacity = '1'; }
     
     try {
-      dbRotas[roteiroOriginalNome] = roteiroEmEdicao;
+      dbRotas[roteiroOriginalNome] = JSON.parse(JSON.stringify(roteiroEmEdicao));
       const chaveSave = roteiroEmEdicao.id || roteiroOriginalNome;
       const res = await fetch('/api/roteiros/' + encodeURIComponent(chaveSave), {
         method: 'POST',
@@ -2458,6 +3083,8 @@ window.triggerRoteiroAutoSave = function() {
         body: JSON.stringify({ ...roteiroEmEdicao, _baseVersao: roteiroEmEdicao.atualizadoEm })
       });
       if (res.status === 409) {
+        let _err = null; try { _err = await res.json(); } catch (e) {}
+        if (_err && _err.error === 'reducao') { if (indicator) { indicator.textContent = '⚠ Alteração retida (segurança)'; indicator.style.opacity = '1'; } return; }
         if (indicator) { indicator.textContent = 'Conflito de edição!'; indicator.style.opacity = '1'; }
         if (!window.__conflitoRoteiroAvisado) {
           window.__conflitoRoteiroAvisado = true;
@@ -2491,7 +3118,9 @@ window.updateRoteiroHeader = function() {
   const cliente = roteiroEmEdicao.cliente || {};
   t.textContent = document.getElementById('editRoteiroNome')?.value || roteiroOriginalNome || 'Roteiro em Edição';
   const nome = cliente.nome || 'Sem nome';
-  const data = cliente.dataOrcamento ? (cliente.dataOrcamento + (cliente.dataFim ? ' a ' + cliente.dataFim : '')) : 'Sem data definida';
+  const dataInicioVal = cliente.dataInicio || (roteiroEmEdicao.dias && roteiroEmEdicao.dias.find(d => d.data)?.data) || cliente.dataOrcamento;
+  const dataFimVal = cliente.dataFim || (roteiroEmEdicao.dias && [...roteiroEmEdicao.dias].reverse().find(d => d.data)?.data);
+  const data = dataInicioVal ? (dataInicioVal + (dataFimVal ? ' a ' + dataFimVal : '')) : 'Sem data definida';
   s.textContent = `Cliente: ${nome} | Viagem: ${data}`;
 };
 
@@ -2715,7 +3344,6 @@ window.renderListaRoteiros = function(filtro = '') {
     card.className = 'list-card ' + isSelected;
     card.dataset.nome = nome;
     card.onclick = () => selecionarRoteiro(nome);
-    card.onmouseenter = () => { if(window.roteiroAtualVisualizado !== nome) selecionarRoteiro(nome, true); };
     
     card.innerHTML = `
       <div class="list-card-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
@@ -3243,6 +3871,12 @@ window.abrirDrawerPerfilCliente = async function() {
 
       prefHTML = `
         <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          ${preferencias.cidadesPretendeVisitar ? `
+          <div style="background:rgba(196,163,90,0.06); border:1px solid rgba(196,163,90,0.2); border-radius:10px; padding:10px 12px; margin-bottom:16px;">
+            <div style="font-size:11px; color:var(--ink-lt); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; font-weight:600;">🗺️ Cidades que pretende visitar</div>
+            <div style="font-size:13px; color:var(--ink-dk); font-weight:600;">${preferencias.cidadesPretendeVisitar}</div>
+          </div>
+          ` : ''}
           <h4 style="margin: 0 0 12px 0; color: var(--gold-dk); font-size: 13.5px; text-transform: uppercase; letter-spacing:0.04em;">🏃 Ritmo & Estilo de Viagem</h4>
           <div style="font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-dk); margin-bottom: 16px;">
             <div><strong>Ritmo dos dias:</strong> ${preferencias.ritmo || 'Não informado'}</div>
@@ -3414,9 +4048,21 @@ window.abrirModalEnviarEmail = async function() {
 
   // Montar template
   // O link do roteiro será gerado com base no host atual (funciona no localhost para testes ou na produção automaticamente)
-  const linkRoteiro = slug 
+  // O link do portal PRECISA do token de segurança (?t=...). Buscamos do endpoint que ASSINA o link
+  // (mesma lógica de todo lugar) em vez de montar na mão — sem token o portal dá 403 pro cliente.
+  let linkRoteiro = slug
     ? `${window.location.protocol}//${window.location.host}/cliente/${slug}`
-    : `${window.location.protocol}//${window.location.host}/cliente/${clienteId}`; // fallback
+    : `${window.location.protocol}//${window.location.host}/cliente/${clienteId}`; // fallback (sem token) se o endpoint falhar
+  try {
+    if (clienteId) {
+      const rLink = await fetch('/api/clientes/' + encodeURIComponent(clienteId) + '/portal-link');
+      if (rLink.ok) {
+        const dLink = await rLink.json();
+        if (dLink && dLink.success && dLink.url) linkRoteiro = dLink.url;
+      }
+    }
+  } catch (e) { console.error('Erro ao gerar link do portal com token:', e); }
+  window.__emailClienteId = clienteId; // p/ marcar 'material enviado' na timeline ao enviar
   
   const getSenderName = () => senderSelect && senderSelect.value === 'diogo' ? 'Diogo' : 'Deborah';
   
@@ -3537,7 +4183,32 @@ window.enviarEmailRoteiroExec = async function() {
       return;
     }
   } else {
-    console.log('Nenhum arquivo de anexo selecionado no input.');
+    // Sem arquivo manual → gera o PDF do roteiro automaticamente a partir do preview aberto (.pdf-doc).
+    // Se falhar (lib ausente, imagem externa sem CORS, etc.), segue SEM anexo (o link do portal fica no corpo).
+    try {
+      const docEl = document.querySelector('#previewContainer .pdf-doc');
+      if (typeof html2pdf === 'function' && docEl) {
+        if (statusText) statusText.textContent = '🖨️ Gerando o PDF do roteiro...';
+        const nomeArq = 'Roteiro Heian Tour.pdf';
+        const opt = {
+          margin: 0,
+          filename: nomeArq,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        const dataUri = await html2pdf().set(opt).from(docEl).outputPdf('datauristring');
+        if (dataUri && dataUri.length > 100) {
+          attachment = { filename: nomeArq, content: dataUri };
+          console.log('PDF automático gerado. Tamanho base64:', dataUri.length);
+        }
+      } else {
+        console.log('html2pdf indisponível ou preview não aberto — enviando sem anexo automático.');
+      }
+    } catch (errPdf) {
+      console.error('Falha ao gerar PDF automático do roteiro (segue sem anexo):', errPdf);
+    }
   }
 
   try {
@@ -3555,6 +4226,13 @@ window.enviarEmailRoteiroExec = async function() {
 
     if (res.ok) {
       console.log('Envio de e-mail bem sucedido!');
+      // Timeline: marca 'material enviado' pro cliente (não bloqueia nada se falhar)
+      if (window.__emailClienteId) {
+        fetch('/api/clientes/' + encodeURIComponent(window.__emailClienteId) + '/marco', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ marco: 'materialEnviado', valor: new Date().toISOString() })
+        }).catch(() => {});
+      }
       if (statusText) {
         statusText.textContent = "✉️ E-mail enviado com sucesso!";
         statusText.style.color = "#2ecc71";
@@ -3577,5 +4255,1031 @@ window.enviarEmailRoteiroExec = async function() {
     if (btnConfirmar) btnConfirmar.disabled = false;
     console.log('--- ENVIAR E-MAIL FINALIZADO ---');
   }
+};
+
+
+/* ── CADASTROS RÁPIDOS DIRETAMENTE DO ROTEIRO ────────────────────────────── */
+window.abrirModalCadastroRapido = function(tipo, idx, eIdx) {
+  const container = document.getElementById('modalContent');
+  if (!container) return;
+  
+  let html = '';
+  let title = '';
+  
+  if (tipo === 'atracao') {
+    title = 'Cadastrar Nova Atração';
+    
+    const diasS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const diasVal = [1, 2, 3, 4, 5, 6, 0];
+    const checkboxesHTML = diasS.map((diaNome, dIdx) => {
+      const val = diasVal[dIdx];
+      return `<label style="display:inline-flex; align-items:center; margin-right:12px; font-weight:normal; cursor:pointer; font-size:12px;">
+                <input type="checkbox" name="m_a_dias_fechados" value="${val}" style="margin-right:4px;"> ${diaNome}
+              </label>`;
+    }).join('');
+
+    html = `
+      <div style="font-family:Jost, sans-serif; max-height: 70vh; overflow-y: auto; padding-right: 8px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Cidade</label>
+            <input type="text" id="cad_atr_cidade" placeholder="Ex: Kyoto" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Bairro</label>
+            <input type="text" id="cad_atr_bairro" placeholder="Ex: Higashiyama" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Nome da Atração *</label>
+          <input type="text" id="cad_atr_nome" placeholder="Ex: Templo Kinkaku-ji" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço do Ingresso (Ex: Gratuito ou ¥400)</label>
+          <input type="text" id="cad_atr_preco" placeholder="Ex: ¥500" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Foto (URL)</label>
+          <input type="text" id="cad_atr_foto" placeholder="https://..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Descrição Detalhada</label>
+          <textarea id="cad_atr_desc" rows="3" placeholder="Descrição da atração..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;"></textarea>
+        </div>
+        
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Dias Fechados (Recorrente)</label>
+          <div style="display:flex; flex-wrap:wrap; margin-top:4px; gap:4px;">
+            ${checkboxesHTML}
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Manutenção/Reforma (Início)</label>
+            <input type="date" id="m_a_manut_inicio" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Manutenção/Reforma (Fim)</label>
+            <input type="date" id="m_a_manut_fim" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Motivo da Manutenção/Reforma</label>
+          <input type="text" id="m_a_manut_motivo" placeholder="Ex: Reforma de verão, pintura, etc." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; position: sticky; bottom: 0; background: var(--bg); padding-top: 10px; border-top: 1px solid var(--border);">
+          <button type="button" class="btn-secondary" onclick="closeModal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnSalvarAtrRapido" onclick="window.salvarNovaAtracaoRapida(${idx}, ${eIdx})" style="padding:8px 16px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson);">Salvar Atração</button>
+        </div>
+      </div>
+    `;
+  } else if (tipo === 'rota') {
+    title = 'Cadastrar Nova Rota Modelo';
+    
+    const cidadesSet = new Set();
+    if (typeof dbAtracoes !== 'undefined') {
+      dbAtracoes.forEach(a => {
+        if (a.Cidade) cidadesSet.add(a.Cidade.trim());
+      });
+    }
+    
+    let cidadePadrao = '';
+    if (idx !== undefined && eIdx !== undefined && roteiroEmEdicao && roteiroEmEdicao.dias[idx] && roteiroEmEdicao.dias[idx].elementos[eIdx]) {
+      cidadePadrao = roteiroEmEdicao.dias[idx].elementos[eIdx].cidade || '';
+    }
+    if (cidadePadrao) cidadesSet.add(cidadePadrao);
+    
+    const cidadesOpts = Array.from(cidadesSet).sort();
+    const optionsHTML = '<option value="">-- Selecione uma Cidade --</option>' + 
+      cidadesOpts.map(c => `<option value="${c}" ${c === cidadePadrao ? 'selected' : ''}>${c}</option>`).join('');
+      
+    window._tempAtracoesSelecionadasRapidas = [];
+    window._dragModalRapidoIdx = undefined;
+    
+    html = `
+      <div style="font-family:Jost, sans-serif;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Cidade *</label>
+            <select id="cad_rota_cidade" onchange="window.atualizarBairrosDisponiveisRotaRapida(); window.renderModalRotasRapidasUI()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+              ${optionsHTML}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Nome da Rota *</label>
+            <input type="text" id="cad_rota_nome" placeholder="Ex: Kyoto Tradicional - Templos do Leste" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        
+        <div class="field" style="margin-top:16px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Atrações Selecionadas na Rota (Arraste para reordenar, clique no 'x' para remover)</label>
+          <div id="cad_rota_selected" style="min-height: 48px; padding: 12px; border: 1px dashed var(--gold); border-radius: 6px; background: rgba(196,163,90,0.05); display: flex; flex-wrap: wrap; gap: 8px; margin-top:4px;">
+          </div>
+        </div>
+        
+        <div class="field" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid); margin:0;">Atrações Disponíveis (Clique para adicionar)</label>
+            <div style="display:flex; gap:8px;">
+              <select id="cad_rota_bairro_filter" onchange="window.renderModalRotasRapidasUI()" style="padding:4px 8px; font-size:12px; border:1px solid #ccc; border-radius:4px; max-width:130px;">
+                <option value="">Todos os Bairros</option>
+              </select>
+              <input type="text" id="cad_rota_search" placeholder="Buscar..." oninput="window.renderModalRotasRapidasUI()" style="width:130px; padding:4px 8px; font-size:12px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+          </div>
+          <div id="cad_rota_available" style="max-height: 180px; overflow-y: auto; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-alt); display: flex; flex-wrap: wrap; gap: 8px;">
+          </div>
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+          <button type="button" class="btn-secondary" onclick="closeModal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnSalvarRotaRapido" onclick="window.salvarNovaRotaRapida(${idx}, ${eIdx})" style="padding:8px 16px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson);">Salvar Rota</button>
+        </div>
+      </div>
+    `;
+    
+    setTimeout(() => { 
+      window.atualizarBairrosDisponiveisRotaRapida();
+      window.renderModalRotasRapidasUI(); 
+    }, 50);
+  } else if (tipo === 'transporte') {
+    title = 'Cadastrar Novo Transporte';
+    html = `
+      <div style="font-family:Jost, sans-serif; max-height: 80vh; overflow-y: auto; padding-right: 8px;">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Trecho / Rota *</label>
+          <input type="text" id="cad_tr_trecho" placeholder="Ex: Kyoto para Tokyo" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Meio de Transporte</label>
+            <select id="cad_tr_tipo" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+              <option value="Trem Bala">Trem Bala</option>
+              <option value="Trem Local">Trem Local</option>
+              <option value="Metrô">Metrô</option>
+              <option value="Ônibus">Ônibus</option>
+              <option value="Voo">Voo</option>
+              <option value="Táxi">Táxi</option>
+              <option value="Carro Privado">Carro Privado</option>
+              <option value="Ferry">Ferry</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Linha / Operadora</label>
+            <input type="text" id="cad_tr_linha" placeholder="Ex: Shinkansen Nozomi" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Categoria</label>
+            <input type="text" id="cad_tr_categoria" placeholder="Ex: Reservado (Green Car)" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Tempo de Viagem</label>
+            <input type="text" id="cad_tr_tempo" placeholder="Ex: 2h15" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço por Adulto (Ienes - ¥)</label>
+            <input type="number" id="cad_tr_preco" placeholder="Ex: 14000" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço por Criança (Ienes - ¥)</label>
+            <input type="number" id="cad_tr_preco_crianca" placeholder="Ex: 7000" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Observações</label>
+          <input type="text" id="cad_tr_obs" placeholder="Observações rápidas..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Link de Compra / Info</label>
+          <input type="text" id="cad_tr_link" placeholder="https://..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Instrução de Compra (Pré-compra)</label>
+          <textarea id="cad_tr_compra" rows="2" placeholder="Passo a passo para comprar..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;"></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Instrução de Uso (Embarque)</label>
+          <textarea id="cad_tr_uso" rows="2" placeholder="Como embarcar, validação de bilhete..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;"></textarea>
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; position: sticky; bottom: 0; background: var(--bg); padding-top: 10px; border-top: 1px solid var(--border);">
+          <button type="button" class="btn-secondary" onclick="closeModal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnSalvarTrRapido" onclick="window.salvarNovoTransporteRapido(${idx}, ${eIdx})" style="padding:8px 16px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson);">Salvar Transporte</button>
+        </div>
+      </div>
+    `;
+  } else if (tipo === 'experiencia') {
+    title = 'Cadastrar Nova Experiência';
+    html = `
+      <div style="font-family:Jost, sans-serif; max-height: 80vh; overflow-y: auto; padding-right: 8px;">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Nome da Experiência *</label>
+          <input type="text" id="cad_exp_nome" placeholder="Ex: Cerimônia do Chá Tradicional" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Cidade</label>
+            <input type="text" id="cad_exp_cidade" placeholder="Ex: Kyoto" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Tipo / Categoria</label>
+            <input type="text" id="cad_exp_tipo" placeholder="Ex: Tour Privado ou Ingresso" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço por Adulto (Ienes - ¥)</label>
+            <input type="number" id="cad_exp_preco" placeholder="Ex: 5000" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço por Criança (Ienes - ¥)</label>
+            <input type="number" id="cad_exp_preco_crianca" placeholder="Ex: 2500" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Duração</label>
+            <input type="text" id="cad_exp_duracao" placeholder="Ex: 2h30" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Horários Típicos</label>
+            <input type="text" id="cad_exp_horarios" placeholder="Ex: 10:00–17:00" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Janela de Abertura (dias)</label>
+            <input type="number" id="cad_exp_janela" placeholder="Ex: 60" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Prazo Limite p/ Reservar (dias)</label>
+            <input type="number" id="cad_exp_prazo" placeholder="Ex: 14" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Público-alvo</label>
+            <input type="text" id="cad_exp_publico" placeholder="Ex: Todos / Famílias" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Sazonalidade</label>
+            <input type="text" id="cad_exp_sazonal" placeholder="Ex: Ano todo / Primavera" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Link de Reserva / Info</label>
+          <input type="text" id="cad_exp_link" placeholder="https://..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Descrição Curta (aparece no roteiro)</label>
+          <textarea id="cad_exp_desc" rows="2" placeholder="Informações resumidas..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;"></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Observações / Instruções de Reserva</label>
+          <textarea id="cad_exp_obs" rows="2" placeholder="Detalhes de operadora, fornecedor, etc..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;"></textarea>
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; position: sticky; bottom: 0; background: var(--bg); padding-top: 10px; border-top: 1px solid var(--border);">
+          <button type="button" class="btn-secondary" onclick="closeModal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnSalvarExpRapido" onclick="window.salvarNovaExperienciaRapida(${idx}, ${eIdx})" style="padding:8px 16px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson);">Salvar Experiência</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  container.innerHTML = `
+    <h2 style="margin: 0 0 20px 0; color: var(--gold-dk); font-size: 22px; font-family: var(--ff-display); font-weight: 500;">${title}</h2>
+    ${html}
+  `;
+  
+  openModal();
+};
+
+window.salvarNovaAtracaoRapida = async function(idx, eIdx) {
+  const nome = document.getElementById('cad_atr_nome').value.trim();
+  const cidade = document.getElementById('cad_atr_cidade').value.trim();
+  const bairro = document.getElementById('cad_atr_bairro').value.trim();
+  const preco = document.getElementById('cad_atr_preco').value.trim();
+  const desc = document.getElementById('cad_atr_desc').value.trim();
+  const foto = document.getElementById('cad_atr_foto').value.trim();
+  
+  if (!nome) { alert('O nome da atração é obrigatório!'); return; }
+  
+  const payload = {
+    "Nome da Atração": nome,
+    "Cidade": cidade,
+    "Bairro": bairro,
+    "Preço (Ingresso)": preco,
+    "Descrição Detalhada": desc,
+    "Foto (URL)": foto
+  };
+  
+  try {
+    const btn = document.getElementById('btnSalvarAtrRapido');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    const res = await fetch('/api/atracoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) throw new Error(await res.text());
+    const novaAtr = await res.json();
+    
+    dbAtracoes.push(novaAtr);
+    atracaoMap.set(novaAtr['Nome da Atração'].toLowerCase(), novaAtr);
+    if (typeof state !== 'undefined' && state.atracoesDB) {
+      state.atracoesDB.push(novaAtr);
+    }
+    
+    if (idx !== undefined && eIdx !== undefined) {
+      roteiroEmEdicao.dias[idx].elementos[eIdx].atracoesDoDia.push(nome);
+      renderEditDias();
+    }
+    
+    closeModal();
+  } catch(e) {
+    alert('Erro ao salvar atração: ' + e.message);
+    console.error(e);
+    const btn = document.getElementById('btnSalvarAtrRapido');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Atração';
+    }
+  }
+};
+
+window.salvarNovaRotaRapida = async function(idx, eIdx) {
+  const nomeDaRota = document.getElementById('cad_rota_nome').value.trim();
+  const cidade = document.getElementById('cad_rota_cidade').value;
+  const atracoesDoDia = window._tempAtracoesSelecionadasRapidas;
+  
+  if (!cidade) { alert('A cidade é obrigatória!'); return; }
+  if (!nomeDaRota) { alert('O nome da rota é obrigatório!'); return; }
+  
+  const payload = {
+    nomeDaRota,
+    cidade,
+    atracoesDoDia
+  };
+  
+  try {
+    const btn = document.getElementById('btnSalvarRotaRapido');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    const res = await fetch('/api/rotas-base', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) throw new Error(await res.text());
+    const novaRota = await res.json();
+    
+    if (typeof state !== 'undefined' && state.rotasDB) {
+      state.rotasDB.push(novaRota);
+    }
+    
+    if (idx !== undefined && eIdx !== undefined) {
+      roteiroEmEdicao.dias[idx].elementos[eIdx].cidade = cidade;
+      roteiroEmEdicao.dias[idx].elementos[eIdx].nomeDaRota = nomeDaRota;
+      roteiroEmEdicao.dias[idx].elementos[eIdx].atracoesDoDia = atracoesDoDia;
+      renderEditDias();
+    }
+    
+    closeModal();
+  } catch(e) {
+    alert('Erro ao salvar rota: ' + e.message);
+    console.error(e);
+    const btn = document.getElementById('btnSalvarRotaRapido');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Rota';
+    }
+  }
+};
+
+window._tempAtracoesSelecionadasRapidas = [];
+window._dragModalRapidoIdx = undefined;
+
+window.renderModalRotasRapidasUI = function() {
+  const cidadeSelect = document.getElementById('cad_rota_cidade');
+  const selContainer = document.getElementById('cad_rota_selected');
+  const availContainer = document.getElementById('cad_rota_available');
+  if (!cidadeSelect || !selContainer || !availContainer) return;
+  
+  const cidade = cidadeSelect.value;
+  if (!cidade) {
+    selContainer.innerHTML = '';
+    availContainer.innerHTML = '<span style="color:var(--ink-lt); font-size:12px;">Selecione uma cidade primeiro.</span>';
+    return;
+  }
+  
+  const atracoesDaCidade = dbAtracoes.filter(a => (a.Cidade || '').trim().toLowerCase() === cidade.toLowerCase()).map(a => a['Nome da Atração']).filter(Boolean);
+  
+  selContainer.innerHTML = '';
+  if (window._tempAtracoesSelecionadasRapidas.length === 0) {
+    selContainer.innerHTML = '<span style="color:var(--ink-lt); font-size:12px; margin:auto">Nenhuma atração selecionada.</span>';
+  } else {
+    window._tempAtracoesSelecionadasRapidas.forEach((nome, i) => {
+      const match = window.buscarAtracaoNoMapa(nome);
+      let isBairro = false;
+      if (match) {
+        const bairro = match['Bairro'] || '';
+        isBairro = (bairro && bairro.toLowerCase() === nome.toLowerCase()) || nome.toLowerCase().includes('bairro');
+      } else {
+        isBairro = nome.toLowerCase().includes('bairro');
+      }
+      
+      const extraClass = isBairro ? ' bairro' : ' sub-atracao';
+      const prefixo = isBairro ? '• ' : '› ';
+      
+      const chip = document.createElement('div');
+      chip.className = 'chip-atracao' + extraClass;
+      chip.style.display = 'inline-flex';
+      chip.style.alignItems = 'center';
+      chip.style.gap = '8px';
+      chip.draggable = true;
+      chip.innerHTML = `<span>${prefixo}${nome}</span><span onclick="window.removerAtracaoModalRapida(${i})" style="color:var(--crimson); cursor:pointer; font-weight:bold; padding-left:4px">&times;</span>`;
+      
+      chip.addEventListener('dragstart', (e) => { window._dragModalRapidoIdx = i; e.dataTransfer.effectAllowed = 'move'; chip.style.opacity = '0.5'; });
+      chip.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+      chip.addEventListener('drop', (e) => {
+        e.preventDefault();
+        chip.style.opacity = '1';
+        if (window._dragModalRapidoIdx === undefined || window._dragModalRapidoIdx === i) return;
+        const arr = window._tempAtracoesSelecionadasRapidas;
+        const item = arr.splice(window._dragModalRapidoIdx, 1)[0];
+        arr.splice(i, 0, item);
+        window._dragModalRapidoIdx = undefined;
+        window.renderModalRotasRapidasUI();
+      });
+      chip.addEventListener('dragend', () => { chip.style.opacity = '1'; });
+      selContainer.appendChild(chip);
+    });
+  }
+  
+  availContainer.innerHTML = '';
+  const busca = (document.getElementById('cad_rota_search')?.value || '').trim().toLowerCase();
+  const bairroSelecionado = document.getElementById('cad_rota_bairro_filter')?.value || '';
+  
+  let disponiveis = atracoesDaCidade;
+  if (bairroSelecionado) {
+    disponiveis = disponiveis.filter(nome => {
+      const match = window.buscarAtracaoNoMapa(nome);
+      if (!match) return false;
+      return (match.Bairro || '').trim().toLowerCase() === bairroSelecionado.trim().toLowerCase();
+    });
+  }
+  
+  disponiveis = disponiveis.filter(a => !window._tempAtracoesSelecionadasRapidas.includes(a) && a.toLowerCase().includes(busca));
+  if (disponiveis.length === 0) {
+    availContainer.innerHTML = '<span style="color:var(--ink-lt); font-size:12px;">Nenhuma atração disponível.</span>';
+  } else {
+    disponiveis.forEach(nome => {
+      const match = window.buscarAtracaoNoMapa(nome);
+      let isBairro = false;
+      if (match) {
+        const bairro = match['Bairro'] || '';
+        isBairro = (bairro && bairro.toLowerCase() === nome.toLowerCase()) || nome.toLowerCase().includes('bairro');
+      } else {
+        isBairro = nome.toLowerCase().includes('bairro');
+      }
+      
+      const extraClass = isBairro ? ' bairro' : ' sub-atracao';
+      const prefixo = isBairro ? '• ' : '› ';
+      
+      const chip = document.createElement('div');
+      chip.className = 'chip-atracao' + extraClass;
+      chip.style.cursor = 'pointer';
+      
+      if (isBairro) {
+        chip.style.background = 'rgba(154, 51, 64, 0.05)';
+        chip.style.color = 'var(--l-wine)';
+        chip.style.borderColor = 'rgba(154, 51, 64, 0.3)';
+        chip.style.borderStyle = 'dashed';
+        chip.style.borderWidth = '1px';
+      } else {
+        chip.style.background = 'rgba(196,163,90,0.08)';
+        chip.style.color = 'var(--gold-dk)';
+        chip.style.borderColor = 'rgba(196,163,90,0.3)';
+        chip.style.borderStyle = 'dashed';
+        chip.style.borderWidth = '1px';
+      }
+      
+      chip.textContent = '+ ' + prefixo + nome;
+      chip.onclick = () => {
+        window._tempAtracoesSelecionadasRapidas.push(nome);
+        window.renderModalRotasRapidasUI();
+      };
+      availContainer.appendChild(chip);
+    });
+  }
+};
+
+window.removerAtracaoModalRapida = function(idx) {
+  window._tempAtracoesSelecionadasRapidas.splice(idx, 1);
+  window.renderModalRotasRapidasUI();
+};
+
+window.atualizarBairrosDisponiveisRotaRapida = function() {
+  const cidadeSelect = document.getElementById('cad_rota_cidade');
+  const bairroFilter = document.getElementById('cad_rota_bairro_filter');
+  if (!cidadeSelect || !bairroFilter) return;
+  
+  const cidade = cidadeSelect.value;
+  if (!cidade) {
+    bairroFilter.innerHTML = '<option value="">Todos os Bairros</option>';
+    return;
+  }
+  
+  const bairrosSet = new Set();
+  dbAtracoes.forEach(a => {
+    if ((a.Cidade || '').trim().toLowerCase() === cidade.toLowerCase() && a.Bairro) {
+      bairrosSet.add(a.Bairro.trim());
+    }
+  });
+  
+  const bairrosList = Array.from(bairrosSet).sort();
+  bairroFilter.innerHTML = '<option value="">Todos os Bairros</option>' +
+    bairrosList.map(b => `<option value="${b}">${b}</option>`).join('');
+};
+
+window.salvarNovoTransporteRapido = async function(idx, eIdx) {
+  const trecho = document.getElementById('cad_tr_trecho').value.trim();
+  const tipo = document.getElementById('cad_tr_tipo').value;
+  const linha = document.getElementById('cad_tr_linha').value.trim();
+  const categoria = document.getElementById('cad_tr_categoria').value.trim();
+  const preco = parseFloat(document.getElementById('cad_tr_preco').value) || 0;
+  const precoCrianca = parseFloat(document.getElementById('cad_tr_preco_crianca').value) || 0;
+  const tempo = document.getElementById('cad_tr_tempo').value.trim();
+  
+  if (!trecho) { alert('O trecho é obrigatório!'); return; }
+  
+  const payload = {
+    trecho,
+    tipo,
+    linha,
+    categoria,
+    idade: 'Adulto',
+    preco_jpy: preco,
+    tempo
+  };
+  
+  try {
+    const btn = document.getElementById('btnSalvarTrRapido');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    const res = await fetch('/api/transportes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) throw new Error(await res.text());
+    const novoTr = await res.json();
+
+    // Preço-criança vira uma linha "Infantil" própria (modelo é 1 linha por idade)
+    if (precoCrianca > 0) {
+      try {
+        await fetch('/api/transportes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trecho, tipo, linha, categoria, idade: 'Infantil', preco_jpy: precoCrianca, tempo })
+        });
+      } catch (e2) { console.warn('Falha ao criar linha infantil do transporte', e2); }
+    }
+    
+    window.dbTransportesCache = null;
+    if (typeof state !== 'undefined' && state.transportesDB) {
+      state.transportesDB.push(novoTr);
+    }
+    
+    if (idx !== undefined && eIdx !== undefined) {
+      roteiroEmEdicao.dias[idx].elementos[eIdx].trechoId = String(novoTr.id);
+      renderEditDias();
+    }
+    
+    closeModal();
+  } catch(e) {
+    alert('Erro ao salvar transporte: ' + e.message);
+    console.error(e);
+    const btn = document.getElementById('btnSalvarTrRapido');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Transporte';
+    }
+  }
+};
+
+window.salvarNovaExperienciaRapida = async function(idx, eIdx) {
+  const nome = document.getElementById('cad_exp_nome').value.trim();
+  const cidade = document.getElementById('cad_exp_cidade').value.trim();
+  const tipo = document.getElementById('cad_exp_tipo').value.trim();
+  const preco = parseFloat(document.getElementById('cad_exp_preco').value) || 0;
+  const precoCrianca = parseFloat(document.getElementById('cad_exp_preco_crianca').value) || 0;
+  const duracao = document.getElementById('cad_exp_duracao').value.trim();
+  const horarios = document.getElementById('cad_exp_horarios').value.trim();
+  const janelaAbreDias = parseInt(document.getElementById('cad_exp_janela').value) || 0;
+  const prazoDias = parseInt(document.getElementById('cad_exp_prazo').value) || 0;
+  const publico = document.getElementById('cad_exp_publico').value.trim();
+  const sazonalidade = document.getElementById('cad_exp_sazonal').value.trim();
+  const link = document.getElementById('cad_exp_link').value.trim();
+  const descricao = document.getElementById('cad_exp_desc').value.trim();
+  const observacao = document.getElementById('cad_exp_obs').value.trim();
+  
+  if (!nome) { alert('O nome da experiência é obrigatório!'); return; }
+  
+  const payload = {
+    nome,
+    cidade,
+    tipo,
+    preco_jpy: preco,
+    preco_crianca_jpy: precoCrianca,
+    duracao,
+    horarios,
+    janelaAbreDias,
+    prazoDias,
+    publico,
+    sazonalidade,
+    link,
+    descricao,
+    observacao
+  };
+  
+  try {
+    const btn = document.getElementById('btnSalvarExpRapido');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    const res = await fetch('/api/experiencias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) throw new Error(await res.text());
+    const novaExp = await res.json();
+    
+    window.dbExperienciasCache = null;
+    if (typeof state !== 'undefined' && state.experienciasDB) {
+      state.experienciasDB.push(novaExp);
+    }
+    
+    if (idx !== undefined && eIdx !== undefined) {
+      roteiroEmEdicao.dias[idx].elementos[eIdx].expId = String(novaExp.id);
+      roteiroEmEdicao.dias[idx].elementos[eIdx].nomeExp = nome;
+      renderEditDias();
+    }
+    
+    closeModal();
+  } catch(e) {
+    alert('Erro ao salvar experiência: ' + e.message);
+    console.error(e);
+    const btn = document.getElementById('btnSalvarExpRapido');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Experiência';
+    }
+  }
+};
+
+
+/* ── EDIÇÃO RÁPIDA DE ITEM DIRETAMENTE DO ROTEIRO ─────────────────────────── */
+window.abrirModalEdicaoAtracao = function(nomeAtracao) {
+  const match = window.buscarAtracaoNoMapa(nomeAtracao);
+  if (!match) {
+    alert(`A atração "${nomeAtracao}" não foi encontrada na base de dados.`);
+    return;
+  }
+  
+  const container = document.getElementById('modalContent');
+  if (!container) return;
+  
+  const id = match.id || match['Nome da Atração'];
+  const nome = match['Nome da Atração'] || '';
+  const cidade = match['Cidade'] || '';
+  const bairro = match['Bairro'] || '';
+  const preco = match['Preço (Ingresso)'] || '';
+  const desc = match['Descrição Detalhada'] || '';
+  const foto = match['Foto (URL)'] || '';
+  const maps = match['Google Maps'] || match['Link do Google Maps'] || match.mapsUrl || match.linkMaps || match.link || '';
+  
+  const html = `
+    <div style="font-family:Jost, sans-serif;">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Nome da Atração *</label>
+        <input type="text" id="edit_atr_nome" value="${nome.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Cidade</label>
+          <input type="text" id="edit_atr_cidade" value="${cidade.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Bairro</label>
+          <input type="text" id="edit_atr_bairro" value="${bairro.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Preço do Ingresso</label>
+        <input type="text" id="edit_atr_preco" value="${preco.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Foto (URL)</label>
+        <input type="text" id="edit_atr_foto" value="${foto.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Google Maps (Link / Como Chegar - Opcional)</label>
+        <input type="text" id="edit_atr_maps" placeholder="https://maps.app.goo.gl/... ou https://google.com/maps/..." value="${maps.replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px; font-weight:600; color:var(--ink-mid);">Descrição Detalhada</label>
+        <textarea id="edit_atr_desc" rows="3" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:4px; font-family:inherit;">${desc}</textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button type="button" class="btn-secondary" onclick="closeModal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+        <button type="button" class="btn-primary" id="btnSalvarEditAtr" onclick="window.salvarEdicaoAtracao('${id.toString().replace(/'/g, "\\'")}', '${nome.replace(/'/g, "\\'")}')" style="padding:8px 16px; font-size:12px; background:var(--crimson); color:white; border-color:var(--crimson);">Salvar Alterações</button>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = `
+    <h2 style="margin: 0 0 20px 0; color: var(--gold-dk); font-size: 22px; font-family: var(--ff-display); font-weight: 500;">Editar Atração</h2>
+    ${html}
+  `;
+  
+  openModal();
+};
+
+window.salvarEdicaoAtracao = async function(idOriginal, nomeOriginal) {
+  const nome = document.getElementById('edit_atr_nome').value.trim();
+  const cidade = document.getElementById('edit_atr_cidade').value.trim();
+  const bairro = document.getElementById('edit_atr_bairro').value.trim();
+  const preco = document.getElementById('edit_atr_preco').value.trim();
+  const desc = document.getElementById('edit_atr_desc').value.trim();
+  const foto = document.getElementById('edit_atr_foto').value.trim();
+  const maps = document.getElementById('edit_atr_maps') ? document.getElementById('edit_atr_maps').value.trim() : '';
+  
+  if (!nome) { alert('O nome da atração é obrigatório!'); return; }
+  
+  const payload = {
+    "Nome da Atração": nome,
+    "Cidade": cidade,
+    "Bairro": bairro,
+    "Preço (Ingresso)": preco,
+    "Google Maps": maps,
+    "Link do Google Maps": maps,
+    "mapsUrl": maps,
+    "Descrição Detalhada": desc,
+    "Foto (URL)": foto
+  };
+  
+  try {
+    const btn = document.getElementById('btnSalvarEditAtr');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    
+    const res = await fetch(`/api/atracoes/${encodeURIComponent(idOriginal)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) throw new Error(await res.text());
+    const atracaoAtualizada = await res.json();
+    
+    const idx = dbAtracoes.findIndex(a => a.id == idOriginal || a['Nome da Atração'] === nomeOriginal);
+    if (idx !== -1) {
+      dbAtracoes[idx] = atracaoAtualizada;
+    }
+    
+    atracaoMap.delete(nomeOriginal.toLowerCase());
+    atracaoMap.set(nome.toLowerCase(), atracaoAtualizada);
+    
+    if (typeof state !== 'undefined' && state.atracoesDB) {
+      const idxState = state.atracoesDB.findIndex(a => a.id == idOriginal || a['Nome da Atração'] === nomeOriginal);
+      if (idxState !== -1) {
+        state.atracoesDB[idxState] = atracaoAtualizada;
+      }
+    }
+    
+    if (nomeOriginal !== nome && typeof roteiroEmEdicao !== 'undefined' && roteiroEmEdicao.dias) {
+      roteiroEmEdicao.dias.forEach(d => {
+        if (d.elementos) {
+          d.elementos.forEach(el => {
+            if (el.tipo === 'sequencia' && el.atracoesDoDia) {
+              const idxRef = el.atracoesDoDia.indexOf(nomeOriginal);
+              if (idxRef !== -1) {
+                el.atracoesDoDia[idxRef] = nome;
+              }
+            }
+          });
+        }
+      });
+    }
+    
+    renderEditDias();
+    closeModal();
+  } catch(e) {
+    alert('Erro ao editar atração: ' + e.message);
+    console.error(e);
+    const btn = document.getElementById('btnSalvarEditAtr');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Alterações';
+    }
+  }
+};
+
+function obterDropdownGlobal() {
+  let el = document.getElementById('dropdownAtracoesGlobal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dropdownAtracoesGlobal';
+    el.className = 'dropdown-atracoes-list';
+    el.style.cssText = 'display:none; position:fixed; background:white; border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-md); overflow-y:auto; z-index:999999; padding:4px 0;';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+window.abrirDropdownAtracoesGlobal = function(input, idx, eIdx) {
+  const el = obterDropdownGlobal();
+  el.dataset.idx = idx;
+  el.dataset.eIdx = eIdx;
+  window.activeDropdownInput = input;
+
+  const bloco = roteiroEmEdicao.dias[idx].elementos[eIdx];
+  const cidade = bloco ? (bloco.cidade || '') : '';
+
+  const html = window.gerarDropdownAtracoesHTML(cidade, input.value, idx, eIdx);
+  el.innerHTML = html;
+
+  const rect = input.getBoundingClientRect();
+  
+  let maxHeight = 450;
+  const windowHeight = window.innerHeight;
+  const spaceBelow = windowHeight - rect.bottom - 16;
+  const spaceAbove = rect.top - 16;
+
+  let topPos;
+  if (spaceBelow >= 300 || spaceBelow >= spaceAbove) {
+    topPos = rect.bottom + 4;
+    maxHeight = Math.min(maxHeight, spaceBelow);
+  } else {
+    maxHeight = Math.min(maxHeight, spaceAbove);
+    topPos = rect.top - maxHeight - 4;
+  }
+
+  el.style.top = `${topPos}px`;
+  el.style.left = `${rect.left}px`;
+  el.style.width = `${rect.width}px`;
+  el.style.maxHeight = `${maxHeight}px`;
+  el.style.display = 'block';
+};
+
+window.filtrarDropdownAtracoesGlobal = function(input, idx, eIdx) {
+  const el = obterDropdownGlobal();
+  
+  const bloco = roteiroEmEdicao.dias[idx].elementos[eIdx];
+  const cidade = bloco ? (bloco.cidade || '') : '';
+
+  const html = window.gerarDropdownAtracoesHTML(cidade, input.value, idx, eIdx);
+  el.innerHTML = html;
+
+  const rect = input.getBoundingClientRect();
+  
+  let maxHeight = 450;
+  const windowHeight = window.innerHeight;
+  const spaceBelow = windowHeight - rect.bottom - 16;
+  const spaceAbove = rect.top - 16;
+
+  let topPos;
+  if (spaceBelow >= 300 || spaceBelow >= spaceAbove) {
+    topPos = rect.bottom + 4;
+    maxHeight = Math.min(maxHeight, spaceBelow);
+  } else {
+    maxHeight = Math.min(maxHeight, spaceAbove);
+    topPos = rect.top - maxHeight - 4;
+  }
+
+  el.style.top = `${topPos}px`;
+  el.style.left = `${rect.left}px`;
+  el.style.width = `${rect.width}px`;
+  el.style.maxHeight = `${maxHeight}px`;
+};
+
+window.fecharDropdownAtracoesGlobal = function(input) {
+  const el = obterDropdownGlobal();
+  setTimeout(() => {
+    el.style.display = 'none';
+  }, 250);
+};
+
+window.selecionarAtracaoDropdown = function(nomeAtracao, idx, eIdx) {
+  if (window.activeDropdownInput) {
+    window.activeDropdownInput.value = '';
+  }
+  if (typeof window.addAtracaoBloco === 'function') {
+    window.addAtracaoBloco(idx, eIdx, nomeAtracao);
+  }
+};
+
+window.gerarDropdownAtracoesHTML = function(cidade, filtro = '', idx, eIdx) {
+  if (typeof dbAtracoes === 'undefined' || !Array.isArray(dbAtracoes)) {
+    return `<div style="padding:12px; font-size:12.5px; color:var(--ink-lt); text-align:center;">Base de dados não inicializada.</div>`;
+  }
+
+  const atracoesFiltradas = dbAtracoes.filter(a => {
+    if (!a) return false;
+    if (cidade && a['Cidade'] && a['Cidade'].toLowerCase() !== cidade.toLowerCase()) return false;
+    if (!a['Nome da Atração']) return false;
+    if (filtro) {
+      const matchText = [a['Nome da Atração'], a['Bairro'] || ''].join(' ').toLowerCase();
+      return matchText.includes(filtro.toLowerCase());
+    }
+    return true;
+  });
+
+  const grupos = {};
+  atracoesFiltradas.forEach(a => {
+    const bairro = a['Bairro'] || 'Outros / Sem Bairro';
+    if (!grupos[bairro]) grupos[bairro] = [];
+    grupos[bairro].push(a);
+  });
+
+  let html = '';
+  const bairrosOrdenados = Object.keys(grupos).sort((x, y) => {
+    if (x === 'Outros / Sem Bairro') return 1;
+    if (y === 'Outros / Sem Bairro') return -1;
+    return x.localeCompare(y);
+  });
+
+  bairrosOrdenados.forEach(bairro => {
+    const isRealBairro = bairro !== 'Outros / Sem Bairro';
+    
+    // Filtrar para remover o item redundante que tem o mesmo nome do bairro
+    const itens = grupos[bairro]
+      .filter(item => {
+        if (!isRealBairro) return true;
+        return item['Nome da Atração'].trim().toLowerCase() !== bairro.trim().toLowerCase();
+      })
+      .sort((x, y) => x['Nome da Atração'].localeCompare(y['Nome da Atração']));
+
+    if (itens.length > 0 || isRealBairro) {
+      if (isRealBairro) {
+        // Cabeçalho de bairro clicável premium que adiciona o Bairro
+        html += `
+          <div class="dropdown-group-header clickable-bairro" onmousedown="window.selecionarAtracaoDropdown('${bairro.replace(/'/g, "\\'")}', ${idx}, ${eIdx})" style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold-dk); font-weight:700; padding:8px 12px; background:#faf7f2; border-bottom:1px solid #f2ece0; border-top:1px solid #f2ece0; margin-top:4px; cursor:pointer; transition: background 0.1s;" onmouseover="this.style.background='#f3ebd9'" onmouseout="this.style.background='#faf7f2'">
+            <span>📍 ${bairro}</span>
+            <span style="font-size:8px; font-weight:700; background:rgba(196,163,90,0.15); color:var(--gold-dk); padding:2px 6.5px; border-radius:12px; letter-spacing:0.03em; user-select:none;">Região (Bairro)</span>
+          </div>
+        `;
+      } else {
+        // Cabeçalho genérico não clicável
+        html += `
+          <div class="dropdown-group-header" style="font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-lt); font-weight:700; padding:6px 12px; background:#f5f5f5; border-bottom:1px solid var(--border); border-top:1px solid var(--border); margin-top:4px; user-select:none;">
+            📍 ${bairro}
+          </div>
+        `;
+      }
+
+      itens.forEach(item => {
+        const nome = item['Nome da Atração'];
+        const isBairroLabel = (item['Bairro'] && item['Bairro'].toLowerCase() === nome.toLowerCase()) || nome.toLowerCase().includes('bairro');
+        
+        let chipBg = 'rgba(142,28,28,0.06)';
+        let chipColor = 'var(--crimson)';
+        let chipLabel = 'Atração';
+        if (isBairroLabel) {
+          chipBg = 'rgba(196,163,90,0.08)';
+          chipColor = 'var(--gold-dk)';
+          chipLabel = 'Bairro';
+        }
+
+        html += `
+          <div class="dropdown-item" onmousedown="window.selecionarAtracaoDropdown('${nome.replace(/'/g, "\\'")}', ${idx}, ${eIdx})" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; cursor:pointer; font-size:12.5px; color:var(--ink); border-bottom:1px solid #f9f9f9; transition: background 0.1s;" onmouseover="this.style.background='#fbf9f6'" onmouseout="this.style.background='none'">
+            <span style="font-weight:500;">${nome}</span>
+            <span style="font-size:9px; font-weight:700; background:${chipBg}; color:${chipColor}; padding:2.5px 6.5px; border-radius:12px; text-transform:uppercase; letter-spacing:0.03em; user-select:none;">${chipLabel}</span>
+          </div>
+        `;
+      });
+    }
+  });
+
+  if (!html) {
+    html = `<div style="padding:12px; font-size:12.5px; color:var(--ink-lt); text-align:center;">Nenhuma atração encontrada.</div>`;
+  }
+  return html;
 };
 

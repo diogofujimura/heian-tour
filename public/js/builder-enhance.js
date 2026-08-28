@@ -11,7 +11,13 @@
   'use strict';
   var EXPANDED = new Set();
   var WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-  var ICON = { sequencia: '◇', transporte: '⇄', experiencia: '🎟', texto: '✎', info: '◷' };
+  var ICON = {
+    sequencia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>',
+    transporte: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><rect x="4" y="3" width="16" height="14" rx="2"></rect><path d="M4 11h16"></path><path d="M12 3v8"></path><path d="m8 17-2 4"></path><path d="m16 17 2 4"></path></svg>',
+    experiencia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v14"></path></svg>',
+    texto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+  };
 
   function R() { return window.roteiroEmEdicao; }
   function el$(id) { return document.getElementById(id); }
@@ -183,6 +189,71 @@
 
   function stat(label, val) { return '<div class="rb-stat"><span>' + label + '</span><b>' + val + '</b></div>'; }
 
+  // ===== Atalhos rápidos na lateral (aparecem ao rolar, quando a barra de cima sai) =====
+  window.__rbQA = function(id){ var b = document.getElementById(id); if (b) b.click(); };
+
+  function quickActionsHtml(){
+    var ic = {
+      save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+      eye:'<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"/><circle cx="12" cy="12" r="3"/>',
+      undo:'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7"/>',
+      user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+      back:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+      bolt:'<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>'
+    };
+    function svg(d,st){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"'+(st?' style="'+st+'"':'')+'>'+d+'</svg>'; }
+    return '<div id="rbQuickActions"><div class="rbqa-wrap">'
+      + '<div class="rbqa-h">'+svg(ic.bolt,'stroke:var(--gold-dk)')+'Ações rápidas</div>'
+      + '<button class="rbqa-b rbqa-save" onclick="window.__rbQA(\'btnSalvarEdicaoRoteiro\')">'+svg(ic.save)+'Salvar Roteiro</button>'
+      + '<button class="rbqa-b rbqa-wide" onclick="window.__rbQA(\'btnSalvarVisualizarRoteiro\')">'+svg(ic.eye)+'Pré-visualizar</button>'
+      + '<div class="rbqa-row">'
+      +   '<button class="rbqa-b" onclick="window.__rbQA(\'btnDesfazerEdicaoRoteiro\')">'+svg(ic.undo)+'Desfazer</button>'
+      +   '<button class="rbqa-b rbqa-gold" onclick="window.__rbQA(\'btnVerPerfilClienteRoteiro\')">'+svg(ic.user,'stroke:var(--gold-dk)')+'Perfil</button>'
+      + '</div>'
+      + '<button class="rbqa-b rbqa-wide" style="margin-bottom:0" onclick="window.__rbQA(\'btnVoltarClientesRoteiro\')">'+svg(ic.back)+'Voltar para Clientes</button>'
+      + '</div></div>';
+  }
+
+  function injectQAStyles(){
+    if (document.getElementById('rbQAStyles')) return;
+    var st = document.createElement('style'); st.id='rbQAStyles';
+    st.textContent =
+      '#rbQuickActions{display:none}'
+      +'#rbQuickActions.rbqa-on{display:block;animation:rbqaIn .28s ease}'
+      +'@keyframes rbqaIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}'
+      +'.rbqa-wrap{margin:16px -16px -18px;padding:13px 16px 14px;border-top:1.5px solid rgba(196,163,90,.4);background:rgba(196,163,90,.05);border-radius:0 0 14px 14px}'
+      +'.rbqa-h{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:var(--gold-dk);margin:0 0 10px}'
+      +'.rbqa-h svg{width:13px;height:13px}'
+      +'.rbqa-b{font-family:var(--ff-body,Inter,sans-serif);font-size:12px;font-weight:600;border-radius:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:.15s;border:1px solid rgba(196,163,90,.3);background:rgba(255,255,255,.85);color:var(--crimson);padding:9px 10px;width:100%}'
+      +'.rbqa-b:hover{border-color:var(--gold);background:#fff}'
+      +'.rbqa-b svg{width:14px;height:14px;flex:none}'
+      +'.rbqa-save{background:linear-gradient(135deg,var(--crimson),#8c2736);color:#fff;border:none;font-size:13px;font-weight:700;padding:11px;box-shadow:0 3px 10px rgba(107,31,42,.22);margin-bottom:7px}'
+      +'.rbqa-save:hover{background:linear-gradient(135deg,#8c2736,#a83244)}'
+      +'.rbqa-wide{margin-bottom:7px}'
+      +'.rbqa-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px}'
+      +'.rbqa-gold{color:var(--gold-dk)}';
+    (document.head||document.documentElement).appendChild(st);
+  }
+
+  function setupQuickActionsReveal(){
+    injectQAStyles();
+    var qa = document.getElementById('rbQuickActions');
+    var hdr = document.getElementById('roteiroEditHeaderDisplay');
+    if (!qa || !hdr) return;
+    // estado inicial: revela se a barra de cima já está fora de vista
+    var r = hdr.getBoundingClientRect();
+    qa.classList.toggle('rbqa-on', r.bottom < 8);
+    if (window.__rbQAObserver) return; // observer só uma vez (persiste apesar do re-render)
+    try {
+      window.__rbQAObserver = new IntersectionObserver(function(entries){
+        var vis = entries[0].isIntersecting;
+        var q = document.getElementById('rbQuickActions');
+        if (q) q.classList.toggle('rbqa-on', !vis);
+      }, { threshold: 0 });
+      window.__rbQAObserver.observe(hdr);
+    } catch(e){ /* IO indisponível: fica sempre visível */ qa.classList.add('rbqa-on'); }
+  }
+
   function renderSummary() {
     var box = el$('rbSummary'); if (!box) return;
     var a = analyze(), est = estimate();
@@ -202,7 +273,8 @@
     } else {
       warnHtml = '<div class="rb-warn ok">✓ Sem avisos. Roteiro consistente.</div>';
     }
-    box.innerHTML = '<h4>RESUMO</h4>' + totalHtml + '<div style="margin-top:14px">' + stats + '</div>' + warnHtml;
+    box.innerHTML = '<h4>RESUMO</h4>' + totalHtml + '<div style="margin-top:14px">' + stats + '</div>' + warnHtml + quickActionsHtml();
+    setupQuickActionsReveal();
   }
 
   function collapseCards() {
@@ -218,18 +290,110 @@
       });
     });
   }
+  // ---- Reordenar blocos arrastando (mouse + toque), dentro do mesmo dia ----
+  function injectDndStyles() {
+    if (document.getElementById('rbDndStyles')) return;
+    var s = document.createElement('style'); s.id = 'rbDndStyles';
+    s.textContent =
+      '.rb-drag{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center;align-self:stretch;padding:0 6px;margin:-6px 2px -6px -4px;color:#b8ada2;font-size:16px;line-height:1;flex:0 0 auto}' +
+      '.rb-drag:hover{color:#8a7f74}.rb-drag:active{cursor:grabbing;color:#6b1f2a}' +
+      '.rb-card.rb-dragging{opacity:.55;box-shadow:0 8px 24px rgba(0,0,0,.18);position:relative;z-index:20}';
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  function sameDayCards(wrap) {
+    var parent = wrap.parentNode; if (!parent) return [wrap];
+    return [].slice.call(parent.children).filter(function (n) {
+      return n.classList && n.classList.contains('rb-card') && n.getAttribute('data-d') === wrap.getAttribute('data-d');
+    });
+  }
+
+  function commitReorder(wrap) {
+    try {
+      var d = +wrap.getAttribute('data-d');
+      var r = R(); if (!r || !r.dias || !r.dias[d]) return;
+      var cards = sameDayCards(wrap);
+      var order = cards.map(function (c) { return +c.getAttribute('data-e'); });
+      var changed = order.some(function (v, i) { return v !== i; });
+      if (!changed) return;
+      var arr = r.dias[d].elementos || [];
+      if (window.registrarEstadoRoteiro) try { window.registrarEstadoRoteiro(r); } catch (e) {}
+      r.dias[d].elementos = order.map(function (i) { return arr[i]; });
+      EXPANDED.clear();
+      if (window.renderEditDias) window.renderEditDias();
+    } catch (e) { console.warn('[builder-enhance] reorder:', e); }
+  }
+
+  function attachDrag(handle, wrap) {
+    handle.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    handle.addEventListener('pointerdown', function (ev) {
+      if (ev.button != null && ev.button !== 0) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var pid = ev.pointerId, moved = false;
+      try { handle.setPointerCapture(pid); } catch (e) {}
+      wrap.classList.add('rb-dragging');
+      function onMove(e) {
+        moved = true;
+        var y = e.clientY;
+        var others = sameDayCards(wrap).filter(function (c) { return c !== wrap; });
+        var target = null, best = -Infinity;
+        others.forEach(function (c) {
+          var box = c.getBoundingClientRect();
+          var off = y - box.top - box.height / 2;
+          if (off < 0 && off > best) { best = off; target = c; }
+        });
+        if (target) wrap.parentNode.insertBefore(wrap, target);
+        else if (others.length) { var last = others[others.length - 1]; wrap.parentNode.insertBefore(wrap, last.nextSibling); }
+      }
+      function onUp() {
+        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointerup', onUp, true);
+        document.removeEventListener('pointercancel', onUp, true);
+        try { handle.releasePointerCapture(pid); } catch (e2) {}
+        wrap.classList.remove('rb-dragging');
+        if (moved) commitReorder(wrap);
+      }
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+      document.addEventListener('pointercancel', onUp, true);
+    });
+  }
+
   function wrapCard(block, d, e, elx, dia) {
     var key = d + '-' + e, sum = elSummary(elx, dia), open = EXPANDED.has(key);
     var wrap = document.createElement('div'); wrap.className = 'rb-card' + (open ? ' open' : '');
+    wrap.setAttribute('data-d', d); wrap.setAttribute('data-e', e);
     var head = document.createElement('div'); head.className = 'rb-card-head';
+    
+    var actionsHtml = '';
+    if (elx.tipo === 'sequencia') {
+      actionsHtml = '<div class="rb-card-actions">' +
+        '<button type="button" class="btn-cad-rapido" onclick="event.stopPropagation(); window.abrirModalCadastroRapido(\'atracao\', ' + d + ', ' + e + ')">+ Nova Atração</button>' +
+        '<button type="button" class="btn-cad-rapido" onclick="event.stopPropagation(); window.abrirModalCadastroRapido(\'rota\', ' + d + ', ' + e + ')">+ Nova Rota</button>' +
+        '</div>';
+    } else if (elx.tipo === 'transporte') {
+      actionsHtml = '<div class="rb-card-actions">' +
+        '<button type="button" class="btn-cad-rapido" onclick="event.stopPropagation(); window.abrirModalCadastroRapido(\'transporte\', ' + d + ', ' + e + ')">+ Novo Transporte</button>' +
+        '</div>';
+    } else if (elx.tipo === 'experiencia') {
+      actionsHtml = '<div class="rb-card-actions">' +
+        '<button type="button" class="btn-cad-rapido" onclick="event.stopPropagation(); window.abrirModalCadastroRapido(\'experiencia\', ' + d + ', ' + e + ')">+ Nova Experiência</button>' +
+        '</div>';
+    }
+    
     head.innerHTML = '<div class="rb-card-ico rb-ico-' + elx.tipo + '">' + (ICON[elx.tipo] || '•') + '</div>' +
       '<div class="rb-card-meta"><div class="t">' + esc(sum.title) +
       (sum.flag ? '<span class="rb-flag">' + esc(sum.flag) + '</span>' : '') +
       '</div><div class="s">' + esc(sum.sub) + '</div></div>' +
+      actionsHtml +
       '<div class="rb-card-chev">' + (open ? '⌃ recolher' : '⌄ editar') + '</div>';
+    var grip = document.createElement('div'); grip.className = 'rb-drag';
+    grip.title = 'Arraste para reordenar'; grip.setAttribute('aria-label', 'Reordenar bloco'); grip.textContent = '☰';
+    head.insertBefore(grip, head.firstChild);
     var body = document.createElement('div'); body.className = 'rb-card-body';
     block.parentNode.insertBefore(wrap, block);
     wrap.appendChild(head); wrap.appendChild(body); body.appendChild(block);
+    attachDrag(grip, wrap);
     head.addEventListener('click', function () {
       var nowOpen = !wrap.classList.contains('open');
       wrap.classList.toggle('open', nowOpen);
@@ -254,7 +418,7 @@
     if (ad) pax.push(ad + (ad > 1 ? ' Adultos' : ' Adulto'));
     if (cr) pax.push(cr + (cr > 1 ? ' Criancas' : ' Crianca'));
     var per = (di && df) ? (fmtBR(di) + ' a ' + fmtBR(df)) : (fmtBR(di || df) || '');
-    var meta = [pax.join(', '), per].filter(Boolean).join('  \u00b7  ');
+    var meta = [pax.join(', '), per].filter(Boolean).join('  ·  ');
     return '<span class="t">' + esc(nome) + '</span>' + (meta ? '<span class="m">' + esc(meta) + '</span>' : '');
   }
   function refreshCli(card) { var el = card.querySelector('.rb-cli-summary'); if (el) el.innerHTML = cliSummaryHTML(); }
@@ -273,7 +437,7 @@
     function setOpen(open) {
       card.classList.toggle('rb-cli-open', open);
       card.classList.toggle('rb-cli-closed', !open);
-      toggle.innerHTML = open ? '\u2303' : '\u2304';
+      toggle.innerHTML = open ? '⌃' : '⌄';
       if (!open) refreshCli(card);
     }
     toggle.addEventListener('click', function (e) { e.stopPropagation(); setOpen(card.classList.contains('rb-cli-closed')); });
@@ -285,6 +449,7 @@
   function enhance() {
     if (!R() || !R().dias) return;
     if (!ensureShell()) return;
+    injectDndStyles();
     togglePaneForEdit(true);
     collapseCards();
     renderRail();
@@ -322,4 +487,3 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook);
   else hook();
 })();
-

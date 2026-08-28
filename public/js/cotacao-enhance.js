@@ -279,6 +279,10 @@
     }
     updateEconLine(box, info, row);
   }
+  // Lembra o estado aberto/minimizado de cada item (por id) entre re-renders. Sem isto, ligar
+  // o desconto/taxa (que re-renderiza a lista) fazia o card voltar a minimizar e o usuário perdia
+  // o lugar. Pedido do Diogo.
+  var cotAbertoPorId = {};
   function collapseItems() {
     var page = el('page-orcamento'); if (!page) return;
     page.querySelectorAll('.item-row').forEach(function (row) {
@@ -286,6 +290,7 @@
       var head = row.querySelector('.item-row-header'), body = row.querySelector('.form-grid');
       if (!head || !body) return;
       var info = listInfoOf(row);
+      var _it = info ? itemOf(info, row) : null; var _iid = (_it && _it.id != null) ? _it.id : null;
       var nameSpan = document.createElement('span'); nameSpan.className = 'cot-item-name';
       var setName = function () { nameSpan.innerHTML = info ? itemSummary(info.arr, itemOf(info, row)) : esc((body.querySelector('input[type="text"]') || {}).value || ''); };
       setName();
@@ -309,8 +314,10 @@
       head.appendChild(actions);
       injectCusto(body, info, row);
 
-      function setOpen(open) { row.classList.toggle('cot-open', open); row.classList.toggle('cot-collapsed', !open); chev.textContent = open ? '⌃' : '⌄'; if (!open) setName(); }
-      var startOpen = !((body.querySelector('input[type="text"]') || {}).value || '').trim();
+      function setOpen(open) { row.classList.toggle('cot-open', open); row.classList.toggle('cot-collapsed', !open); chev.textContent = open ? '⌃' : '⌄'; if (!open) setName(); if (_iid != null) cotAbertoPorId[_iid] = open; }
+      // Se já lembramos o estado deste item, usa ele (preserva entre re-renders); senão, abre só
+      // quando é item novo (primeiro campo de texto vazio).
+      var startOpen = (_iid != null && cotAbertoPorId[_iid] !== undefined) ? cotAbertoPorId[_iid] : !((body.querySelector('input[type="text"]') || {}).value || '').trim();
       setOpen(startOpen);
       chev.addEventListener('click', function (e) { e.stopPropagation(); setOpen(!row.classList.contains('cot-open')); });
       head.addEventListener('click', function (e) { if (e.target.closest('.cot-actions')) return; setOpen(!row.classList.contains('cot-open')); });
