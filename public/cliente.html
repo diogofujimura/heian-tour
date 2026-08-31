@@ -4953,6 +4953,8 @@
           const diaNum = dIdx + 1;
           const diaData = dia.data || '';
           (dia.elementos || []).forEach(el => {
+            const isTrSemReserva = el.tipo === 'transporte' && isTransporteSemReserva(el);
+            if (isTrSemReserva) return; // Transportes locais, metrô, ônibus, balsa e cartão IC não possuem vouchers
             if ((el.tipo === 'transporte' || el.tipo === 'experiencia') && (el.compradoHeian === true || el.compradoHeian === 'true' || el.compradoHeian === undefined)) {
               const refId = el.refId;
               const nome = el.tipo === 'transporte' ? (el.cidadeDestino ? ((el.cidadeOrigem || '?') + ' → ' + el.cidadeDestino) : (el.tipoTransporte || 'Deslocamento')) : (el.nomeExp || 'Experiência');
