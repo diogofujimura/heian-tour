@@ -5532,8 +5532,16 @@
             const key = refId ? ('ref:' + refId) : null;
             if (key && tasksMap[key]) {
               if (!tasksMap[key].horario && tr.observacao) tasksMap[key].horario = tr.observacao;
-              if (tr.descricao && tr.descricao.length > tasksMap[key].subtitulo.length) {
-                tasksMap[key].subtitulo = tr.descricao;
+              // Se a tarefa não tem dica ou link, tenta resolver
+              if (!tasksMap[key].link || tasksMap[key].dica === 'Comprar bilhetes/passes com antecedência no site oficial ou bilheteria.') {
+                const dbT = resolverTransporteBase(tr);
+                if (dbT) {
+                  if (dbT.compra) tasksMap[key].dica = dbT.compra;
+                  if (dbT.uso) tasksMap[key].instrucoesPosCompra = dbT.uso;
+                  if (dbT.link) tasksMap[key].link = dbT.link;
+                  if (dbT.link_klook) tasksMap[key].link_klook = dbT.link_klook;
+                  if (dbT.observacao) tasksMap[key].observacao = dbT.observacao;
+                }
               }
             } else if (tr.descricao) {
               const descClean = tr.descricao.toLowerCase().replace(/[^a-z0-9]/g, '');
