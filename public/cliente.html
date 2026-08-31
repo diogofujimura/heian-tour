@@ -18,7 +18,9 @@
   <link rel="apple-touch-icon" href="/assets/logo-192.png">
   <link rel="icon" type="image/png" href="/assets/logo.png">
 
-  
+  <!-- PDF Redesign Styles -->
+  <link rel="stylesheet" href="/css/pdf-redesign.css?v=20260829_01">
+
   <style>
     :root {
       --primary: #8e1c1c; /* Crimson Heian */
@@ -35,6 +37,16 @@
       --ink: #231f1b; /* Soft dark */
       --ink-mid: #5c544e;
       --ink-light: #9c9085;
+      
+      /* Variáveis oficiais Heian Tour compartilhadas com o Admin */
+      --crimson: #842836;
+      --wine: #842836;
+      --gold: #C4A35A;
+      --gold-dk: #9c8248;
+      --gold-lt: rgba(196, 163, 90, 0.3);
+      --ink-dark: #2C1A1D;
+      --text-main: #2B2326;
+      --text-sec: #6E5E63;
       
       --ff-display: 'Outfit', sans-serif;
       --ff-body: 'Inter', sans-serif;
@@ -1756,6 +1768,139 @@
       width: 1.5em;
       height: 1.5em;
     }
+
+    /* Modal Overlay de Exportação do Roteiro em PDF (Anti-Popup Blocker no Mobile/PWA) */
+    #modalRoteiroPdfCliente {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: #FBF7F0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0;
+      margin: 0;
+    }
+    #modalRoteiroPdfCliente .mobile-print-bar {
+      background: #2C1A1D;
+      color: #fff;
+      padding: 14px 20px;
+      font-family: var(--ff-display);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 2px solid #C4A35A;
+    }
+    #modalRoteiroPdfCliente .mobile-print-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 440px;
+    }
+    #modalRoteiroPdfCliente .mobile-print-btn {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    #modalRoteiroPdfCliente .mobile-print-btn.btn-print {
+      background: #8e1c1c;
+      color: #fff;
+      border: 1px solid #C4A35A;
+      box-shadow: 0 2px 10px rgba(142,28,28,0.35);
+    }
+    #modalRoteiroPdfCliente .mobile-print-btn.btn-close {
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    #modalRoteiroPdfCliente .pdf-modal-content-wrap {
+      padding: 20px 10px 40px;
+      display: flex;
+      justify-content: center;
+    }
+    #modalRoteiroPdfCliente .pdf-doc {
+      width: 100%;
+      max-width: 840px;
+      background: #fff;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    @media print {
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body > *:not(#modalRoteiroPdfCliente) {
+        display: none !important;
+      }
+      #modalRoteiroPdfCliente {
+        display: block !important;
+        position: static !important;
+        background: #fff !important;
+        overflow: visible !important;
+        inset: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #modalRoteiroPdfCliente .mobile-print-bar {
+        display: none !important;
+      }
+      #modalRoteiroPdfCliente .pdf-modal-content-wrap {
+        padding: 0 !important;
+        display: block !important;
+      }
+      #modalRoteiroPdfCliente .pdf-doc {
+        max-width: 100% !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      @page {
+        size: A4;
+        margin: 14mm 12mm 14mm 12mm;
+      }
+      .dia-card,
+      .roteiro-timeline,
+      .pdf-sequencia-item,
+      .dia-atracoes {
+        display: block !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      .dia-card { margin-bottom: 22px !important; }
+      .dia-header { page-break-after: avoid !important; break-after: avoid !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      .pdf-section-header { page-break-after: avoid !important; break-after: avoid !important; }
+      .pdf-atracao-item,
+      .pdf-transporte-item,
+      .pdf-experiencia-item,
+      .pdf-texto-item,
+      .pdf-info-item,
+      .pdf-estadia-item,
+      .pdf-body .dia-atracoes > div,
+      .pdf-body [style*="border-left:4px"],
+      .pdf-body [style*="border-left: 4px"] {
+        display: block !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1935,6 +2080,22 @@
       <!-- TAB 1: ITINERARY -->
       <section id="tab-itinerary" class="tab-content active">
         <div id="trip-status-banner" style="display:none;"></div>
+        
+        <!-- BARRA DE AÇÕES DO ROTEIRO: BAIXAR PDF DETALHADO -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding:14px 18px; background:var(--card-bg); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); backdrop-filter:blur(10px);">
+          <div>
+            <h3 style="font-family:var(--ff-display); font-size:16px; color:var(--primary); font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+              <svg class="v-icon" style="color:var(--accent); stroke-width:2.2;"><use href="#icon-compass"></use></svg>
+              <span>Cronograma Dia a Dia</span>
+            </h3>
+            <div style="font-size:12px; color:var(--ink-mid); margin-top:2px;">Consulte suas atividades ou baixe a versão completa para salvar offline</div>
+          </div>
+          <button id="btnBaixarRoteiroPdf" type="button" onclick="window.baixarRoteiroPdfCompleto(event)" style="display:inline-flex; align-items:center; gap:8px; background:var(--primary-gradient); color:white; border:none; padding:9px 18px; border-radius:30px; font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; box-shadow:0 4px 12px rgba(142,28,28,0.22); transition:all 0.2s ease;">
+            <svg class="v-icon" style="width:15px; height:15px; stroke:#fff; stroke-width:2.2;"><use href="#icon-download"></use></svg>
+            <span id="btnBaixarRoteiroPdfTexto">Baixar Roteiro em PDF (Completo)</span>
+          </button>
+        </div>
+
         <div class="timeline" id="itinerary-timeline">
           <!-- Timeline items rendered dynamically -->
         </div>
@@ -2179,6 +2340,15 @@
 
         <!-- SEÇÃO 2: CHECKLIST DE COMPRAS DO VIAJANTE -->
         <div id="vouchers-checklist-wrapper" style="display: none; margin-bottom: 36px;">
+          <!-- AVISO DE CURADORIA E RESPONSABILIDADE -->
+          <div style="background: linear-gradient(135deg, rgba(234, 88, 12, 0.06), rgba(197, 160, 89, 0.12)); border: 1.5px solid rgba(234, 88, 12, 0.22); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px;">
+            <div style="font-size: 20px; line-height: 1; flex-shrink: 0; margin-top: 2px;">💡</div>
+            <div>
+              <h4 style="margin: 0 0 4px 0; font-size: 13.5px; font-weight: 700; color: #9a3412; display: flex; align-items: center; gap: 6px;">Aviso de Curadoria e Responsabilidade</h4>
+              <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-mid);">Os itens desta aba são sugestões e orientações da consultoria Heian Tour. Toda a realização da compra, pagamento, guarda de comprovantes e uso dos ingressos são de responsabilidade exclusiva do cliente junto aos fornecedores oficiais.</p>
+            </div>
+          </div>
+
           <div id="vouchers-checklist-container" style="display: flex; flex-direction: column; gap: 12px;">
             <!-- Tarefas do cliente renderizadas dinamicamente pelo JS -->
           </div>
@@ -5330,6 +5500,7 @@
               const dbE = resolverExperienciaBase(el);
               let preCompraText = (dbE && dbE.compra) ? dbE.compra : (el.instrucoesPreCompra || (dbE ? dbE.instrucoesPreCompra : ''));
               let posCompraText = (dbE && dbE.uso) ? dbE.uso : (el.instrucoesPosCompra || (dbE ? dbE.instrucoesPosCompra : ''));
+              let linkKlook = (dbE && dbE.link_klook) ? dbE.link_klook : (el.link_klook || '');
               let linkOficial = (dbE && dbE.link) ? dbE.link : (el.link || '');
               let obsText = (dbE && dbE.observacao) ? dbE.observacao : (el.observacao || '');
               let janelaDias = (dbE && dbE.janelaAbreDias) ? Number(dbE.janelaAbreDias) : (el.janelaAbreDias ? Number(el.janelaAbreDias) : 0);
@@ -5348,6 +5519,7 @@
                 instrucoesPreCompra: preCompraText || '',
                 instrucoesPosCompra: posCompraText || '',
                 observacao: obsText || '',
+                link_klook: linkKlook,
                 link: linkOficial || '',
                 janelaAbreDias: janelaDias,
                 feita: !!checklistState[key]
@@ -6486,8 +6658,18 @@
         document.getElementById('popBairro').textContent = atracao['Bairro'] || atracao['Cidade'] || 'Japão';
         document.getElementById('popTitulo').textContent = atracao['Nome da Atração'];
         document.getElementById('popDesc').textContent = (atracao['Descrição Detalhada'] || 'Visitação livre.').replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
-        let preco = atracao['Preço (Ingresso)'];
-        document.getElementById('popPreco').innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco || 'Gratuito'}</strong>`;
+        
+        let preco = (atracao['Preço (Ingresso)'] || atracao['Preço'] || '').trim();
+        const popPrecoEl = document.getElementById('popPreco');
+        if (popPrecoEl) {
+          const isGratuito = !preco || preco === '—' || preco === '0' || preco.toLowerCase().includes('gratuito') || preco.toLowerCase().includes('grátis');
+          if (isGratuito) {
+            popPrecoEl.style.display = 'none';
+          } else {
+            popPrecoEl.style.display = 'flex';
+            popPrecoEl.innerHTML = `<span>Preço:</span><strong class="preco-brt">${preco}</strong>`;
+          }
+        }
         
         // Validar fechamento recorrente e manutenção para o popover
         let alertas = [];
@@ -6516,7 +6698,8 @@
         document.getElementById('popBairro').textContent = 'Ponto de Interesse';
         document.getElementById('popTitulo').textContent = nome;
         document.getElementById('popDesc').textContent = 'Atração apenas citada no roteiro. Detalhamento e preços não cadastrados no banco.';
-        document.getElementById('popPreco').innerHTML = `<span>Aviso:</span><strong class="preco-brt" style="color:var(--ink-light)">Sem dados</strong>`;
+        const popPrecoEl = document.getElementById('popPreco');
+        if (popPrecoEl) popPrecoEl.style.display = 'none';
         if (popFunc) popFunc.style.display = 'none';
       }
 
@@ -6831,6 +7014,349 @@
         });
       }
     });
+
+    // --- GERADOR DE PDF DETALHADO DO ROTEIRO PARA O CLIENTE (MOTOR OFICIAL HEIAN TOUR) ---
+    window.baixarRoteiroPdfCompleto = async function(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const clientData = window.__lastClientData;
+      if (!clientData) {
+        alert('Carregando os dados da viagem... Por favor, tente novamente em alguns segundos.');
+        return;
+      }
+
+      const btn = document.getElementById('btnBaixarRoteiroPdf');
+      const btnTxt = document.getElementById('btnBaixarRoteiroPdfTexto');
+      const origTxt = btnTxt ? btnTxt.textContent : 'Baixar Roteiro em PDF (Completo)';
+
+      try {
+        if (btn) btn.style.pointerEvents = 'none';
+        if (btnTxt) btnTxt.textContent = '⏳ Gerando PDF detalhado...';
+
+        const cliente = clientData.clientInfo || clientData.client || clientData || {};
+        const clientLocalObj = clientData.clientLocalInfo || window.clientLocalInfoObj || {};
+        const itinerary = clientData.itinerary || { dias: [] };
+        const diasArray = itinerary.dias || [];
+
+        if (diasArray.length === 0) {
+          alert('O roteiro dia a dia ainda não está preenchido para gerar o PDF.');
+          return;
+        }
+
+        const nomeParaExibir = cliente.nome ? (cliente.nome.startsWith('Roteiro') || cliente.nome.startsWith('Família') ? cliente.nome : `Roteiro ${cliente.nome}`) : 'Roteiro de Viagem';
+        const MESES_PDF = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+        const formatPeriodoExtenso = (d1, d2) => {
+          if (!d1 && !d2) return '';
+          const parse = s => { const p = String(s).split('-'); return { y: +p[0], m: +p[1], d: +p[2] }; };
+          if (d1 && d2) {
+            const a = parse(d1), b = parse(d2);
+            if (a.m === b.m && a.y === b.y) return `${a.d} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+            if (a.y === b.y) return `${a.d} de ${MESES_PDF[a.m - 1]} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+            return `${a.d} de ${MESES_PDF[a.m - 1]} de ${a.y} a ${b.d} de ${MESES_PDF[b.m - 1]} de ${b.y}`;
+          }
+          const s = d1 || d2, p = parse(s);
+          return `${p.d} de ${MESES_PDF[p.m - 1]} de ${p.y}`;
+        };
+
+        const pInicio = cliente.dataInicio || clientLocalObj.dataInicio || (diasArray.find(d => d.data)?.data);
+        const pFim = cliente.dataFim || clientLocalObj.dataFim || ([...diasArray].reverse().find(d => d.data)?.data);
+        const perStr = formatPeriodoExtenso(pInicio, pFim);
+
+        const passageiros = (cliente.adultos || 0) + (cliente.criancas || 0);
+        let txtPessoas = '';
+        if (cliente.adultos > 0 || cliente.criancas > 0) {
+          txtPessoas = `${cliente.adultos || 0} ${Number(cliente.adultos) === 1 ? 'adulto' : 'adultos'}`;
+          if (cliente.criancas > 0) {
+            txtPessoas += `, ${cliente.criancas} ${Number(cliente.criancas) === 1 ? 'criança' : 'crianças'}`;
+          }
+        } else if (passageiros > 0) {
+          txtPessoas = `${passageiros} adultos`;
+        }
+
+        // Função de preço de atração limpo (retorna vazio se for gratuito)
+        const obterPrecoAtracaoLimpo = (atrNome, atrObj) => {
+          if (!atrNome) return '';
+          const atr = atrObj || (window.buscarAtracaoNoMapa ? window.buscarAtracaoNoMapa(atrNome) : null);
+          if (!atr) return '';
+          const p = atr['Preço (Ingresso)'] || atr['Preço'] || atr['preco'] || '';
+          if (!p || p === '—' || p.toLowerCase().includes('gratuito') || p.toLowerCase().includes('grátis') || p === '0' || p === '¥0') {
+            return '';
+          }
+          const limpo = String(p).trim();
+          if (/^\d+$/.test(limpo)) {
+            return `~¥${Number(limpo).toLocaleString('pt-BR')}`;
+          }
+          if (!limpo.startsWith('~') && !limpo.startsWith('¥') && !limpo.toLowerCase().includes('yen')) {
+            return `~${limpo}`;
+          }
+          return limpo;
+        };
+
+        // Montagem do HTML detalhado dos dias (100% fiel a roteiros.js)
+        const diasHtml = diasArray.map((dia, index) => {
+          const elementos = dia.elementos || [];
+          const temDeslocamento = elementos.some(el => el.tipo === 'transporte');
+          const temExperiencia = elementos.some(el => el.tipo === 'experiencia');
+
+          const badgeGuiado = dia.tourGuiado ? `<span class="badge" style="background:var(--gold); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle; display:inline-flex; align-items:center; gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-compass"></use></svg> Tour Guiado</span>` : '';
+          const badgeDeslocamento = temDeslocamento ? `<span class="badge" style="background:#C4A35A; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center;">Deslocamento</span>` : '';
+          const badgeExperiencia = temExperiencia ? `<span class="badge" style="background:var(--crimson); color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; display:inline-flex; align-items:center; border: 1px solid rgba(255,255,255,0.4); gap:3px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-ticket"></use></svg> Experiência</span>` : '';
+
+          let elementosHtml = elementos.map(el => {
+            if (el.tipo === 'info') {
+              const parts = [];
+              if (el.dataDoTour) {
+                const d = new Date(el.dataDoTour);
+                parts.push(`${isNaN(d) ? el.dataDoTour : d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`);
+              }
+              if (el.horarioEncontro) parts.push(`Encontro: ${el.horarioEncontro}`);
+              if (el.duracaoTour) parts.push(`Duração: ${el.duracaoTour}`);
+              if (el.localEncontro) parts.push(`Local: ${el.localEncontro}`);
+              if (parts.length > 0) return `<div class="pdf-info-item" style="break-inside:avoid; page-break-inside:avoid; font-size:12px; color:var(--text-sec); margin-bottom:12px; font-weight:500; background:#f9f9f9; padding:6px 12px; border-radius:4px; display:inline-block">${parts.join(' &nbsp;|&nbsp; ')}</div>`;
+              return '';
+            } else if (el.tipo === 'texto') {
+              return el.conteudo ? `<div class="pdf-texto-item" style="break-inside:avoid; page-break-inside:avoid; font-size:13px; color:var(--text-main); margin-bottom:16px; line-height:1.6; border-left:3px solid var(--gold-lt); padding-left:12px; font-style:italic">${el.conteudo}</div>` : '';
+            } else if (el.tipo === 'sequencia') {
+              const semNomeRota = !el.nomeDaRota;
+              const tituloRota = el.nomeDaRota || (el.cidade ? 'Passeio em ' + el.cidade : 'Passeio do dia');
+              const cidadeText = el.cidade ? `<span style="color:var(--crimson); font-size:13px; font-weight:700; text-transform:uppercase; margin-right:8px">${el.cidade}</span>` : '';
+
+              let atracoesHTML = '';
+              if (el.atracoesDoDia && el.atracoesDoDia.length > 0) {
+                atracoesHTML = '<div class="dia-atracoes" style="display:block; border-left:2px solid var(--gold-lt); padding-left:12px; margin-left:6px; break-inside:auto; page-break-inside:auto;">';
+                el.atracoesDoDia.forEach((atrNome, idxAtr) => {
+                  const atr = buscarAtracaoNoMapa(atrNome);
+                  let desc = atr ? (atr['Descrição Detalhada'] || 'Visitação livre.') : 'Visitação livre.';
+                  desc = desc.replace(/<[^>]*>?/gm, '').trim() || 'Visitação livre.';
+                  const bairro = atr ? (atr['Bairro'] || '') : '';
+                  const isBairro = bairro && bairro.toLowerCase() === atrNome.toLowerCase();
+                  const precoAtr = obterPrecoAtracaoLimpo(atrNome, atr);
+                  const precoAtrHtml = precoAtr ? ` <span style="font-weight:600; color:#854d0e; font-size:11.5px;">· ${precoAtr} / pessoa</span>` : '';
+
+                  if (isBairro) {
+                    const baseSpacing = idxAtr === 0 ? 'margin-top:4px;' : 'margin-top:12px;';
+                    const bgStyle = 'background: linear-gradient(to right, rgba(212,175,55,0.12), transparent); padding: 6px 12px; border-radius: 6px;';
+                    atracoesHTML += `
+                      <div class="pdf-atracao-item" style="display:block; break-inside:avoid; page-break-inside:avoid; margin-bottom:8px; ${baseSpacing} ${bgStyle}">
+                        <strong style="font-size:14px; color:var(--ink-dark); display:block;">
+                          ${atrNome}${precoAtrHtml}
+                        </strong>
+                        ${desc !== 'Visitação livre.' ? `<div style="font-size:11px; color:var(--text-main); margin-top:2px; line-height:1.4;">${desc}</div>` : ''}
+                      </div>`;
+                  } else {
+                    atracoesHTML += `
+                      <div class="pdf-atracao-item" style="display:block; break-inside:avoid; page-break-inside:avoid; font-size:12px; color:var(--text-main); margin-bottom:6px; line-height:1.4; padding-left:11px; text-indent:-11px;">
+                        <span style="display:inline-block; width:5px; height:5px; background:var(--gold); border-radius:50%; margin-right:6px; vertical-align:middle; position:relative; top:-1px;"></span>
+                        <strong>${atrNome}</strong>${precoAtrHtml}${desc !== 'Visitação livre.' ? ` <span style="color:var(--text-sec);">— ${desc}</span>` : ''}
+                      </div>`;
+                  }
+                });
+                atracoesHTML += '</div>';
+              }
+
+              return `
+                <div class="pdf-sequencia-item" style="margin-bottom:12px; position:relative; break-inside:auto; page-break-inside:auto;">
+                  <div style="display:flex; flex-wrap:wrap; align-items:center; margin-bottom:10px; break-after:avoid; page-break-after:avoid;">
+                    ${cidadeText}
+                    <strong style="color:var(--crimson); font-size:13px; font-weight:600">${tituloRota}</strong>
+                  </div>
+                  ${atracoesHTML}
+                </div>
+              `;
+            } else if (el.tipo === 'transporte') {
+              const origem = el.cidadeOrigem || 'Origem';
+              const destino = el.cidadeDestino || 'Destino';
+              const transpNome = el.tipoTransporte ? `${el.tipoTransporte} (${el.linha || ''})` : 'Deslocamento a definir';
+              const ctg = el.categoria ? ` - ${el.categoria}` : '';
+              const duracao = el.tempo ? ` <span style="color:var(--gold-dk); font-weight:bold;">[${el.tempo}]</span>` : '';
+              const pText = (el.adultos ? el.adultos + ' Adultos' : ''); const pss = pText ? ` - ${pText}` : '';
+              const h = el.horario ? `${el.horario}` : '';
+              const horaText = h ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-left:8px;">${h}</span>` : '';
+
+              const precoVal = el.preco || 0;
+              const linhaEstimativa = precoVal > 0 ? `<div style="font-size:11.5px; color:#78350f; font-weight:600; margin-top:4px;">Estimativa: ~¥${precoVal.toLocaleString('pt-BR')} / pessoa</div>` : '';
+
+              return `
+                <div class="pdf-transporte-item" style="break-inside:avoid; page-break-inside:avoid; margin-bottom:16px; border-left:4px solid #C4A35A; padding-left:12px; background:linear-gradient(to right, rgba(196,163,90,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+                  <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+                    <strong style="color:#9c8248; font-size:12px; text-transform:uppercase; margin-right:8px">Deslocamento ${horaText}</strong>
+                  </div>
+                  <div style="font-size:13px; color:var(--text-main); font-weight:600">${origem} ➔ ${destino}</div>
+                  <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${transpNome}${ctg}${duracao}${pss} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
+                  ${linhaEstimativa}
+                </div>`;
+            } else if (el.tipo === 'experiencia') {
+              const pText = (el.adultos ? el.adultos + ' Adultos' : ''); const p = pText ? (el.horaPartida ? ` &nbsp;|&nbsp; ${pText}` : `${pText}`) : '';
+              const h = el.horaPartida ? `<span style="color:#000; font-weight:bold; font-size:14px; margin-right:8px;">${el.horaPartida}</span>` : '';
+
+              const precoVal = el.preco || 0;
+              const linhaEstimativa = precoVal > 0 ? `<div style="font-size:11.5px; color:#78350f; font-weight:600; margin-top:4px;">Estimativa: ~¥${precoVal.toLocaleString('pt-BR')} / pessoa</div>` : '';
+
+              return `
+                <div class="pdf-experiencia-item" style="break-inside:avoid; page-break-inside:avoid; margin-bottom:16px; border-left:4px solid var(--crimson); padding-left:12px; background:linear-gradient(to right, rgba(107,31,42,0.06), transparent); padding-top:8px; padding-bottom:8px; border-radius:8px">
+                  <div style="margin-bottom:4px; display:flex; flex-wrap:wrap; align-items:center">
+                    <strong style="color:var(--crimson); font-size:12px; text-transform:uppercase; margin-right:8px">Tickets & Experiências</strong>
+                  </div>
+                  <div style="font-size:13px; color:var(--text-main); font-weight:600">${el.nomeExp || 'Experiência a definir'}</div>
+                  <div style="font-size:11px; color:var(--text-sec); margin-top:2px">${h}${p} ${el.compradoHeian !== false ? '<span style="font-size:9px; background:var(--gold); color:white; padding:2px 6px; border-radius:4px; margin-left:4px; text-transform:uppercase; letter-spacing:0.05em; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#fff; width:1em; height:1em; margin-right:0;"><use href="#icon-check"></use></svg> Comprado pela Heian</span>' : '<span style="font-size:9px; background:#e2d9cf; color:#5c4a3d; padding:2px 6px; border-radius:4px; margin-left:4px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><svg class="v-icon" style="stroke:#5c4a3d; width:1em; height:1em; margin-right:0;"><use href="#icon-user"></use></svg> Comprado pelo cliente</span>'}</div>
+                  ${linhaEstimativa}
+                </div>`;
+            }
+            return '';
+          }).join('');
+
+          let dataText = '';
+          if (dia.data) {
+            const [yy, mm, dd] = dia.data.split('-');
+            dataText = `${dd}/${mm}`;
+          }
+
+          // Cálculo automático da rota de cidades com setas (idêntico a roteiros.js)
+          let rotaCidades = '';
+          const chainCidades = [];
+          (dia.elementos || []).forEach(el => {
+            if (el.tipo === 'transporte') {
+              if (el.cidadeOrigem) chainCidades.push(String(el.cidadeOrigem).trim());
+              if (el.cidadeDestino) chainCidades.push(String(el.cidadeDestino).trim());
+            } else if (el.tipo === 'sequencia' && el.cidade) {
+              chainCidades.push(String(el.cidade).trim());
+            }
+          });
+          const limpa = [];
+          chainCidades.forEach(c => { if (c && (!limpa.length || limpa[limpa.length - 1].toLowerCase() !== c.toLowerCase())) limpa.push(c); });
+          rotaCidades = limpa.join(' \u2192 ');
+
+          const tituloFinal = (dia.titulo && String(dia.titulo).trim()) ? String(dia.titulo).trim() : rotaCidades;
+
+          const rotuloDia = dataText 
+            ? `${dataText} (Dia ${dia.numeroDia || (index + 1)})${tituloFinal ? ' — ' + tituloFinal : ''}` 
+            : `Dia ${dia.numeroDia || (index + 1)})${tituloFinal ? ' — ' + tituloFinal : ''}`;
+
+          return `
+            <div class="dia-card">
+              <div class="dia-header" style="flex-direction:column; align-items:flex-start; background: linear-gradient(to right, rgba(107,31,42,0.08), transparent); padding: 8px 12px; border-radius: 6px; border-left: 4px solid var(--crimson); margin-bottom: 16px;">
+                <div style="margin-bottom:0px; display:flex; flex-wrap:wrap; align-items:center;">
+                  <span class="dia-numero" style="font-size:20px; font-weight:800; margin-right:8px; color:var(--crimson)">${rotuloDia}</span>
+                  ${badgeGuiado}
+                  ${badgeDeslocamento}
+                  ${badgeExperiencia}
+                </div>
+              </div>
+              ${elementosHtml}
+            </div>
+          `;
+        }).join('');
+
+        const estadiasArr = (cliente.estadias && cliente.estadias.length > 0) 
+          ? cliente.estadias 
+          : ((clientLocalObj.estadias && clientLocalObj.estadias.length > 0) 
+            ? clientLocalObj.estadias 
+            : (clientData.estadias || []));
+
+        const estadiasHtml = estadiasArr.length > 0 ? `
+          <div class="pdf-section" style="margin-bottom:30px">
+            <div class="pdf-section-header" style="margin-bottom:16px">
+              <div class="pdf-section-dot"></div>
+              <div class="pdf-section-title">Estadias</div>
+            </div>
+            <div class="pdf-estadias-grid">
+              ${estadiasArr.map(e => {
+                const f1 = e.dataInicio ? e.dataInicio.split('-').reverse().slice(0, 2).join('/') : '';
+                const f2 = e.dataFim ? e.dataFim.split('-').reverse().slice(0, 2).join('/') : '';
+                const per = (f1 && f2) ? `${f1} - ${f2}` : f1 || f2 || '';
+                return `<div class="pdf-estadia-item"><div class="pdf-estadia-cidade">${e.cidade||'-'}</div>${per?`<div class="pdf-estadia-datas">${per}</div>`:``} ${e.hotel?`<div class="pdf-estadia-hotel">${e.hotel}</div>`:``}</div>`;
+              }).join('')}
+            </div>
+          </div>
+        ` : '';
+
+        const vooChegada = cliente.vooChegada || clientLocalObj.vooChegada || '';
+        const vooPartida = cliente.vooPartida || clientLocalObj.vooPartida || '';
+
+        const voosHtml = (vooChegada || vooPartida) ? `
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; background:var(--bg); border:1px solid #eaeaea; border-radius:8px; padding:20px; margin-bottom:30px;">
+            ${vooChegada ? `<div style="flex:1"><div style="font-size:10px; color:var(--gold-dk); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px">Voo de Chegada</div><div style="font-size:14px; color:var(--ink); font-weight:500">${vooChegada}</div></div>` : ''}
+            ${vooPartida ? `<div style="flex:1; padding-left:20px; border-left:1px solid #eaeaea"><div style="font-size:10px; color:var(--gold-dk); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px">Voo de Partida</div><div style="font-size:14px; color:var(--ink); font-weight:500">${vooPartida}</div></div>` : ''}
+          </div>
+        ` : '';
+
+        const nomeSanitizado = (cliente.nome || 'Cliente').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        // Cria ou recupera o modal overlay dentro do próprio app (sem risco de bloqueio de pop-up no mobile/PWA)
+        let modalPdf = document.getElementById('modalRoteiroPdfCliente');
+        if (!modalPdf) {
+          modalPdf = document.createElement('div');
+          modalPdf.id = 'modalRoteiroPdfCliente';
+          document.body.appendChild(modalPdf);
+        }
+
+        modalPdf.innerHTML = `
+          <div class="mobile-print-bar">
+            <div style="font-size:15px; font-weight:700; color:#E8D5A3;">📄 Roteiro de Viagem — Heian Tour</div>
+            <div style="font-size:12px; color:#D3C3B3; text-align:center; max-width:480px; line-height:1.4;">
+              Toque em <strong>"Salvar como PDF / Imprimir"</strong> e selecione a opção de salvar PDF no seu celular ou computador.
+            </div>
+            <div class="mobile-print-actions">
+              <button type="button" class="mobile-print-btn btn-print" onclick="window.print()">📥 Salvar como PDF / Imprimir</button>
+              <button type="button" class="mobile-print-btn btn-close" onclick="window.fecharModalPdfCliente()">✕ Voltar ao Roteiro</button>
+            </div>
+          </div>
+          <div class="pdf-modal-content-wrap">
+            <div class="pdf-doc">
+              <div class="pdf-cover">
+                <img src="/assets/logo.png" class="pdf-cover-logo" alt="Heian Tour" onerror="this.style.display='none'">
+                <div class="pdf-cover-label">Roteiro de Viagem</div>
+                <div class="pdf-cover-title">${nomeParaExibir}</div>
+                <div class="pdf-cover-meta">
+                  ${perStr ? `<div class="pdf-cover-meta-item"><div class="pdf-cover-meta-label">Período</div><div class="pdf-cover-meta-value">${perStr}</div></div>` : ''}
+                  ${txtPessoas ? `<div class="pdf-cover-meta-item"><div class="pdf-cover-meta-label">Passageiros</div><div class="pdf-cover-meta-value">${txtPessoas}</div></div>` : ''}
+                </div>
+              </div>
+              <div class="pdf-body">
+                <div>
+                  ${estadiasHtml}
+                  ${voosHtml}
+                  <div class="roteiro-timeline">
+                    ${diasHtml}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        modalPdf.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+
+        if (btnTxt) btnTxt.textContent = '✅ Visualização Pronta!';
+
+        // Dispara a caixa de impressão/PDF nativa automaticamente
+        setTimeout(() => {
+          window.print();
+        }, 400);
+
+      } catch (err) {
+        console.error('Erro ao gerar PDF do roteiro:', err);
+        alert('Ocorreu uma falha ao abrir a visualização para PDF. Tentando modo de impressão padrão...');
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (btn) btn.style.pointerEvents = 'auto';
+          if (btnTxt) btnTxt.textContent = origTxt;
+        }, 3000);
+      }
+    };
+
+    window.fecharModalPdfCliente = function() {
+      const modalPdf = document.getElementById('modalRoteiroPdfCliente');
+      if (modalPdf) {
+        modalPdf.style.display = 'none';
+      }
+      document.body.style.overflow = '';
+    };
 
     window.addEventListener('load', loadClientArea);
   </script>
