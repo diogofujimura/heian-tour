@@ -5539,8 +5539,14 @@
               const descClean = tr.descricao.toLowerCase().replace(/[^a-z0-9]/g, '');
               let matchedKey = null;
               Object.keys(tasksMap).forEach(k => {
-                if (tasksMap[k].tipo === 'transporte' && descClean.includes(tasksMap[k].titulo.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
-                  matchedKey = k;
+                const tTit = (tasksMap[k].titulo || '').toLowerCase();
+                const tSub = (tasksMap[k].subtitulo || '').toLowerCase();
+                const tClean = (tTit + ' ' + tSub).replace(/[^a-z0-9]/g, '');
+                if (tasksMap[k].tipo === 'transporte') {
+                  if (descClean.includes(tClean) || tClean.includes(descClean) ||
+                      (descClean.includes('miyajima') && descClean.includes('parque') && tClean.includes('miyajima') && (tClean.includes('parque') || tClean.includes('hiroshima')))) {
+                    matchedKey = k;
+                  }
                 }
               });
               if (matchedKey) {
@@ -5548,17 +5554,33 @@
                 if (tr.descricao.length > tasksMap[matchedKey].subtitulo.length) tasksMap[matchedKey].subtitulo = tr.descricao;
               } else {
                 const kFallback = 'quote_tr:' + idx;
+                const origGuess = tr.origem || (tr.descricao ? tr.descricao.split('-')[0].split('|')[0].trim() : '');
+                const destGuess = tr.destino || (tr.descricao ? tr.descricao.split('-')[1]?.split('|')[0].trim() : '');
+                const dbTFallback = resolverTransporteBase(tr) || resolverTransporteBase({
+                  cidadeOrigem: origGuess,
+                  cidadeDestino: destGuess,
+                  tipoTransporte: tr.tipo || '',
+                  linha: tr.linha || ''
+                });
+
+                let descLimpa = tr.descricao || 'Transporte';
+                descLimpa = descLimpa.replace(/\s*\|\s*\|\s*/g, ' | ').replace(/\|\s*$/, '').trim();
+
                 tasksMap[kFallback] = {
                   id: kFallback,
                   tipo: 'transporte',
-                  titulo: `Transporte: ${tr.descricao}`,
-                  subtitulo: tr.descricao,
+                  titulo: `Transporte: ${descLimpa}`,
+                  subtitulo: descLimpa,
                   horario: tr.observacao || '',
                   tempo: '',
                   diaNum: 99,
                   data: tr.data || '',
                   pessoas: paxCliente,
-                  dica: 'Comprar bilhetes/passes com antecedência no site oficial ou bilheteria.',
+                  dica: (dbTFallback && dbTFallback.compra) ? dbTFallback.compra : 'Comprar bilhetes/passes com antecedência no site oficial ou bilheteria.',
+                  instrucoesPosCompra: (dbTFallback && dbTFallback.uso) ? dbTFallback.uso : '',
+                  observacao: (dbTFallback && dbTFallback.observacao) ? dbTFallback.observacao : '',
+                  link_klook: (dbTFallback && dbTFallback.link_klook) ? dbTFallback.link_klook : (tr.link_klook || ''),
+                  link: (dbTFallback && dbTFallback.link) ? dbTFallback.link : (tr.link || ''),
                   feita: !!checklistState[kFallback]
                 };
               }
@@ -5577,7 +5599,8 @@
               const expClean = exp.nome.toLowerCase().replace(/[^a-z0-9]/g, '');
               let matchedKey = null;
               Object.keys(tasksMap).forEach(k => {
-                if (tasksMap[k].tipo === 'experiencia' && (tasksMap[k].titulo.toLowerCase().includes(expClean) || expClean.includes(tasksMap[k].titulo.toLowerCase()))) {
+                const eTit = (tasksMap[k].titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (tasksMap[k].tipo === 'experiencia' && (eTit.includes(expClean) || expClean.includes(eTit))) {
                   matchedKey = k;
                 }
               });
@@ -5585,6 +5608,7 @@
                 if (!tasksMap[matchedKey].horario && exp.observacao) tasksMap[matchedKey].horario = exp.observacao;
               } else {
                 const kFallback = 'quote_exp:' + idx;
+                const dbEFallback = resolverExperienciaBase(exp) || resolverExperienciaBase({ nome: exp.nome, nomeExp: exp.nome });
                 tasksMap[kFallback] = {
                   id: kFallback,
                   tipo: 'experiencia',
@@ -5595,7 +5619,11 @@
                   diaNum: 99,
                   data: exp.data || '',
                   pessoas: paxCliente,
-                  dica: 'Realizar reserva prévia/compra de ingressos antecedida.',
+                  dica: (dbEFallback && dbEFallback.compra) ? dbEFallback.compra : 'Realizar reserva prévia/compra de ingressos antecedida.',
+                  instrucoesPosCompra: (dbEFallback && dbEFallback.uso) ? dbEFallback.uso : '',
+                  observacao: (dbEFallback && dbEFallback.observacao) ? dbEFallback.observacao : '',
+                  link_klook: (dbEFallback && dbEFallback.link_klook) ? dbEFallback.link_klook : (exp.link_klook || ''),
+                  link: (dbEFallback && dbEFallback.link) ? dbEFallback.link : (exp.link || ''),
                   feita: !!checklistState[kFallback]
                 };
               }
