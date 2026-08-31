@@ -4029,52 +4029,44 @@
       if (el.isSemReserva === true) return true;
       
       const ctg = String(el.categoria || '').toLowerCase().trim();
-      if (ctg === 'sem reserva' || ctg.includes('sem reserva') || ctg.includes('ic card') || ctg === 'por conta do cliente') {
-        const tipoT = String(el.tipoTransporte || el.tipo || '').toLowerCase().trim();
-        // Apenas Shinkansen / Limited Express com assento marcado não são puramente sem reserva
-        if (!tipoT.includes('shinkansen') && !tipoT.includes('limited express') && !tipoT.includes('romancecar') && !tipoT.includes('skyliner')) {
-          return true;
-        }
-      }
-
       const tipo = String(el.tipoTransporte || el.tipo || '').toLowerCase().trim();
       const linha = String(el.linha || '').toLowerCase().trim();
-      
-      // Táxi / App GO é deslocamento local sob demanda pago no táximetro
-      if (tipo === 'taxi' || tipo === 'táxi' || tipo.includes('taxi') || tipo.includes('táxi') || linha.includes('taxi') || linha.includes('táxi')) {
-        return true;
-      }
+      const desc = String(el.descricao || el.titulo || el.trecho || '').toLowerCase().trim();
+      const fullText = (ctg + ' ' + tipo + ' ' + linha + ' ' + desc).toLowerCase();
 
-      if (tipo.includes('ic card') || tipo.includes('sem reserva') || linha.includes('ic card') || linha.includes('sem reserva')) {
+      // Táxi / App GO é deslocamento local sob demanda pago no táximetro
+      if (fullText.includes('taxi') || fullText.includes('táxi')) {
         return true;
       }
 
       // Modais que realmente exigem reserva ou compra antecipada (trens expressos intermunicipais)
-      const isExpressoReservado = tipo.includes('shinkansen') || 
-                                 tipo.includes('romancecar') || 
-                                 tipo.includes('skyliner') || 
-                                 tipo.includes('limited express') || 
-                                 tipo.includes('granclass') ||
-                                 (tipo.includes('transfer') && !tipo.includes('local')) ||
-                                 linha.includes('shinkansen') || 
-                                 linha.includes('romancecar') || 
-                                 linha.includes('skyliner') || 
-                                 linha.includes('limited express') ||
-                                 linha.includes('revaty') ||
-                                 linha.includes('spacia') ||
-                                 linha.includes('haruka') ||
-                                 linha.includes('thunderbird');
+      const isExpressoReservado = fullText.includes('shinkansen') || 
+                                 fullText.includes('romancecar') || 
+                                 fullText.includes('skyliner') || 
+                                 fullText.includes('limited express') || 
+                                 fullText.includes('granclass') ||
+                                 fullText.includes('revaty') ||
+                                 fullText.includes('spacia') ||
+                                 fullText.includes('haruka') ||
+                                 fullText.includes('thunderbird') ||
+                                 (fullText.includes('transfer') && !fullText.includes('local'));
 
       if (isExpressoReservado) {
         return false;
       }
 
-      // Se for Trem comum, Metrô, Ônibus, Balsa, Bonde, Monotrilho ou linha metropolitana
+      // Se for explicitamente sem reserva, Cartão IC ou classe Ordinary em linhas JR
+      if (ctg === 'sem reserva' || ctg.includes('sem reserva') || ctg.includes('ic card') || ctg === 'ordinary' || ctg === 'por conta do cliente' || fullText.includes('ic card') || fullText.includes('sem reserva') || fullText.includes('ordinary')) {
+        return true;
+      }
+
+      // Se for Trem comum, Metrô, Ônibus, Balsa, Bonde, Monotrilho ou linha metropolitana JR/Privada
       if (tipo === 'trem' || tipo === 'metrô' || tipo === 'metro' || tipo === 'ônibus' || tipo === 'onibus' || 
           tipo === 'balsa' || tipo === 'barco' || tipo === 'bonde' || tipo === 'monotrilho' ||
-          linha.includes('yokosuka') || linha.includes('yamanote') || linha.includes('chuo') || 
-          linha.includes('keihan') || linha.includes('hankyu') || linha.includes('ginza') || 
-          linha.includes('marunouchi') || linha.includes('uno')) {
+          fullText.includes('yokosuka') || fullText.includes('yamanote') || fullText.includes('chuo') || 
+          fullText.includes('kobe line') || fullText.includes('sanyo line') || fullText.includes('tokaido line') ||
+          fullText.includes('keihan') || fullText.includes('hankyu') || fullText.includes('ginza') || 
+          fullText.includes('marunouchi') || fullText.includes('uno')) {
         return true;
       }
 
@@ -5534,6 +5526,7 @@
       if (quote) {
         (quote.transportes || []).forEach((tr, idx) => {
           if (tr._roteiroRefId && heianRefIds.has(tr._roteiroRefId)) return;
+          if (isTransporteSemReserva(tr)) return; // Ignorar trens locais, metrô, ônibus e classe Ordinary da cotação
           if (isCompradoCliente(tr.compradoHeian)) {
             const refId = tr._roteiroRefId;
             const key = refId ? ('ref:' + refId) : null;
